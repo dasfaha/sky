@@ -49,6 +49,11 @@ where it is headed. The following is what is coming up:
    sharding and failover.
 
 
+## Command Line Interface (CLI)
+
+The command line interface is for playing with Sky locally.
+
+
 ## Path Query Language (PQL)
 
 The SQL language was built to query or alter the current state of an object in a
