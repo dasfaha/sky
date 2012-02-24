@@ -49,9 +49,34 @@ where it is headed. The following is what is coming up:
    sharding and failover.
 
 
-## Command Line Interface (CLI)
+## Sky Standalone CLI
 
-The command line interface is for playing with Sky locally.
+The standalone command line interface runs a single task such as adding an event
+to a database. This is used for playing around with Sky and for simple testing.
+The CLI is called `sky-standalone` and provides the following options:
+
+* `--version` - Displays the version of sky installed.
+* `--database=PATH` - Uses the database at the given path. If not specified then
+  the current directory is used.
+* `--add-event` - Inserts an event into the database. This depends on the
+  `object-type`, `object-id`, `timestamp`, `action` and `data` arguments.
+* `object-type` - Specifies the type of object.
+* `object-id` - Specifies the numeric identifier for the object.
+* `timestamp` - Specifies the timestamp in ISO8601 format:
+  `yyyy-mm-ddThh:MM:ss.SSS`. Timestamps are always in UTC. If not specified, the
+  current time is used instead.
+* `action` - The name of the action performed.
+* `data` - A state change that occurred in the event. The data should be
+  specified as `--data KEY:VALUE`. Use the argument multiple times to add
+  multiple state changes for the event.
+
+Below are some examples of the standalone CLI:
+    
+    $ sky-standalone --add-event --object-type user --object-id 10 --action sign_up
+    $ sky-standalone --add-event --object-type user --object-id 200 --data name:Bob --data salary:50000
+    
+This should not be used in a production environment. It is only used for
+testing and learning about the database without having to run the server.
 
 
 ## Path Query Language (PQL)
