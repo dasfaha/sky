@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Ben Johnson, http://skylandlabs.com
+ * Copyright (c) 2012 Ben Johnson, http://skylandlabs.com
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,64 +20,35 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <getopt.h>
+#ifndef _db_h
+#define _db_h
+
+#include "bstring.h"
 
 //==============================================================================
 //
-// Command Line Arguments
+// Typedefs
 //
 //==============================================================================
 
-void parseopts(int argc, char **argv)
-{
-    int c;
-    int version_flag;
-    
-    // Command line options.
-    struct option long_options[] = {
-        {"version", no_argument, &version_flag, 1},
-        {0, 0, 0, 0}
-    };
-
-    // Parse command line options.
-    while(1) {
-        int option_index = 0;
-        c = getopt_long(argc, argv, "", long_options, &option_index);
-        
-        if(c == -1) {
-            break;
-        }
-    }
-    
-    argc -= optind;
-    argv += optind;
-
-    // Print version number if requested.
-    if(version_flag) {
-        printf("sky-standalone 0.1.0\n");
-    }
-}
-
-void usage()
-{
-    fprintf(stderr, "usage: sky-standalone [--version]\n\n");
-    exit(0);
-}
+/**
+ * The reference to a logical database. A database is composed of multiple
+ * object files that actually store the object paths.
+ */
+typedef struct Database {
+    bstring name;
+} Database;
 
 
 //==============================================================================
 //
-// Main
+// Functions
 //
 //==============================================================================
 
-int main(int argc, char **argv)
-{
-    // Parse command line options.
-    parseopts(argc, argv);
+Database *Database_create(bstring name);
 
-    return 0;
-}
+void Database_destroy(Database *database);
 
+
+#endif

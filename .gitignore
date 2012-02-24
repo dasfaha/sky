@@ -1,2 +1,4 @@
 bin/
 src/*.o
+tests/*_tests
+.DS_Store

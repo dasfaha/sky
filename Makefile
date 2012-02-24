@@ -1,9 +1,31 @@
-CFLAGS=-g -O2 -Wall
+################################################################################
+# Variables
+################################################################################
 
-SOURCES=$(wildcard src/*.c)
+CFLAGS=-g -O2 -Wall -Wextra
+
+SOURCES=$(wildcard src/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES})
+LIB_SOURCES=$(filter-out src/sky_*.c,${SOURCES})
+LIB_OBJECTS=$(filter-out src/sky_*.o,${OBJECTS})
+TEST_SRC=$(wildcard tests/*_tests.c)
+TESTS=$(patsubst %.c,%,${TEST_SRC})
 
-all: bin/sky-standalone
+
+################################################################################
+# Default Target
+################################################################################
+
+all: bin/sky-standalone bin/libsky.a test
+
+
+################################################################################
+# Binaries
+################################################################################
+
+bin/libsky.a: bin ${LIB_OBJECTS}
+	ar rcs $@ ${LIB_OBJECTS}
+	ranlib $@
 
 bin/sky-standalone: bin ${OBJECTS}
 	$(CC) $(CFLAGS) src/sky_standalone.o -o $@
@@ -12,9 +34,22 @@ bin/sky-standalone: bin ${OBJECTS}
 bin:
 	mkdir -p bin
 
-test:
-	cucumber
+
+################################################################################
+# Tests
+################################################################################
+
+.PHONY: test
+test: $(TESTS)
+	sh ./tests/runtests.sh
+
+$(TESTS): $(TEST_SRC)
+	$(CC) $(CFLAGS) -Isrc -o $@ $< bin/libsky.a
+
+
+################################################################################
+# Clean up
+################################################################################
 
 clean: 
-	rm src/*.o
-	rm -rf bin
+	rm -rf bin ${OBJECTS}
