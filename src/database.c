@@ -33,12 +33,13 @@
 
 /*
  * Creates a reference to a database.
+ *
+ * path - The file path where the data resides on disk.
  */
-Database *Database_create(bstring name)
+Database *Database_create(bstring path)
 {
     Database *database = calloc(1, sizeof(Database));
-    database->name = bstrcpy(name);
-    check_mem(name);
+    database->path = bstrcpy(path); check_mem(database->path);
 
     return database;
     
@@ -53,7 +54,7 @@ error:
 void Database_destroy(Database *database)
 {
     if(database) {
-        bdestroy(database->name);
+        bdestroy(database->path);
         free(database);
     }
 }

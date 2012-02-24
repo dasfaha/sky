@@ -9,12 +9,15 @@
 //
 //==============================================================================
 
-char *test_Database_create() {
+char *test_Database_create_destroy() {
     Database *database = Database_create(
-        bfromcstr("foo")
+        bfromcstr("/etc/sky/data")
     );
     mu_assert(database != NULL, "Could not create database");
-    mu_assert(biseq(database->name, bfromcstr("foo")), "Invalid name");
+    mu_assert(biseq(database->path, bfromcstr("/etc/sky/data")), "Invalid path");
+
+    Database_destroy(database);
+
     return NULL;
 }
 
@@ -27,7 +30,7 @@ char *test_Database_create() {
 //==============================================================================
 
 char *all_tests() {
-    mu_run_test(test_Database_create);
+    mu_run_test(test_Database_create_destroy);
     return NULL;
 }
 

@@ -36,7 +36,7 @@
  * object files that actually store the object paths.
  */
 typedef struct Database {
-    bstring name;
+    bstring path;
 } Database;
 
 
@@ -46,7 +46,7 @@ typedef struct Database {
 //
 //==============================================================================
 
-Database *Database_create(bstring name);
+Database *Database_create(bstring path);
 
 void Database_destroy(Database *database);
 
