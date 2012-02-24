@@ -6,8 +6,8 @@ CFLAGS=-g -O2 -Wall -Wextra
 
 SOURCES=$(wildcard src/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES})
-LIB_SOURCES=$(filter-out src/sky_*.c,${SOURCES})
-LIB_OBJECTS=$(filter-out src/sky_*.o,${OBJECTS})
+LIB_SOURCES=$(filter-out $(wildcard src/sky_*.c),${SOURCES})
+LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
 TEST_SRC=$(wildcard tests/*_tests.c)
 TESTS=$(patsubst %.c,%,${TEST_SRC})
 
@@ -24,6 +24,7 @@ all: bin/libsky.a bin/sky-standalone test
 ################################################################################
 
 bin/libsky.a: bin ${LIB_OBJECTS}
+	rm -f bin/libsky.a
 	ar rcs $@ ${LIB_OBJECTS}
 	ranlib $@
 
@@ -41,7 +42,7 @@ bin:
 
 .PHONY: test
 test: $(TESTS)
-	sh ./tests/runtests.sh
+	@sh ./tests/runtests.sh
 
 $(TESTS): %: %.c bin/libsky.a
 	$(CC) $(CFLAGS) -Isrc -o $@ $< bin/libsky.a

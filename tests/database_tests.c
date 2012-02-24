@@ -14,7 +14,7 @@ char *test_Database_create_destroy() {
         bfromcstr("/etc/sky/data")
     );
     mu_assert(database != NULL, "Could not create database");
-    mu_assert(biseq(database->path, bfromcstr("/etc/sky/data")), "Invalid path");
+    mu_assert(biseqcstr(database->path, "/etc/sky/data"), "Invalid path");
 
     Database_destroy(database);
 

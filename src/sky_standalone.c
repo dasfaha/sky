@@ -25,6 +25,8 @@
 #include <getopt.h>
 
 #include "bstring.h"
+#include "dbg.h"
+#include "database.h"
 
 //==============================================================================
 //
@@ -43,28 +45,39 @@
 
 //==============================================================================
 //
+// Typedefs
+//
+//==============================================================================
+
+enum e_command {
+    CMD_SHOW_VERSION = 1,
+    CMD_ADD_EVENT = 2
+};
+
+typedef struct Options {
+    enum e_command command;
+    bstring database;
+    bstring object_type;
+    bstring object_id;
+    bstring timestamp;
+    bstring action;
+    bstring *data;
+    int data_count;
+} Options;
+
+
+//==============================================================================
+//
 // Command Line Arguments
 //
 //==============================================================================
 
-typedef struct Options {
-    enum e_command {
-        CMD_SHOW_VERSION,
-        CMD_ADD_EVENT
-    } command;
-    bstring *database;
-    bstring *object_type;
-    bstring *object_id;
-    bstring *timestamp;
-    bstring *action;
-    bstring **data;
-} Options;
-
-Options parseopts(int argc, char **argv)
+Options *parseopts(int argc, char **argv)
 {
     int c;
-    e_command command;
-    Options options = calloc(1, sizeof(Options)); check_mem(options);
+    int command;
+    Options *options = (Options*)calloc(1, sizeof(Options));
+    check_mem(options);
     
     // Command line options.
     struct option long_options[] = {
@@ -91,28 +104,35 @@ Options parseopts(int argc, char **argv)
         
         // Parse each option.
         switch(c) {
-            case 'd':
-            options->database = bfromcstr(optstr); check_mem(options->database);
+        case 'd':
+            options->database = bfromcstr(optarg); check_mem(options->database);
             break;
             
-            case 't':
-            options->object_type = bfromcstr(optstr); check_mem(options->object_type);
+        case 't':
+            options->object_type = bfromcstr(optarg); check_mem(options->object_type);
             break;
             
-            case 'i':
-            options->object_type = bfromcstr(optstr); check_mem(options->object_type);
+        case 'i':
+            options->object_id = bfromcstr(optarg); check_mem(options->object_id);
             break;
 
-            case 'T':
-            options->timestamp = bfromcstr(optstr); check_mem(options->timestamp);
+        case 'T':
+            options->timestamp = bfromcstr(optarg); check_mem(options->timestamp);
             break;
 
-            case 'a':
-            options->action = bfromcstr(optstr); check_mem(options->action);
+        case 'a':
+            options->action = bfromcstr(optarg); check_mem(options->action);
             break;
 
-            case 'D':
-            // TODO;
+        case 'D':
+            // Increment array allocation.
+            options->data_count++;
+            reallocf(options->data, sizeof(bstring)*options->data_count);
+            check_mem(options->data);
+            
+            // Append data to array.
+            bstring data = bfromcstr(optarg); check_mem(data);
+            options->data[options->data_count-1] = data;
             break;
         }
     }
@@ -120,12 +140,45 @@ Options parseopts(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
+    // Set command on options.
+    options->command = command;
+    
     return options;
     
 error:
     exit(1);
 }
 
+/**
+ * Releases memory held by an Options struct.
+ */
+void Options_destroy(Options *options)
+{
+    int i;
+
+    if(options) {
+        bdestroy(options->database); options->database = NULL;
+        bdestroy(options->object_type); options->object_type = NULL;
+        bdestroy(options->object_id); options->object_id = NULL;
+        bdestroy(options->timestamp); options->timestamp = NULL;
+        bdestroy(options->action); options->action = NULL;
+
+        // Clean up data elements.
+        for(i=0; i<options->data_count; i++) {
+            bdestroy((bstring)&options[i]);
+        }
+        free(options->data); options->data = NULL;
+
+        free(options);
+    }
+}
+
+
+//==============================================================================
+//
+// Usage & Version
+//
+//==============================================================================
 
 void print_version()
 {
@@ -145,9 +198,51 @@ void usage()
 //
 //==============================================================================
 
-void add_event(Options options)
+/**
+ * Adds an event to an object file in a database.
+ */
+void add_event(Options *options)
 {
-    // TODO!
+    bstring path = bstrcpy(options->database);
+    bstring timestamp = bstrcpy(options->timestamp);
+
+    // Validate options.
+    if(!options->object_type) {
+        fprintf(stderr, "Object type is required.\n"); exit(1);
+    }
+    if(!options->object_id) {
+        fprintf(stderr, "Object id is required.\n"); exit(1);
+    }
+    if(!options->action) {
+        fprintf(stderr, "Action is required.\n"); exit(1);
+    }
+
+    // Default database to current working directory.
+    if(path == NULL) {
+        char *cwd = getcwd(NULL, 0);
+        check(cwd != NULL, "Current working directory could not be found");
+        path = bfromcstr(cwd);
+        free(cwd);
+    }
+    
+    // Create database reference.
+    Database *database = Database_create(path);
+    bdestroy(path);
+    check_mem(database);
+    
+    // TODO: Open object file reference.
+    // TODO: Parse ISO8601 timestamp.
+    
+    // Print parameters.
+    printf("DATABASE:    %s\n", database->path->data);
+    printf("OBJECT TYPE: %s\n", options->object_type->data);
+    printf("OBJECT ID:   %s\n", options->object_id->data);
+    printf("ACTION:      %s\n", options->action->data);
+    printf("\n");
+    
+error:
+    bdestroy(path);
+    bdestroy(timestamp);
 }
 
 //==============================================================================
@@ -159,19 +254,26 @@ void add_event(Options options)
 int main(int argc, char **argv)
 {
     // Parse command line options.
-    Options options = parseopts(argc, argv);
+    Options *options = parseopts(argc, argv);
 
     // Determine what command to execute.
     switch(options->command) {
-        case CMD_SHOW_VERSION:
+    case CMD_SHOW_VERSION:
         print_version();
         break;
         
-        case CMD_ADD_EVENT:
+    case CMD_ADD_EVENT:
         add_event(options);
+        break;
+        
+    default:
+        fprintf(stderr, "Missing command: version, add-event");
         break;
     }
 
+    // Clean up.
+    Options_destroy(options);
+    
     return 0;
 }
 

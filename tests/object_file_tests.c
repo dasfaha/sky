@@ -18,7 +18,7 @@ char *test_ObjectFile_create_destroy() {
     );
 
     mu_assert(object_file != NULL, "Could not create object file");
-    mu_assert(biseq(object_file->name, bfromcstr("users")), "Invalid name");
+    mu_assert(biseqcstr(object_file->name, "users"), "Invalid name");
 
     ObjectFile_destroy(object_file);
     Database_destroy(database);

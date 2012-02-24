@@ -59,7 +59,7 @@ error:
 void Database_destroy(Database *database)
 {
     if(database) {
-        bdestroy(database->path);
+        bdestroy(database->path); database->path = NULL;
         free(database);
     }
 }
