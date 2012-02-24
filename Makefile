@@ -43,7 +43,7 @@ bin:
 test: $(TESTS)
 	sh ./tests/runtests.sh
 
-$(TESTS): $(TEST_SRC)
+$(TESTS): %: %.c bin/libsky.a
 	$(CC) $(CFLAGS) -Isrc -o $@ $< bin/libsky.a
 
 

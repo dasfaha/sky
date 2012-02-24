@@ -20,43 +20,49 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _database_h
-#define _database_h
+#include <stdlib.h>
 
+#include "dbg.h"
 #include "bstring.h"
+#include "database.h"
+#include "object_file.h"
 
 //==============================================================================
 //
-// Overview
+// Object File Management
 //
 //==============================================================================
 
-/**
- * The database is a collection of object files. For more information on the
- * data storage format, read the object_file.c source.
+/*
+ * Creates a reference to an object file.
+ *
+ * database - A reference to the database that the object file belongs to.
+ * name - The name of the object file.
  */
+ObjectFile *ObjectFile_create(Database *database, bstring name)
+{
+    ObjectFile *object_file;
+    
+    check(database != NULL, "Cannot create object file without a database");
+    check(name != NULL, "Cannot create unnamed object file");
+    
+    object_file = malloc(sizeof(ObjectFile));
+    object_file->name = bstrcpy(name); check_mem(object_file->name);
 
+    return object_file;
+    
+error:
+    ObjectFile_destroy(object_file);
+    return NULL;
+}
 
-//==============================================================================
-//
-// Typedefs
-//
-//==============================================================================
-
-typedef struct Database {
-    bstring path;
-} Database;
-
-
-//==============================================================================
-//
-// Functions
-//
-//==============================================================================
-
-Database *Database_create(bstring path);
-
-void Database_destroy(Database *database);
-
-
-#endif
+/*
+ * Removes an object file reference from memory.
+ */
+void ObjectFile_destroy(ObjectFile *object_file)
+{
+    if(object_file) {
+        bdestroy(object_file->name);
+        free(object_file);
+    }
+}

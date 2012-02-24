@@ -20,10 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdlib.h>
+
 #include "dbg.h"
 #include "bstring.h"
 #include "database.h"
-#include <stdlib.h>
 
 //==============================================================================
 //
@@ -38,7 +39,11 @@
  */
 Database *Database_create(bstring path)
 {
-    Database *database = calloc(1, sizeof(Database));
+    Database *database;
+
+    check(path != NULL, "Cannot create database without a path");
+    
+    database = malloc(sizeof(Database));
     database->path = bstrcpy(path); check_mem(database->path);
 
     return database;
