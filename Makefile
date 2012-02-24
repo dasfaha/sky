@@ -16,7 +16,7 @@ TESTS=$(patsubst %.c,%,${TEST_SRC})
 # Default Target
 ################################################################################
 
-all: bin/sky-standalone bin/libsky.a test
+all: bin/libsky.a bin/sky-standalone test
 
 
 ################################################################################
@@ -28,7 +28,7 @@ bin/libsky.a: bin ${LIB_OBJECTS}
 	ranlib $@
 
 bin/sky-standalone: bin ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_standalone.o -o $@
+	$(CC) $(CFLAGS) src/sky_standalone.o -o $@ bin/libsky.a
 	chmod 700 $@
 
 bin:
