@@ -8,8 +8,8 @@ SOURCES=$(wildcard src/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES})
 LIB_SOURCES=$(filter-out $(wildcard src/sky_*.c),${SOURCES})
 LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
-TEST_SRC=$(wildcard tests/*_tests.c)
-TESTS=$(patsubst %.c,%,${TEST_SRC})
+TEST_SOURCES=$(wildcard tests/*_tests.c)
+TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 
 
 ################################################################################
@@ -41,10 +41,10 @@ bin:
 ################################################################################
 
 .PHONY: test
-test: $(TESTS)
+test: $(TEST_OBJECTS)
 	@sh ./tests/runtests.sh
 
-$(TESTS): %: %.c bin/libsky.a
+$(TEST_OBJECTS): %: %.c bin/libsky.a
 	$(CC) $(CFLAGS) -Isrc -o $@ $< bin/libsky.a
 
 
@@ -53,4 +53,5 @@ $(TESTS): %: %.c bin/libsky.a
 ################################################################################
 
 clean: 
-	rm -rf bin ${OBJECTS}
+	rm -rf bin ${OBJECTS} ${TEST_OBJECTS}
+	rm -rf tests/*.dSYM

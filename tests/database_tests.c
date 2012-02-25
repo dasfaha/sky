@@ -1,7 +1,8 @@
 #include <stdio.h>
-#include "minunit.h"
 #include <database.h>
 #include <bstring.h>
+
+#include "minunit.h"
 
 //==============================================================================
 //
