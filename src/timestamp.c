@@ -36,6 +36,9 @@
  * Parses a timestamp from a C string. The return value is the number of
  * milliseconds before or after the epoch (Jan 1, 1970).
  *
+ * NOTE: Parsing seems to only work back to around the first decade of the
+ *       1900's. Need to investigate further why this is.
+ *
  * str - The string containing an ISO 8601 formatted date.
  */
 int Timestamp_parse(bstring str, long long *ret)
@@ -63,7 +66,4 @@ int Timestamp_parse(bstring str, long long *ret)
     *ret = value * 1000;
     
     return 0;
-    
-error:
-    return -1;
 }
