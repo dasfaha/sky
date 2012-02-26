@@ -73,12 +73,11 @@ int Timestamp_parse(bstring str, long long *ret)
  */
 int Timestamp_now(long long *ret)
 {
-    time_t t = time(NULL);
-    if(t != -1) {
-        *ret = t * 1000;
-        return 0;
-    }
-    else {
-        return -1;
-    }
+    struct timeval tv;
+    check(gettimeofday(&tv, NULL) == 0, "Cannot obtain current time");
+    *ret = (tv.tv_sec*1000) + (tv.tv_usec/1000);
+    return 0;
+
+error:
+    return -1;
 }
