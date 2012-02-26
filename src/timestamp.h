@@ -46,5 +46,7 @@
 
 int Timestamp_parse(bstring str, long long *ret);
 
+int Timestamp_now(long long *ret);
+
 #endif
 

@@ -27,6 +27,8 @@
 #include "bstring.h"
 #include "dbg.h"
 #include "database.h"
+#include "object_file.h"
+#include "timestamp.h"
 
 //==============================================================================
 //
@@ -203,6 +205,8 @@ void usage()
  */
 void add_event(Options *options)
 {
+    int rc;
+    long long ts;
     bstring path = bstrcpy(options->database);
     bstring timestamp = bstrcpy(options->timestamp);
 
@@ -230,14 +234,27 @@ void add_event(Options *options)
     bdestroy(path);
     check_mem(database);
     
-    // TODO: Open object file reference.
-    // TODO: Parse ISO8601 timestamp.
+    // Open object file reference.
+    ObjectFile *object_file = ObjectFile_create(database, options->object_type);
+    check_mem(object_file);
+    
+    // Use current time if timestamp was not passed in.
+    if(timestamp == NULL) {
+        rc = Timestamp_now(&ts);
+        check(rc == 0, "Can not determine current timestamp");
+    }
+    // Parse ISO8601 timestamp.
+    else {
+        rc = Timestamp_parse(timestamp, &ts);
+        check(rc == 0, "Could not parse timestamp")
+    }
     
     // Print parameters.
     printf("DATABASE:    %s\n", database->path->data);
     printf("OBJECT TYPE: %s\n", options->object_type->data);
     printf("OBJECT ID:   %s\n", options->object_id->data);
     printf("ACTION:      %s\n", options->action->data);
+    printf("TIMESTAMP:   %lld\n", ts);
     printf("\n");
     
 error:

@@ -67,3 +67,18 @@ int Timestamp_parse(bstring str, long long *ret)
     
     return 0;
 }
+
+/*
+ * Returns the number of milliseconds since the epoch.
+ */
+int Timestamp_now(long long *ret)
+{
+    time_t t = time(NULL);
+    if(t != -1) {
+        *ret = t * 1000;
+        return 0;
+    }
+    else {
+        return -1;
+    }
+}
