@@ -20,11 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _object_file_h
-#define _object_file_h
+#ifndef _event_h
+#define _event_h
 
 #include "bstring.h"
-#include "database.h"
 
 //==============================================================================
 //
@@ -33,24 +32,22 @@
 //==============================================================================
 
 /**
- * The object file represents the storage for a type of object. The object file
- * is analogous to a table in a relational database. The object file is
- * represented on the file system as a directory that contains a header file
- * and multiple data extent files numbered sequentially (1, 2, 3, etc).
+ * The event is the basic unit of data in a behavioral database. It is composed
+ * of several elements: a timestamp, an object identifier, an action and a set
+ * of key/value data. The timestamp and object identifier are always required.
+ * The timestamp states when the event occurred and the object identifier states
+ * who (or what) the event is related to.
  *
- * Extents are a collection of 64k blocks. Each block can store any number of
- * paths that can fit into it. If the size of the paths is larger than the block
- * can handle then the block is split into multiple blocks.
+ * The action and data are optional but at least one of them needs to be
+ * present. The action represents a verb that the object has performed. This
+ * could be something like a user signing up or a product being being
+ * discontinued. The data represents the state of the object. These can be
+ * things like the date of birth of a user or it could be the color of a car.
  *
- * Blocks are stored in the order in which they are created. This means that 
- * while objects are stored in order within a block, they are not necessarily 
- * stored in order from one block to the next. Because of this, the header file
- * is used to store a range of object ids for each block and serves as an index
- * when looking up a single object.
- *
- * Because of the redundancy of action names and data keys, those strings are
- * cached and converted into integer identifiers. The action cache is located
- * in the 'actions' file and the data keys cache is located in the 'keys' file.
+ * Because there is a timestamp attached to every event, this data can
+ * change over time without destroying data stored in the past. That also means
+ * that searches across the data will take into account the state of an object
+ * at a specific point in time.
  */
 
 
@@ -60,10 +57,12 @@
 //
 //==============================================================================
 
-typedef struct ObjectFile {
-    Database *database;
-    bstring name;
-} ObjectFile;
+typedef struct Event {
+    long long timestamp;
+    long long object_id;
+    bstring action;
+    bstring *data;
+} Event;
 
 
 //==============================================================================
@@ -73,27 +72,23 @@ typedef struct ObjectFile {
 //==============================================================================
 
 //======================================
-// Lifecycle
+// Create/Destroy
 //======================================
 
-ObjectFile *ObjectFile_create(Database *database, bstring name);
+Event *Event_create(long long timestamp, long long object_id, bstring action);
 
-void ObjectFile_destroy(ObjectFile *object_file);
+void Event_destroy(Event *event);
 
-
-//======================================
-// State
-//======================================
-
-int *ObjectFile_open();
-
-void *ObjectFile_close();
+// Event *Event_copy(Event *event);
 
 
 //======================================
-// Event Management
+// Data Management
 //======================================
 
-int *ObjectFile_add_event(Event *event);
+// Event *Event_set_data(bstring key, bstring value);
+
+// Event *Event_unset_data(bstring key);
+
 
 #endif

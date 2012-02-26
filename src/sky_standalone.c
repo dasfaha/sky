@@ -249,17 +249,38 @@ void add_event(Options *options)
         check(rc == 0, "Could not parse timestamp")
     }
     
+    // Create an event object.
+    Event *event = Event_create(ts, options->object_id, options->action);
+    // TODO: Set data.
+
     // Print parameters.
-    printf("DATABASE:    %s\n", database->path->data);
-    printf("OBJECT TYPE: %s\n", options->object_type->data);
-    printf("OBJECT ID:   %s\n", options->object_id->data);
-    printf("ACTION:      %s\n", options->action->data);
-    printf("TIMESTAMP:   %lld\n", ts);
+    printf("DATABASE:    %s\n", bdata(database->path));
+    printf("OBJECT TYPE: %s\n", bdata(object_file->name));
+    printf("OBJECT ID:   %lld\n", event->object_id);
+    printf("ACTION:      %s\n", bdata(event->action));
+    printf("TIMESTAMP:   %lld\n", event->timestamp);
     printf("\n");
+    
+    // Add the event to the object file.
+    ObjectFile_open(object_file);
+    ObjectFile_add_event(object_file, event);
+    ObjectFile_close(object_file);
+    
+    // Clean up
+    Database_destroy(database);
+    ObjectFile_destroy(object_file);
+    Event_destroy(event);
+    
+    return;
     
 error:
     bdestroy(path);
     bdestroy(timestamp);
+    ObjectFile_close(object_file);
+
+    Database_destroy(database);
+    ObjectFile_destroy(object_file);
+    Event_destroy(event);
 }
 
 //==============================================================================

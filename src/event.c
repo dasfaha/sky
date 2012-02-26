@@ -21,65 +21,49 @@
  */
 
 #include <stdlib.h>
-#include <sys/time.h>
 
 #include "dbg.h"
 #include "bstring.h"
 
+
 //==============================================================================
 //
-// Timestamp Parsing
+// Event Management
 //
 //==============================================================================
 
 /*
- * Parses a timestamp from a C string. The return value is the number of
- * milliseconds before or after the epoch (Jan 1, 1970).
+ * Creates a reference to an event.
  *
- * NOTE: Parsing seems to only work back to around the first decade of the
- *       1900's. Need to investigate further why this is.
- *
- * str - The string containing an ISO 8601 formatted date.
+ * timestamp - When the event occurred (in milliseconds since midnight Jan 1,
+ *             1970 UTC).
+ * object_id - The identifier for the object that the event is related to.
+ * action    - The name of the action that was performed.
  */
-int Timestamp_parse(bstring str, long long *ret)
+Event *Event_create(long long timestamp, long long object_id, bstring action)
 {
-    // Validate string.
-    if(str == NULL) {
-        return -1;
-    }
+    Event *event;
     
-    // Parse date.
-    struct tm tp;
-    if(strptime(bdata(str), "%Y-%m-%dT%H:%M:%SZ", &tp) == NULL) {
-        return -1;
-    }
-    
-    // Set timezone information.
-    tzset();
+    event = malloc(sizeof(Event));
+    event->timestamp = timestamp;
+    event->object_id = object_id;
+    event->action    = bstrcpy(action); check_mem(event->action);
+    event->data = NULL;
 
-    // Convert to milliseconds since epoch in UTC.
-    char buffer[100];
-    strftime(buffer, 100, "%s", &tp);
-    long long value = atoll(buffer);
-    value -= timezone;
-    value += (daylight ? 3600 : 0);
-    *ret = value * 1000;
+    return event;
     
-    return 0;
+error:
+    Event_destroy(event);
+    return NULL;
 }
 
 /*
- * Returns the number of milliseconds since the epoch.
- *
- * ret - The reference to the variable that will be assigned the timestamp.
+ * Removes an event reference from memory.
  */
-int Timestamp_now(long long *ret)
+void Event_destroy(Event *event)
 {
-    struct timeval tv;
-    check(gettimeofday(&tv, NULL) == 0, "Cannot obtain current time");
-    *ret = (tv.tv_sec*1000) + (tv.tv_usec/1000);
-    return 0;
-
-error:
-    return -1;
+    if(event) {
+        bdestroy(event->action);
+        free(event);
+    }
 }
