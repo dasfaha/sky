@@ -23,8 +23,12 @@
 #ifndef _object_file_h
 #define _object_file_h
 
+#include <inttypes.h>
+#include <sys/stat.h>
+
 #include "bstring.h"
 #include "database.h"
+#include "event.h"
 
 //==============================================================================
 //
@@ -60,9 +64,56 @@
 //
 //==============================================================================
 
+/**
+ * The block info stores the sequential block identifier as well as the object
+ * identifier range that is stored in that block. The block info is used in the
+ * header file as an index when looking up block data.
+ */
+typedef struct BlockInfo {
+    uint32_t id;
+    uint64_t min_object_id;
+    uint64_t max_object_id;
+} BlockInfo;
+
+/**
+ * An action defines a verb that is performed in an event. 4 billion (2^32)
+ * unique types of actions can be defined within an object file. The name of the
+ * action is stored in the 'actions' file and the action identifier is used when
+ * storing event data in a block.
+ */
+typedef struct Action {
+    int32_t id;
+    bstring name;
+} Action;
+
+/**
+ * A property is a key used on data in an event. The property identifier's range
+ * is split up: positive ids are used for data attached to an object, negative
+ * ids are used for data attached to an action and id 0 is reserved.
+ *
+ * Property identifiers are used when storing events in blocks because of their
+ * redundancy. Property definitions are stored in the 'properties' file.
+ */
+typedef struct Property {
+    int16_t id;
+    bstring name;
+} Property;
+
+/**
+ * The object file is a reference to the disk location where data is stored. The
+ * object file also maintains a cache of block info and predefined actions and
+ * properties.
+ */
 typedef struct ObjectFile {
     Database *database;
     bstring name;
+    bstring path;
+    uint32_t block_count;
+    BlockInfo *infos;
+    Action *actions;
+    uint32_t action_count;
+    Property *properties;
+    uint16_t property_count;
 } ObjectFile;
 
 
@@ -85,15 +136,15 @@ void ObjectFile_destroy(ObjectFile *object_file);
 // State
 //======================================
 
-int *ObjectFile_open();
+int ObjectFile_open(ObjectFile *object_file);
 
-void *ObjectFile_close();
+int ObjectFile_close(ObjectFile *object_file);
 
 
 //======================================
 // Event Management
 //======================================
 
-int *ObjectFile_add_event(Event *event);
+int ObjectFile_add_event(ObjectFile *object_file, Event *event);
 
 #endif

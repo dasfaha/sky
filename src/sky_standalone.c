@@ -60,7 +60,7 @@ typedef struct Options {
     enum e_command command;
     bstring database;
     bstring object_type;
-    bstring object_id;
+    long long object_id;
     bstring timestamp;
     bstring action;
     bstring *data;
@@ -115,7 +115,7 @@ Options *parseopts(int argc, char **argv)
             break;
             
         case 'i':
-            options->object_id = bfromcstr(optarg); check_mem(options->object_id);
+            options->object_id = atoll(optarg);
             break;
 
         case 'T':
@@ -161,9 +161,10 @@ void Options_destroy(Options *options)
     if(options) {
         bdestroy(options->database); options->database = NULL;
         bdestroy(options->object_type); options->object_type = NULL;
-        bdestroy(options->object_id); options->object_id = NULL;
         bdestroy(options->timestamp); options->timestamp = NULL;
         bdestroy(options->action); options->action = NULL;
+
+        options->object_id = 0;
 
         // Clean up data elements.
         for(i=0; i<options->data_count; i++) {

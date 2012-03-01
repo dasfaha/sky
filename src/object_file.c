@@ -21,6 +21,7 @@
  */
 
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "dbg.h"
 #include "bstring.h"
@@ -32,6 +33,21 @@
 // Functions
 //
 //==============================================================================
+
+//======================================
+// File Management
+//======================================
+
+/**
+ * Checks if a file exists.
+ */
+int file_exists(bstring path)
+{
+    struct stat buffer;
+    int rc = stat(bdata(path), &buffer);
+    return rc;
+}
+
 
 //======================================
 // Header Management
@@ -53,6 +69,80 @@ int load_header(ObjectFile *object_file)
 
 
 //======================================
+// Action Management
+//======================================
+
+/**
+ * Loads action information from file.
+ */
+int load_actions(ObjectFile *object_file)
+{
+    int rc;
+    FILE *file;
+    Action *actions;
+    char *buffer;
+    uint32_t count = 0;
+    
+    // Retrieve file stats on actions file
+    bstring path = bformat("%s/actions", bdata(object_file->path)); check_mem(path);
+    
+    // Read in actions file if it exists.
+    if(file_exists(path)) {
+        file = fopen(bdata(path), "r");
+        check(file, "Failed to open action file: %s",  bdata(path));
+        
+        // Read action count.
+        fread(&count, sizeof(count), 1, file);
+        actions = malloc(sizeof(Action) * count);
+        
+        // Read actions until end of file.
+        uint32_t i;
+        uint16_t length;
+        for(i=0; i<count && !feof(file); i++) {
+            // Read action id and name length.
+            fread(&actions[i].id, sizeof(actions[i].id), 1, file);
+            fread(&length, sizeof(length), 1, file);
+
+            // Read action name.
+            buffer = calloc(1, length+1); check_mem(buffer);
+            check(fread(&buffer, sizeof(length), 1, file) == length, "Corrupt actions file");
+            actions[i].name = bfromcstr(buffer); check_mem(actions[i].name);
+        }
+        
+        // Close the file.
+        fclose(file);
+    }
+
+    // Store action list on object file.
+    object_file->actions = actions;
+    object_file->action_count = count;
+    
+    // Clean up.
+    bdestroy(path);
+    
+    return 0;
+
+error:
+    if(file) fclose(file);
+    if(buffer) free(buffer);
+    bdestroy(path);
+    return -1;
+}
+
+//======================================
+// Property Management
+//======================================
+
+/**
+ * Loads property information from file.
+ */
+int load_properties(ObjectFile *object_file)
+{
+    return 0;
+}
+
+
+//======================================
 // Locking
 //======================================
 
@@ -66,6 +156,8 @@ int lock(ObjectFile *object_file)
     // TODO: If owner is gone then remove lock.
     
     // TODO: Write PID to lock file in object file directory.
+    
+    return 0;
 }
 
 /**
@@ -75,6 +167,8 @@ int unlock(ObjectFile *object_file)
 {
     // TODO: Check for lock file in object file directory.
     // TODO: If contents of lock file are this file's PID then remove lock file.
+
+    return 0;
 }
 
 
@@ -97,6 +191,17 @@ ObjectFile *ObjectFile_create(Database *database, bstring name)
     
     object_file = malloc(sizeof(ObjectFile));
     object_file->name = bstrcpy(name); check_mem(object_file->name);
+    object_file->path = bformat("%s/%s", bdata(database->path), bdata(object_file->name));
+    check_mem(object_file->path);
+
+    object_file->infos = NULL;
+    object_file->block_count = 0;
+
+    object_file->actions = NULL;
+    object_file->action_count = 0;
+
+    object_file->properties = NULL;
+    object_file->property_count = 0;
 
     return object_file;
     
@@ -112,6 +217,7 @@ void ObjectFile_destroy(ObjectFile *object_file)
 {
     if(object_file) {
         bdestroy(object_file->name);
+        bdestroy(object_file->path);
         free(object_file);
     }
 }
@@ -124,13 +230,15 @@ void ObjectFile_destroy(ObjectFile *object_file)
 /**
  * Opens the object file for reading and writing events.
  */
-int *ObjectFile_open(ObjectFile *object_file)
+int ObjectFile_open(ObjectFile *object_file)
 {
     // Obtain lock.
     check(lock(object_file) == 0, "Unable to obtain lock");
     
-    // Load header data.
-    check(load_header() == 0, "Unable to load header data");
+    // Load header, action and properties data.
+    check(load_header(object_file) == 0, "Unable to load header data");
+    check(load_actions(object_file) == 0, "Unable to load action data");
+    check(load_properties(object_file) == 0, "Unable to load property data");
     
     return 0;
 
@@ -141,7 +249,7 @@ error:
 /**
  * Closes the object file.
  */
-int *ObjectFile_close(ObjectFile *object_file)
+int ObjectFile_close(ObjectFile *object_file)
 {
     check(unlock(object_file) == 0, "Unable to remove lock");
     return 0;
@@ -155,7 +263,7 @@ error:
 // Event Management
 //======================================
 
-int *ObjectFile_add_event(Event *event)
+int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 {
     // TODO: If there are no blocks then create a block.
     // TODO: Otherwise find block that contains existing event.
