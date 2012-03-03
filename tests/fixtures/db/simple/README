@@ -1,0 +1,3 @@
+The 'simple' database is composed of a single object file ('users') that has
+only a couple actions, properties and blocks. The purpose of the simple database
+is to verify that the basic open/close functions of the object file are working.

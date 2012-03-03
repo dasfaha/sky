@@ -58,11 +58,76 @@ int file_exists(bstring path)
  */
 int load_header(ObjectFile *object_file)
 {
-    // TODO: If header file does not exist, set empty header data.
-    // TODO: Otherwise open header file.
-    // TODO: Read object id ranges into structs.
-    // TODO: Close header file.
+    FILE *file;
+    BlockInfo *infos = NULL;
+    uint32_t version = 1;
+    uint32_t block_size = 2 ^ 16;
+    uint64_t block_count = 0;
+
+    // Retrieve file stats on header file
+    bstring path = bformat("%s/header", bdata(object_file->path)); check_mem(path);
+
+    // Read in header file if it exists.
+    if(file_exists(path)) {
+        file = fopen(bdata(path), "r");
+        check(file, "Failed to open header file: %s",  bdata(path));
+
+        // Read database format version & block size.
+        check(fread(&version, sizeof(version), 1, file) == 1, "Corrupt header file");
+        check(fread(&block_size, sizeof(block_size), 1, file) == 1, "Corrupt header file");
+
+        // Read block count.
+        check(fread(&block_count, sizeof(block_count), 1, file) == 1, "Corrupt header file");
+        infos = malloc(sizeof(BlockInfo) * block_count); check_mem(infos);
+
+        // Read block info items until end of file.
+        uint32_t i;
+        uint16_t length;
+        for(i=0; i<block_count && !feof(file); i++) {
+            // Set index.
+            infos[i].id = i;
+            
+            // Read object id range.
+            check(fread(&infos[i].min_object_id, sizeof(infos[i].min_object_id), 1, file) == 1, "Corrupt header file");
+            check(fread(&infos[i].max_object_id, sizeof(infos[i].max_object_id), 1, file) == 1, "Corrupt header file");
+        }
+
+        // Close the file.
+        fclose(file);
+    }
+
     // TODO: Sort ranges by starting object id.
+
+    // Store version and block information on object file.
+    object_file->version = version;
+    object_file->block_count = block_count;
+    object_file->block_size = block_size;
+    object_file->infos = infos;
+
+    // Clean up.
+    bdestroy(path);
+
+    return 0;
+
+error:
+    if(file) fclose(file);
+    bdestroy(path);
+    return -1;
+}
+
+/**
+ * Unloads the header data.
+ */
+int unload_header(ObjectFile *object_file)
+{
+    if(object_file) {
+        if(object_file->infos) free(object_file->infos);
+        object_file->infos = NULL;
+
+        object_file->version = 0;
+        object_file->block_size = 0;
+        object_file->block_count = 0;
+    }
     
     return 0;
 }
@@ -77,7 +142,6 @@ int load_header(ObjectFile *object_file)
  */
 int load_actions(ObjectFile *object_file)
 {
-    int rc;
     FILE *file;
     Action *actions = NULL;
     char *buffer;
@@ -107,6 +171,7 @@ int load_actions(ObjectFile *object_file)
             buffer = calloc(1, length+1); check_mem(buffer);
             check(fread(buffer, length, 1, file) == 1, "Corrupt actions file");
             actions[i].name = bfromcstr(buffer); check_mem(actions[i].name);
+            free(buffer);
         }
         
         // Close the file.
@@ -129,6 +194,27 @@ error:
     return -1;
 }
 
+/**
+ * Unloads the action data.
+ */
+int unload_actions(ObjectFile *object_file)
+{
+    if(object_file) {
+        if(object_file->action_count > 0) {
+            int i=0;
+            for(i=0; i<object_file->action_count; i++) {
+                bdestroy(object_file->actions[i].name);
+            }
+        }
+        
+        if(object_file->actions) free(object_file->actions);
+        object_file->actions = NULL;
+        object_file->action_count = 0;
+    }
+    
+    return 0;
+}
+
 
 //======================================
 // Property Management
@@ -139,7 +225,6 @@ error:
  */
 int load_properties(ObjectFile *object_file)
 {
-    int rc;
     FILE *file;
     Property *properties = NULL;
     char *buffer;
@@ -169,6 +254,7 @@ int load_properties(ObjectFile *object_file)
             buffer = calloc(1, length+1); check_mem(buffer);
             check(fread(buffer, length, 1, file) == 1, "Corrupt properties file");
             properties[i].name = bfromcstr(buffer); check_mem(properties[i].name);
+            free(buffer);
         }
         
         // Close the file.
@@ -189,6 +275,27 @@ error:
     if(buffer) free(buffer);
     bdestroy(path);
     return -1;
+}
+
+/**
+ * Unloads the property data.
+ */
+int unload_properties(ObjectFile *object_file)
+{
+    if(object_file) {
+        if(object_file->property_count > 0) {
+            int i=0;
+            for(i=0; i<object_file->property_count; i++) {
+                bdestroy(object_file->properties[i].name);
+            }
+        }
+        
+        if(object_file->properties) free(object_file->properties);
+        object_file->properties = NULL;
+        object_file->property_count = 0;
+    }
+    
+    return 0;
 }
 
 
@@ -301,7 +408,14 @@ error:
  */
 int ObjectFile_close(ObjectFile *object_file)
 {
+    // Release lock.
     check(unlock(object_file) == 0, "Unable to remove lock");
+
+    // Unload header, action and properties data.
+    check(unload_header(object_file) == 0, "Unable to unload header data");
+    check(unload_actions(object_file) == 0, "Unable to unload action data");
+    check(unload_properties(object_file) == 0, "Unable to unload property data");
+
     return 0;
     
 error:

@@ -11,9 +11,8 @@
 //==============================================================================
 
 char *test_Database_create_destroy() {
-    Database *database = Database_create(
-        bfromcstr("/etc/sky/data")
-    );
+    struct tagbstring root = bsStatic("/etc/sky/data");
+    Database *database = Database_create(&root);
     mu_assert(database != NULL, "Could not create database");
     mu_assert(biseqcstr(database->path, "/etc/sky/data"), "Invalid path");
 

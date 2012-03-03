@@ -108,6 +108,8 @@ typedef struct ObjectFile {
     Database *database;
     bstring name;
     bstring path;
+    uint32_t version;
+    uint32_t block_size;
     uint32_t block_count;
     BlockInfo *infos;
     Action *actions;
