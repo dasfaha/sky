@@ -30,7 +30,7 @@ char *test_ObjectFile_create_destroy() {
     return NULL;
 }
 
-char *test_ObjectFile_open() {
+char *test_ObjectFile_open_actions() {
     int rc = 0;
     
     char *cwd = getcwd(NULL, 0);
@@ -45,13 +45,15 @@ char *test_ObjectFile_open() {
     mu_assert(object_file->action_count == 3, "Expected 3 actions");
 
     mu_assert(object_file->actions[0].id == 1, "Expected action[0].id == 1");
-    mu_assert(biseqcstr(object_file->actions[0].name, "home_page"), "Expected action[0].name == 'home_page'");
+    mu_assert(biseqcstr(object_file->actions[0].name, "home_page") == 1, "Expected action[0].name == 'home_page'");
 
     mu_assert(object_file->actions[1].id == 2, "Expected action[1].id == 2");
-    mu_assert(biseqcstr(object_file->actions[0].name, "sign_up"), "Expected action[0].name == 'home_page'");
+    mu_assert(biseqcstr(object_file->actions[1].name, "sign_up") == 1, "Expected action[0].name == 'sign_up'");
 
     mu_assert(object_file->actions[2].id == 3, "Expected action[2].id == 3");
-    mu_assert(biseqcstr(object_file->actions[0].name, "sign_in"), "Expected action[0].name == 'home_page'");
+    mu_assert(biseqcstr(object_file->actions[2].name, "sign_in") == 1, "Expected action[0].name == 'sign_in'");
+
+    ObjectFile_close(object_file);
 
     ObjectFile_destroy(object_file);
     Database_destroy(database);
@@ -71,7 +73,7 @@ char *test_ObjectFile_open() {
 
 char *all_tests() {
     mu_run_test(test_ObjectFile_create_destroy);
-    mu_run_test(test_ObjectFile_open);
+    mu_run_test(test_ObjectFile_open_actions);
     return NULL;
 }
 

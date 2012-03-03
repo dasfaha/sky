@@ -45,7 +45,7 @@ int file_exists(bstring path)
 {
     struct stat buffer;
     int rc = stat(bdata(path), &buffer);
-    return rc;
+    return (rc == 0);
 }
 
 
@@ -79,7 +79,7 @@ int load_actions(ObjectFile *object_file)
 {
     int rc;
     FILE *file;
-    Action *actions;
+    Action *actions = NULL;
     char *buffer;
     uint32_t count = 0;
     
@@ -100,12 +100,12 @@ int load_actions(ObjectFile *object_file)
         uint16_t length;
         for(i=0; i<count && !feof(file); i++) {
             // Read action id and name length.
-            fread(&actions[i].id, sizeof(actions[i].id), 1, file);
-            fread(&length, sizeof(length), 1, file);
+            check(fread(&actions[i].id, sizeof(int32_t), 1, file) == 1, "Corrupt actions file");
+            check(fread(&length, sizeof(length), 1, file) == 1, "Corrupt actions file");
 
             // Read action name.
             buffer = calloc(1, length+1); check_mem(buffer);
-            check(fread(&buffer, sizeof(length), 1, file) == length, "Corrupt actions file");
+            check(fread(buffer, length, 1, file) == 1, "Corrupt actions file");
             actions[i].name = bfromcstr(buffer); check_mem(actions[i].name);
         }
         
