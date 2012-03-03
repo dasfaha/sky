@@ -129,6 +129,7 @@ error:
     return -1;
 }
 
+
 //======================================
 // Property Management
 //======================================
@@ -138,7 +139,56 @@ error:
  */
 int load_properties(ObjectFile *object_file)
 {
+    int rc;
+    FILE *file;
+    Property *properties = NULL;
+    char *buffer;
+    int16_t count = 0;
+    
+    // Retrieve file stats on properties file
+    bstring path = bformat("%s/properties", bdata(object_file->path)); check_mem(path);
+    
+    // Read in properties file if it exists.
+    if(file_exists(path)) {
+        file = fopen(bdata(path), "r");
+        check(file, "Failed to open properties file: %s",  bdata(path));
+        
+        // Read properties count.
+        fread(&count, sizeof(count), 1, file);
+        properties = malloc(sizeof(Property) * count);
+        
+        // Read properties until end of file.
+        uint32_t i;
+        uint16_t length;
+        for(i=0; i<count && !feof(file); i++) {
+            // Read property id and name length.
+            check(fread(&properties[i].id, sizeof(int16_t), 1, file) == 1, "Corrupt properties file");
+            check(fread(&length, sizeof(length), 1, file) == 1, "Corrupt properties file");
+
+            // Read property name.
+            buffer = calloc(1, length+1); check_mem(buffer);
+            check(fread(buffer, length, 1, file) == 1, "Corrupt properties file");
+            properties[i].name = bfromcstr(buffer); check_mem(properties[i].name);
+        }
+        
+        // Close the file.
+        fclose(file);
+    }
+
+    // Store property list on object file.
+    object_file->properties = properties;
+    object_file->property_count = count;
+    
+    // Clean up.
+    bdestroy(path);
+    
     return 0;
+
+error:
+    if(file) fclose(file);
+    if(buffer) free(buffer);
+    bdestroy(path);
+    return -1;
 }
 
 
