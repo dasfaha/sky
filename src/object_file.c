@@ -50,6 +50,38 @@ int file_exists(bstring path)
 
 
 //======================================
+// Block Sorting
+//======================================
+
+/**
+ * Compares two blocks and sorts them based on starting min object identifier
+ * and then by id.
+ */
+int compare_block_info(const BlockInfo *a, const BlockInfo *b)
+{
+    // Sort by min object id first.
+    if(a->min_object_id > b->min_object_id) {
+        return 1;
+    }
+    else if(a->min_object_id < b->min_object_id) {
+        return -1;
+    }
+    else {
+        // If min object ids are the same then sort by block id.
+        if(a->id > b->id) {
+            return 1;
+        }
+        else if(a->id < b->id) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
+    }
+}
+
+
+//======================================
 // Header Management
 //======================================
 
@@ -96,7 +128,8 @@ int load_header(ObjectFile *object_file)
         fclose(file);
     }
 
-    // TODO: Sort ranges by starting object id.
+    // Sort ranges by starting object id.
+    qsort(infos, block_count, sizeof(BlockInfo), compare_block_info);
 
     // Store version and block information on object file.
     object_file->version = version;

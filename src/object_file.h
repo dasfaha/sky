@@ -55,6 +55,11 @@
  * Because of the redundancy of action names and data keys, those strings are
  * cached and converted into integer identifiers. The action cache is located
  * in the 'actions' file and the data keys cache is located in the 'keys' file.
+ *
+ *
+ * TODOS
+ * - Change qsorted block infos to a red-black tree for better block insertion
+ *   performance.
  */
 
 

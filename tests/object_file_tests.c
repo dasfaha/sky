@@ -54,12 +54,17 @@ char *test_ObjectFile_open_header() {
     rc = ObjectFile_open(object_file);
 
     mu_assert(rc == 0, "Object file could not be opened");
-    mu_assert(object_file->block_count == 4, "Expected 4 blocks");
+    mu_assert(object_file->block_count == 9, "Expected 9 blocks");
 
-    mu_block_info_assert(0, 0, 1, 3);
-    mu_block_info_assert(1, 1, 4, 5);
-    mu_block_info_assert(2, 2, 7, 10);
-    mu_block_info_assert(3, 3, 11, 15);
+    mu_block_info_assert(0, 1, 1, 3);
+    mu_block_info_assert(1, 8, 4, 5);
+    mu_block_info_assert(2, 0, 6, 6);
+    mu_block_info_assert(3, 3, 6, 6);
+    mu_block_info_assert(4, 5, 6, 6);
+    mu_block_info_assert(5, 2, 7, 9);
+    mu_block_info_assert(6, 4, 10, 10);
+    mu_block_info_assert(7, 6, 10, 10);
+    mu_block_info_assert(8, 7, 10, 10);
 
     ObjectFile_close(object_file);
 
