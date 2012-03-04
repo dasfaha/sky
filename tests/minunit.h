@@ -1,3 +1,9 @@
+//==============================================================================
+//
+// Minunit
+//
+//==============================================================================
+
 /* file: minunit.h */
 #define mu_assert(test, message) do {\
 if (!(test)) \
@@ -20,3 +26,34 @@ if (!(test)) \
 }
 
 int tests_run;
+
+
+
+
+//==============================================================================
+//
+// Helpers
+//
+//==============================================================================
+
+// Copy a database from the fixtures directory into the tmp/db directory.
+#define copydb(DB) \
+    char _copydb_cmd[1024]; \
+    snprintf(_copydb_cmd, 1024, "tests/copydb.sh %s", DB); \
+    system(_copydb_cmd)
+    
+// Asserts that a block has a specific block id and object id range.
+#define mu_assert_block_info(INDEX, ID, MIN_OBJECT_ID, MAX_OBJECT_ID) \
+    mu_assert(object_file->infos[INDEX].id == ID, "Block " #INDEX " id expected to be " #ID); \
+    mu_assert(object_file->infos[INDEX].min_object_id == MIN_OBJECT_ID, "Block " #INDEX " min object id expected to be " #MIN_OBJECT_ID); \
+    mu_assert(object_file->infos[INDEX].max_object_id == MAX_OBJECT_ID, "Block " #INDEX " max object id expected to be " #MAX_OBJECT_ID);
+
+// Asserts action data.
+#define mu_assert_action(INDEX, ID, NAME) \
+    mu_assert(object_file->actions[INDEX].id == ID, "Expected action #" #INDEX " id to be: " #ID); \
+    mu_assert(biseqcstr(object_file->actions[INDEX].name, NAME) == 1, "Expected action #" #INDEX " name to be: " #NAME);
+
+// Asserts property data.
+#define mu_assert_property(INDEX, ID, NAME) \
+    mu_assert(object_file->properties[INDEX].id == ID, "Expected property #" #INDEX " id to be: " #ID); \
+    mu_assert(biseqcstr(object_file->properties[INDEX].name, NAME) == 1, "Expected property #" #INDEX " name to be: " #NAME);
