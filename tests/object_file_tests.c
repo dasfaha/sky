@@ -14,11 +14,27 @@
 //
 //==============================================================================
 
+// Copy a database from the fixtures directory into the tmp/db directory.
+#define copydb(DB) \
+    char _copydb_cmd[1024]; \
+    snprintf(_copydb_cmd, 1024, "tests/copydb.sh %s", DB); \
+    system(_copydb_cmd)
+    
+// Asserts that a block has a specific block id and object id range.
 #define mu_block_info_assert(INDEX, ID, MIN_OBJECT_ID, MAX_OBJECT_ID) \
-mu_assert(object_file->infos[INDEX].id == ID, "Block " #INDEX " id expected to be " #ID); \
-mu_assert(object_file->infos[INDEX].min_object_id == MIN_OBJECT_ID, "Block " #INDEX " min object id expected to be " #MIN_OBJECT_ID); \
-mu_assert(object_file->infos[INDEX].max_object_id == MAX_OBJECT_ID, "Block " #INDEX " max object id expected to be " #MAX_OBJECT_ID);
+    mu_assert(object_file->infos[INDEX].id == ID, "Block " #INDEX " id expected to be " #ID); \
+    mu_assert(object_file->infos[INDEX].min_object_id == MIN_OBJECT_ID, "Block " #INDEX " min object id expected to be " #MIN_OBJECT_ID); \
+    mu_assert(object_file->infos[INDEX].max_object_id == MAX_OBJECT_ID, "Block " #INDEX " max object id expected to be " #MAX_OBJECT_ID);
 
+
+//==============================================================================
+//
+// Constants
+//
+//==============================================================================
+
+struct tagbstring ROOT = bsStatic("tmp/db");
+struct tagbstring OBJECT_TYPE = bsStatic("users");
 
 
 //==============================================================================
@@ -28,10 +44,10 @@ mu_assert(object_file->infos[INDEX].max_object_id == MAX_OBJECT_ID, "Block " #IN
 //==============================================================================
 
 char *test_ObjectFile_create_destroy() {
-    struct tagbstring root = bsStatic("/etc/sky/data");
-    struct tagbstring object_type = bsStatic("users");
-    Database *database = Database_create(&root);
-    ObjectFile *object_file = ObjectFile_create(database, &object_type);
+    copydb("simple");
+
+    Database *database = Database_create(&ROOT);
+    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
 
     mu_assert(object_file != NULL, "Could not create object file");
     mu_assert(biseqcstr(object_file->name, "users") == 1, "Invalid name");
@@ -43,15 +59,11 @@ char *test_ObjectFile_create_destroy() {
 }
 
 char *test_ObjectFile_open_header() {
-    int rc = 0;
+    copydb("simple");
     
-    char *cwd = getcwd(NULL, 0);
-    bstring path = bformat("%s/tests/fixtures/db/simple", cwd);
-    struct tagbstring object_type = bsStatic("users");
-
-    Database *database = Database_create(path);
-    ObjectFile *object_file = ObjectFile_create(database, &object_type);
-    rc = ObjectFile_open(object_file);
+    Database *database = Database_create(&ROOT);
+    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
+    int rc = ObjectFile_open(object_file);
 
     mu_assert(rc == 0, "Object file could not be opened");
     mu_assert(object_file->block_count == 9, "Expected 9 blocks");
@@ -71,22 +83,15 @@ char *test_ObjectFile_open_header() {
     ObjectFile_destroy(object_file);
     Database_destroy(database);
 
-    bdestroy(path);
-    free(cwd);
-
     return NULL;
 }
 
 char *test_ObjectFile_open_actions() {
-    int rc = 0;
+    copydb("simple");
     
-    char *cwd = getcwd(NULL, 0);
-    bstring path = bformat("%s/tests/fixtures/db/simple", cwd);
-    struct tagbstring object_type = bsStatic("users");
-
-    Database *database = Database_create(path);
-    ObjectFile *object_file = ObjectFile_create(database, &object_type);
-    rc = ObjectFile_open(object_file);
+    Database *database = Database_create(&ROOT);
+    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
+    int rc = ObjectFile_open(object_file);
 
     mu_assert(rc == 0, "Object file could not be opened");
     mu_assert(object_file->action_count == 3, "Expected 3 actions");
@@ -105,22 +110,15 @@ char *test_ObjectFile_open_actions() {
     ObjectFile_destroy(object_file);
     Database_destroy(database);
 
-    bdestroy(path);
-    free(cwd);
-
     return NULL;
 }
 
 char *test_ObjectFile_open_properties() {
-    int rc = 0;
+    copydb("simple");
     
-    char *cwd = getcwd(NULL, 0);
-    bstring path = bformat("%s/tests/fixtures/db/simple", cwd);
-    struct tagbstring object_type = bsStatic("users");
-
-    Database *database = Database_create(path);
-    ObjectFile *object_file = ObjectFile_create(database, &object_type);
-    rc = ObjectFile_open(object_file);
+    Database *database = Database_create(&ROOT);
+    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
+    int rc = ObjectFile_open(object_file);
 
     mu_assert(rc == 0, "Object file could not be opened");
     mu_assert(object_file->action_count == 3, "Expected 3 properties");
@@ -138,9 +136,6 @@ char *test_ObjectFile_open_properties() {
 
     ObjectFile_destroy(object_file);
     Database_destroy(database);
-
-    bdestroy(path);
-    free(cwd);
 
     return NULL;
 }

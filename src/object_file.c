@@ -21,6 +21,7 @@
  */
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <inttypes.h>
 
 #include "dbg.h"
@@ -35,7 +36,7 @@
 //==============================================================================
 
 //======================================
-// File Management
+// Utility
 //======================================
 
 /**
@@ -57,8 +58,11 @@ int file_exists(bstring path)
  * Compares two blocks and sorts them based on starting min object identifier
  * and then by id.
  */
-int compare_block_info(const BlockInfo *a, const BlockInfo *b)
+int compare_block_info(const void *_a, const void *_b)
 {
+    const BlockInfo *a = (BlockInfo *)_a;
+    const BlockInfo *b = (BlockInfo *)_b;
+
     // Sort by min object id first.
     if(a->min_object_id > b->min_object_id) {
         return 1;
@@ -114,7 +118,6 @@ int load_header(ObjectFile *object_file)
 
         // Read block info items until end of file.
         uint32_t i;
-        uint16_t length;
         for(i=0; i<block_count && !feof(file); i++) {
             // Set index.
             infos[i].id = i;
@@ -234,7 +237,7 @@ int unload_actions(ObjectFile *object_file)
 {
     if(object_file) {
         if(object_file->action_count > 0) {
-            int i=0;
+            uint32_t i=0;
             for(i=0; i<object_file->action_count; i++) {
                 bdestroy(object_file->actions[i].name);
             }
@@ -261,7 +264,7 @@ int load_properties(ObjectFile *object_file)
     FILE *file;
     Property *properties = NULL;
     char *buffer;
-    int16_t count = 0;
+    uint16_t count = 0;
     
     // Retrieve file stats on properties file
     bstring path = bformat("%s/properties", bdata(object_file->path)); check_mem(path);
@@ -341,13 +344,29 @@ int unload_properties(ObjectFile *object_file)
  */
 int lock(ObjectFile *object_file)
 {
-    // TODO: Check for lock file in object file directory.
-    // TODO: If lock exists, check if owner process still exists.
-    // TODO: If owner is gone then remove lock.
+    FILE *file;
     
-    // TODO: Write PID to lock file in object file directory.
+    // Construct path to lock.
+    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
     
+    // Raise error if object file is already locked.
+    check(!file_exists(path), "Cannot obtain lock: %s", bdata(path));
+
+    // Write pid to lock file.
+    file = fopen(bdata(path), "w");
+    check(file, "Failed to open lock file: %s",  bdata(path));
+    check(fprintf(file, "%d", getpid()) > 0, "Error writing lock file: %s",  bdata(path));
+    fclose(file);
+    
+    // Clean up.
+    bdestroy(path);
+
     return 0;
+
+error:
+    if(file) fclose(file);
+    bdestroy(path);
+    return -1;
 }
 
 /**
@@ -355,10 +374,36 @@ int lock(ObjectFile *object_file)
  */
 int unlock(ObjectFile *object_file)
 {
-    // TODO: Check for lock file in object file directory.
-    // TODO: If contents of lock file are this file's PID then remove lock file.
+    FILE *file;
+    pid_t pid = 0;
+    
+    // Construct path to lock.
+    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
+
+    // If file exists, check its PID and then attempt to remove it.
+    if(file_exists(path)) {
+        // Read PID from lock.
+        file = fopen(bdata(path), "r");
+        check(file, "Failed to open lock file: %s",  bdata(path));
+        check(fscanf(file, "%d", &pid) > 0, "Error reading lock file: %s", bdata(path));
+        fclose(file);
+        
+        // Make sure we are removing a lock we created.
+        check(pid == getpid(), "Cannot remove lock from another process (PID #%d): %s", pid, bdata(path));
+        
+        // Remove lock.
+        check(unlink(bdata(path)) == 0, "Unable to remove lock: %s", bdata(path));
+    }
+
+    // Clean up.
+    bdestroy(path);
 
     return 0;
+
+error:
+    if(file) fclose(file);
+    bdestroy(path);
+    return -1;
 }
 
 

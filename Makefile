@@ -63,3 +63,4 @@ $(TEST_OBJECTS): %: %.c bin/libsky.a
 clean: 
 	rm -rf bin ${OBJECTS} ${TEST_OBJECTS}
 	rm -rf tests/*.dSYM
+	rm -rf tmp/*
