@@ -6,6 +6,21 @@
 
 //==============================================================================
 //
+// Helpers
+//
+//==============================================================================
+
+#define mu_timestamp_assert(STR, VALUE) \
+timestamp = 0; \
+str = bfromcstr(STR); \
+rc = Timestamp_parse(str, &timestamp); \
+mu_assert(rc == 0, "Invalid return code for timestamp: " #STR); \
+mu_assert(timestamp == VALUE, "Expected " #STR " to convert to " #VALUE); \
+bdestroy(str);
+
+
+//==============================================================================
+//
 // Test Cases
 //
 //==============================================================================
@@ -14,34 +29,28 @@ char *test_Timestamp_parse()
 {
     long long timestamp = 0;
     int rc;
+    bstring str;
 
     // Parse ISO 8601 date.
-    rc = Timestamp_parse(bfromcstr("2010-01-02T10:30:20Z"), &timestamp);
-    mu_assert(timestamp == 1262428220000, "Invalid timestamp - 2010-01-02T10:30:20Z");
+    mu_timestamp_assert("2010-01-02T10:30:20Z", 1262428220000);
 
     // Parse ISO 8601 date past 2036.
-    rc = Timestamp_parse(bfromcstr("2080-01-01T00:00:00Z"), &timestamp);
-    mu_assert(timestamp == 3471292800000, "Invalid timestamp - 2080-01-01T00:00:00Z");
+    mu_timestamp_assert("2080-01-01T00:00:00Z", 3471292800000);
 
     // Parse ISO 8601 date on the epoch.
-    rc = Timestamp_parse(bfromcstr("1970-01-01T00:00:00Z"), &timestamp);
-    mu_assert(timestamp == 0, "Invalid timestamp - 1970-01-01T00:00:00Z");
+    mu_timestamp_assert("1970-01-01T00:00:00Z", 0);
 
     // Parse ISO 8601 date just before the epoch.
-    rc = Timestamp_parse(bfromcstr("1969-12-31T23:59:59Z"), &timestamp);
-    mu_assert(timestamp == -1000, "Invalid timestamp - 1969-12-31T23:59:59Z");
+    mu_timestamp_assert("1969-12-31T23:59:59Z", -1000);
 
     // Parse ISO 8601 date a year before the epoch.
-    rc = Timestamp_parse(bfromcstr("1969-01-01T00:00:00Z"), &timestamp);
-    mu_assert(timestamp == -31536000000, "Invalid timestamp - 1969-01-01T00:00:00Z");
+    mu_timestamp_assert("1969-01-01T00:00:00Z", -31536000000);
 
     // Parse ISO 8601 date a decade before the epoch.
-    rc = Timestamp_parse(bfromcstr("1960-01-01T00:00:00Z"), &timestamp);
-    mu_assert(timestamp == -315619200000, "Invalid timestamp - 1960-01-01T00:00:00Z");
+    mu_timestamp_assert("1960-01-01T00:00:00Z", -315619200000);
 
     // Parse ISO 8601 date a long time before the epoch.
-    rc = Timestamp_parse(bfromcstr("1910-01-01T00:00:00Z"), &timestamp);
-    mu_assert(timestamp == -1893456000000, "Invalid timestamp - 1910-01-01T00:00:00Z");
+    mu_timestamp_assert("1910-01-01T00:00:00Z", -1893456000000);
 
     return NULL;
 }
