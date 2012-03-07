@@ -336,78 +336,6 @@ int unload_properties(ObjectFile *object_file)
 
 
 //======================================
-// Locking
-//======================================
-
-/**
- * Obtains a write lock on the object file.
- */
-int lock(ObjectFile *object_file)
-{
-    FILE *file;
-    
-    // Construct path to lock.
-    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
-    
-    // Raise error if object file is already locked.
-    check(!file_exists(path), "Cannot obtain lock: %s", bdata(path));
-
-    // Write pid to lock file.
-    file = fopen(bdata(path), "w");
-    check(file, "Failed to open lock file: %s",  bdata(path));
-    check(fprintf(file, "%d", getpid()) > 0, "Error writing lock file: %s",  bdata(path));
-    fclose(file);
-    
-    // Clean up.
-    bdestroy(path);
-
-    return 0;
-
-error:
-    if(file) fclose(file);
-    bdestroy(path);
-    return -1;
-}
-
-/**
- * Removes a lock on the object file obtained by this process.
- */
-int unlock(ObjectFile *object_file)
-{
-    FILE *file;
-    pid_t pid = 0;
-    
-    // Construct path to lock.
-    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
-
-    // If file exists, check its PID and then attempt to remove it.
-    if(file_exists(path)) {
-        // Read PID from lock.
-        file = fopen(bdata(path), "r");
-        check(file, "Failed to open lock file: %s",  bdata(path));
-        check(fscanf(file, "%d", &pid) > 0, "Error reading lock file: %s", bdata(path));
-        fclose(file);
-        
-        // Make sure we are removing a lock we created.
-        check(pid == getpid(), "Cannot remove lock from another process (PID #%d): %s", pid, bdata(path));
-        
-        // Remove lock.
-        check(unlink(bdata(path)) == 0, "Unable to remove lock: %s", bdata(path));
-    }
-
-    // Clean up.
-    bdestroy(path);
-
-    return 0;
-
-error:
-    if(file) fclose(file);
-    bdestroy(path);
-    return -1;
-}
-
-
-//======================================
 // Lifecycle
 //======================================
 
@@ -425,6 +353,7 @@ ObjectFile *ObjectFile_create(Database *database, bstring name)
     check(name != NULL, "Cannot create unnamed object file");
     
     object_file = malloc(sizeof(ObjectFile));
+    object_file->state = OBJECT_FILE_STATE_CLOSED;
     object_file->name = bstrcpy(name); check_mem(object_file->name);
     object_file->path = bformat("%s/%s", bdata(database->path), bdata(object_file->name));
     check_mem(object_file->path);
@@ -464,17 +393,23 @@ void ObjectFile_destroy(ObjectFile *object_file)
 
 /**
  * Opens the object file for reading and writing events.
+ *
+ * object_file - The object file to open.
  */
 int ObjectFile_open(ObjectFile *object_file)
 {
-    // Obtain lock.
-    check(lock(object_file) == 0, "Unable to obtain lock");
-    
+    // Validate arguments.
+    check(object_file != NULL, "Object file required to open");
+    check(object_file->state == OBJECT_FILE_STATE_CLOSED, "Object file must be closed to open")
+
     // Load header, action and properties data.
     check(load_header(object_file) == 0, "Unable to load header data");
     check(load_actions(object_file) == 0, "Unable to load action data");
     check(load_properties(object_file) == 0, "Unable to load property data");
     
+    // Flag the object file as locked.
+    object_file->state = OBJECT_FILE_STATE_OPEN;
+
     return 0;
 
 error:
@@ -486,13 +421,17 @@ error:
  */
 int ObjectFile_close(ObjectFile *object_file)
 {
-    // Release lock.
-    check(unlock(object_file) == 0, "Unable to remove lock");
+    // Validate arguments.
+    check(object_file != NULL, "Object file required to close");
+    check(object_file->state == OBJECT_FILE_STATE_OPEN, "Object file must be open to close")
 
     // Unload header, action and properties data.
     check(unload_header(object_file) == 0, "Unable to unload header data");
     check(unload_actions(object_file) == 0, "Unable to unload action data");
     check(unload_properties(object_file) == 0, "Unable to unload property data");
+
+    // Update state.
+    object_file->state = OBJECT_FILE_STATE_CLOSED;
 
     return 0;
     
@@ -502,12 +441,112 @@ error:
 
 
 //======================================
+// Locking
+//======================================
+
+/**
+ * Locks an object file for writing.
+ *
+ * object_file - The object file to lock.
+ */
+int ObjectFile_lock(ObjectFile *object_file)
+{
+    FILE *file;
+
+    // Validate arguments.
+    check(object_file != NULL, "Object file required to lock");
+    check(object_file->state == OBJECT_FILE_STATE_OPEN, "Object file must be open to lock")
+
+    // Construct path to lock.
+    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
+
+    // Raise error if object file is already locked.
+    check(!file_exists(path), "Cannot obtain lock: %s", bdata(path));
+
+    // Write pid to lock file.
+    file = fopen(bdata(path), "w");
+    check(file, "Failed to open lock file: %s",  bdata(path));
+    check(fprintf(file, "%d", getpid()) > 0, "Error writing lock file: %s",  bdata(path));
+    fclose(file);
+
+    // Flag the object file as locked.
+    object_file->state = OBJECT_FILE_STATE_LOCKED;
+
+    // Clean up.
+    bdestroy(path);
+
+    return 0;
+
+error:
+    if(file) fclose(file);
+    bdestroy(path);
+    return -1;
+}
+
+/**
+ * Unlocks an object file.
+ *
+ * object_file - The object file to unlock.
+ */
+int ObjectFile_unlock(ObjectFile *object_file)
+{
+    FILE *file;
+    pid_t pid = 0;
+
+    // Validate arguments.
+    check(object_file != NULL, "Object file required to unlock");
+    check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to unlock")
+
+    // Construct path to lock.
+    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
+
+    // If file exists, check its PID and then attempt to remove it.
+    if(file_exists(path)) {
+        // Read PID from lock.
+        file = fopen(bdata(path), "r");
+        check(file, "Failed to open lock file: %s",  bdata(path));
+        check(fscanf(file, "%d", &pid) > 0, "Error reading lock file: %s", bdata(path));
+        fclose(file);
+
+        // Make sure we are removing a lock we created.
+        check(pid == getpid(), "Cannot remove lock from another process (PID #%d): %s", pid, bdata(path));
+
+        // Remove lock.
+        check(unlink(bdata(path)) == 0, "Unable to remove lock: %s", bdata(path));
+    }
+
+    // Flag the object file as open.
+    object_file->state = OBJECT_FILE_STATE_OPEN;
+
+    // Clean up.
+    bdestroy(path);
+
+    return 0;
+
+error:
+    if(file) fclose(file);
+    bdestroy(path);
+    return -1;
+}
+    
+
+//======================================
 // Event Management
 //======================================
 
 int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 {
-    // TODO: If there are no blocks then create a block.
+    // Verify arguments.
+    check(object_file != NULL, "Object file is required");
+    check(event != NULL, "Event is required");
+
+    check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
+    
+    // If there are no blocks then create a block.
+    if(object_file->block_count) {
+        
+    }
+    
     // TODO: Otherwise find block that contains existing event.
     // TODO: If no existing object found, find closest matching block.
     
@@ -519,4 +558,7 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     // TODO: Write all blocks to disk.
     
     return 0;
+
+error:
+    return -1;
 }

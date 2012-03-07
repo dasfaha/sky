@@ -33,10 +33,17 @@ char *test_ObjectFile_open() {
     
     Database *database = Database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
+    mu_assert(object_file->state == OBJECT_FILE_STATE_CLOSED, "Expected state initialize as closed");
+
     rc = ObjectFile_open(object_file);
-    
     mu_assert(rc == 0, "Object file could not be opened");
+
+    mu_assert(object_file->state == OBJECT_FILE_STATE_OPEN, "Expected state to be open");
     mu_assert(object_file->block_count == 9, "Expected 9 blocks");
+
+    rc = ObjectFile_lock(object_file);
+    mu_assert(rc == 0, "Object file could not be locked");
+    mu_assert(object_file->state == OBJECT_FILE_STATE_LOCKED, "Expected state to be locked");
 
     // Verify lock file.
     rc = stat("tmp/db/users/.lock", &buffer);
@@ -65,12 +72,18 @@ char *test_ObjectFile_open() {
     mu_assert_property(1, 2, "last_name");
     mu_assert_property(2, 3, "salary");
 
-    ObjectFile_close(object_file);
+    rc = ObjectFile_unlock(object_file);
+    mu_assert(rc == 0, "Object file could not be unlocked");
+    mu_assert(object_file->state == OBJECT_FILE_STATE_OPEN, "Expected state to be open after unlock");
 
     // Verify lock is gone.
     rc = stat("tmp/db/users/.lock", &buffer);
     mu_assert(rc == -1, "Expected lock file to not exist");
     mu_assert(errno == ENOENT, "Expected stat error on lock file to be ENOENT");
+
+    rc = ObjectFile_close(object_file);
+    mu_assert(rc == 0, "Object file could not be closed");
+    mu_assert(object_file->state == OBJECT_FILE_STATE_CLOSED, "Expected state to be closed");
 
     ObjectFile_destroy(object_file);
     Database_destroy(database);

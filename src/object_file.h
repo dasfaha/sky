@@ -114,6 +114,15 @@ typedef struct Property {
 } Property;
 
 /**
+ * The various states that an object file can be in.
+ */
+typedef enum ObjectFileState {
+    OBJECT_FILE_STATE_CLOSED,
+    OBJECT_FILE_STATE_OPEN,
+    OBJECT_FILE_STATE_LOCKED
+} ObjectFileState;
+
+/**
  * The object file is a reference to the disk location where data is stored. The
  * object file also maintains a cache of block info and predefined actions and
  * properties.
@@ -122,6 +131,7 @@ typedef struct ObjectFile {
     Database *database;
     bstring name;
     bstring path;
+    ObjectFileState state;
     uint32_t version;
     uint32_t block_size;
     uint32_t block_count;
@@ -155,6 +165,15 @@ void ObjectFile_destroy(ObjectFile *object_file);
 int ObjectFile_open(ObjectFile *object_file);
 
 int ObjectFile_close(ObjectFile *object_file);
+
+
+//======================================
+// Locking
+//======================================
+
+int ObjectFile_lock(ObjectFile *object_file);
+
+int ObjectFile_unlock(ObjectFile *object_file);
 
 
 //======================================
