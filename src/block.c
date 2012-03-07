@@ -21,65 +21,73 @@
  */
 
 #include <stdlib.h>
-#include <sys/time.h>
+#include <inttypes.h>
 
 #include "dbg.h"
-#include "bstring.h"
+#include "block.h"
 
 //==============================================================================
 //
-// Timestamp Parsing
+// Functions
 //
 //==============================================================================
+
+//======================================
+// Lifecycle
+//======================================
 
 /*
- * Parses a timestamp from a C string. The return value is the number of
- * milliseconds before or after the epoch (Jan 1, 1970).
- *
- * NOTE: Parsing seems to only work back to around the first decade of the
- *       1900's. Need to investigate further why this is.
- *
- * str - The string containing an ISO 8601 formatted date.
+ * Creates a reference to a block.
  */
-int Timestamp_parse(bstring str, int64_t *ret)
+Block *Block_create()
 {
-    // Validate string.
-    if(str == NULL) {
-        return -1;
-    }
+    Block *block;
     
-    // Parse date.
-    struct tm tp;
-    if(strptime(bdata(str), "%Y-%m-%dT%H:%M:%SZ", &tp) == NULL) {
-        return -1;
-    }
-    
-    // Set timezone information.
-    tzset();
+    block = malloc(sizeof(Block)); check_mem(block);
+    block->paths = NULL;
+    block->path_count = 0;
 
-    // Convert to milliseconds since epoch in UTC.
-    char buffer[100];
-    strftime(buffer, 100, "%s", &tp);
-    int64_t value = atoll(buffer);
-    value -= timezone;
-    value += (daylight ? 3600 : 0);
-    *ret = value * 1000;
+    return block;
     
-    return 0;
+error:
+    Block_destroy(block);
+    return NULL;
 }
 
 /*
- * Returns the number of milliseconds since the epoch.
- *
- * ret - The reference to the variable that will be assigned the timestamp.
+ * Removes a block reference from memory.
  */
-int Timestamp_now(int64_t *ret)
+void Block_destroy(Block *block)
 {
-    struct timeval tv;
-    check(gettimeofday(&tv, NULL) == 0, "Cannot obtain current time");
-    *ret = (tv.tv_sec*1000) + (tv.tv_usec/1000);
-    return 0;
+    if(block) {
+        // Destroy paths.
+        if(block->path_count > 0) {
+            uint32_t i=0;
+            for(i=0; i<block->path_count; i++) {
+                // TODO: Release path struct members. Releasing full path list at the end of this loop.
+                // Path_destroy(block->paths[i]);
+            }
+        }
+        
+        if(block->paths) free(block->paths);
+        block->paths = NULL;
+        block->path_count = 0;
 
-error:
-    return -1;
+        free(block);
+    }
+}
+
+
+//======================================
+// Event Management
+//======================================
+
+int Block_add_event(Block *block, Event *event)
+{
+    // TODO: Validate arguments.
+    // TODO: Find path in block with matching event's object id.
+    // TODO: If none found then append a new path.
+    // TODO: Add event to path.
+
+    return 0;
 }

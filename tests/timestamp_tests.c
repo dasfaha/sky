@@ -27,7 +27,7 @@ bdestroy(str);
 
 char *test_Timestamp_parse()
 {
-    long long timestamp = 0;
+    int64_t timestamp = 0;
     int rc;
     bstring str;
 
@@ -57,7 +57,7 @@ char *test_Timestamp_parse()
 
 char *test_Timestamp_parse_invalid()
 {
-    long long timestamp = 0;
+    int64_t timestamp = 0;
     int rc;
 
     // Parse invalid date.

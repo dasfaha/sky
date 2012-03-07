@@ -20,10 +20,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _event_h
-#define _event_h
+#ifndef _path_h
+#define _path_h
 
-#include "bstring.h"
+#include <inttypes.h>
+
+#include "event.h"
+
 
 //==============================================================================
 //
@@ -32,24 +35,8 @@
 //==============================================================================
 
 /**
- * The event is the basic unit of data in a behavioral database. It is composed
- * of several elements: a timestamp, an object identifier, an action and a set
- * of key/value data. The timestamp and object identifier are always required.
- * The timestamp states when the event occurred and the object identifier states
- * who (or what) the event is related to.
- *
- * The action and data are optional but at least one of them needs to be
- * present. The action represents a verb that the object has performed. This
- * could be something like a user signing up or a product being being
- * discontinued. The data represents the state of the object. These can be
- * things like the date of birth of a user or it could be the color of a car.
- *
- * Because there is a timestamp attached to every event, this data can
- * change over time without destroying data stored in the past. That also means
- * that searches across the data will take into account the state of an object
- * at a specific point in time.
+ * A path is a collection of events that is associated with an object.
  */
-
 
 //==============================================================================
 //
@@ -57,12 +44,13 @@
 //
 //==============================================================================
 
-typedef struct Event {
-    int64_t timestamp;
-    int64_t object_id;
-    bstring action;
-    bstring *data;
-} Event;
+/**
+ * The path stores an array of events.
+ */
+typedef struct Path {
+    uint32_t event_count;
+    Event *events;
+} Path;
 
 
 //==============================================================================
@@ -72,23 +60,27 @@ typedef struct Event {
 //==============================================================================
 
 //======================================
-// Create/Destroy
+// Lifecycle
 //======================================
 
-Event *Event_create(int64_t timestamp, int64_t object_id, bstring action);
+Path *Path_create();
 
-void Event_destroy(Event *event);
-
-// Event *Event_copy(Event *event);
+void Path_destroy(Path *path);
 
 
 //======================================
-// Data Management
+// Serialization
 //======================================
 
-// Event *Event_set_data(bstring key, bstring value);
+//int Path_serialize(Path *path, FILE *file);
 
-// Event *Event_unset_data(bstring key);
+//int Path_deserialize(Path *path, FILE *file);
 
+
+//======================================
+// Event Management
+//======================================
+
+int Path_add_event(Path *path, Event *event);
 
 #endif

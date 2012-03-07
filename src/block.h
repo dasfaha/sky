@@ -20,10 +20,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _event_h
-#define _event_h
+#ifndef _block_h
+#define _block_h
 
-#include "bstring.h"
+#include <inttypes.h>
+
+#include "path.h"
+#include "event.h"
+
 
 //==============================================================================
 //
@@ -32,24 +36,10 @@
 //==============================================================================
 
 /**
- * The event is the basic unit of data in a behavioral database. It is composed
- * of several elements: a timestamp, an object identifier, an action and a set
- * of key/value data. The timestamp and object identifier are always required.
- * The timestamp states when the event occurred and the object identifier states
- * who (or what) the event is related to.
- *
- * The action and data are optional but at least one of them needs to be
- * present. The action represents a verb that the object has performed. This
- * could be something like a user signing up or a product being being
- * discontinued. The data represents the state of the object. These can be
- * things like the date of birth of a user or it could be the color of a car.
- *
- * Because there is a timestamp attached to every event, this data can
- * change over time without destroying data stored in the past. That also means
- * that searches across the data will take into account the state of an object
- * at a specific point in time.
+ * A block represents a contiguous area of storage for paths. A block can store
+ * multiple paths or paths can span across multiple blocks (block spanning).
+ * The 
  */
-
 
 //==============================================================================
 //
@@ -57,12 +47,13 @@
 //
 //==============================================================================
 
-typedef struct Event {
-    int64_t timestamp;
-    int64_t object_id;
-    bstring action;
-    bstring *data;
-} Event;
+/**
+ * The block stores an array of paths.
+ */
+typedef struct Block {
+    uint32_t path_count;
+    Path *paths;
+} Block;
 
 
 //==============================================================================
@@ -72,23 +63,27 @@ typedef struct Event {
 //==============================================================================
 
 //======================================
-// Create/Destroy
+// Lifecycle
 //======================================
 
-Event *Event_create(int64_t timestamp, int64_t object_id, bstring action);
+Block *Block_create();
 
-void Event_destroy(Event *event);
-
-// Event *Event_copy(Event *event);
+void Block_destroy(Block *block);
 
 
 //======================================
-// Data Management
+// Serialization
 //======================================
 
-// Event *Event_set_data(bstring key, bstring value);
+//int Block_serialize(Block *block, FILE *file);
 
-// Event *Event_unset_data(bstring key);
+//int Block_deserialize(Block *block, FILE *file);
 
+
+//======================================
+// Event Management
+//======================================
+
+int Block_add_event(Block *block, Event *event);
 
 #endif

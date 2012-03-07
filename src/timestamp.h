@@ -23,6 +23,8 @@
 #ifndef _timestamp_h
 #define _timestamp_h
 
+#include <inttypes.h>
+
 #include "bstring.h"
 
 //==============================================================================
@@ -44,9 +46,9 @@
 //
 //==============================================================================
 
-int Timestamp_parse(bstring str, long long *ret);
+int Timestamp_parse(bstring str, int64_t *ret);
 
-int Timestamp_now(long long *ret);
+int Timestamp_now(int64_t *ret);
 
 #endif
 

@@ -336,6 +336,68 @@ int unload_properties(ObjectFile *object_file)
 
 
 //======================================
+// Block Management
+//======================================
+
+/**
+ * Creates a block in the object file and returns a reference to its info object.
+ */
+int create_block(ObjectFile *object_file, BlockInfo *info)
+{
+    // Increment block count and resize block info memory.
+    object_file->block_count++;
+    object_file->infos = realloc(object_file->infos, sizeof(BlockInfo) * object_file->block_count);
+    check_mem(object_file->infos);
+
+    // Create new block.
+    info = &object_file->infos[object_file->block_count];
+    info->id = object_file->block_count-1;
+    info->min_object_id = 0LL;
+    info->max_object_id = 0LL;
+    
+    return 0;
+    
+error:
+    return -1;
+}
+
+/**
+ * Finds the correct block to add an event to.
+ */
+int find_insertion_block(ObjectFile *object_file, BlockInfo *info)
+{
+    // TODO: Find first block where object id in range.
+    // TODO: If no exact match found then find first one before id exceeds range.
+
+    return 0;
+}
+
+/**
+ * Reads a block in from disk and deserializes it.
+ */
+int load_block(ObjectFile *object_file, BlockInfo *info, Block *block)
+{
+    // TODO: Open data file.
+    // TODO: Seek to starting position of block.
+    // TODO: Delegate deserialization to block.
+    
+    return 0;
+}
+
+/**
+ * Serializes a block and writes it to disk.
+ */
+int save_block(object_file, info, block)
+{
+    // TODO: Open data file for writing.
+    // TODO: Seek to starting position of block.
+    // TODO: Delegate serialization to block.
+    
+    return 0;
+}
+
+
+//======================================
 // Lifecycle
 //======================================
 
@@ -352,7 +414,7 @@ ObjectFile *ObjectFile_create(Database *database, bstring name)
     check(database != NULL, "Cannot create object file without a database");
     check(name != NULL, "Cannot create unnamed object file");
     
-    object_file = malloc(sizeof(ObjectFile));
+    object_file = malloc(sizeof(ObjectFile)); check_mem(object_file);
     object_file->state = OBJECT_FILE_STATE_CLOSED;
     object_file->name = bstrcpy(name); check_mem(object_file->name);
     object_file->path = bformat("%s/%s", bdata(database->path), bdata(object_file->name));
@@ -536,6 +598,10 @@ error:
 
 int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 {
+    int rc;
+    BlockInfo *info;
+    Block *block;
+    
     // Verify arguments.
     check(object_file != NULL, "Object file is required");
     check(event != NULL, "Event is required");
@@ -543,22 +609,43 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
     
     // If there are no blocks then create a block.
-    if(object_file->block_count) {
-        
+    if(object_file->block_count == 0) {
+        rc = create_block(object_file, &info);
+        check(rc == 0, "Unable to create block");
     }
+    // If there are blocks then find the correct one to insert into.
+    else {
+        // Find appropriate block to insert into.
+        rc = find_insertion_block(event, &info);
+        check(rc == 0, "Unable to find an insertion block");
+    }
+
+    // Load block from memory and deserialize.
+    rc = load_block(object_file, info, &block);
+    check(rc == 0, "Unable to load block %d", info->id);
     
-    // TODO: Otherwise find block that contains existing event.
-    // TODO: If no existing object found, find closest matching block.
+    // Add event to block.
+    rc = Block_add_event(block, event);
+    check(rc == 0, "Unable to add event to block %d", info->id);
     
-    // TODO: Find existing object path or create object path.
-    // TODO: Insert event into path.
-    // TODO: Insert path into block.
-    // TODO: If block is larger than limit then split the block into multiple blocks.
+    // Update the block info stats.
+    if(event->object_id < info->min_object_id) {
+        info->min_object_id = event->object_id;
+    }
+    if(event->object_id > info->max_object_id) {
+        info->max_object_id = event->object_id;
+    }
+
+    // Serialize the block back to disk.
+    rc = save_block(object_file, info, block);
+    check(rc == 0, "Unable to save block %d", info->id);
     
-    // TODO: Write all blocks to disk.
+    // Clean up.
+    free(block);
     
     return 0;
 
 error:
+    if(block) free(block);
     return -1;
 }

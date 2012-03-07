@@ -21,65 +21,71 @@
  */
 
 #include <stdlib.h>
-#include <sys/time.h>
+#include <inttypes.h>
 
 #include "dbg.h"
-#include "bstring.h"
+#include "path.h"
 
 //==============================================================================
 //
-// Timestamp Parsing
+// Functions
 //
 //==============================================================================
+
+//======================================
+// Lifecycle
+//======================================
 
 /*
- * Parses a timestamp from a C string. The return value is the number of
- * milliseconds before or after the epoch (Jan 1, 1970).
- *
- * NOTE: Parsing seems to only work back to around the first decade of the
- *       1900's. Need to investigate further why this is.
- *
- * str - The string containing an ISO 8601 formatted date.
+ * Creates a reference to a path.
  */
-int Timestamp_parse(bstring str, int64_t *ret)
+Path *Path_create()
 {
-    // Validate string.
-    if(str == NULL) {
-        return -1;
-    }
+    Path *path;
     
-    // Parse date.
-    struct tm tp;
-    if(strptime(bdata(str), "%Y-%m-%dT%H:%M:%SZ", &tp) == NULL) {
-        return -1;
-    }
-    
-    // Set timezone information.
-    tzset();
+    path = malloc(sizeof(Path)); check_mem(path);
+    path->events = NULL;
+    path->event_count = 0;
 
-    // Convert to milliseconds since epoch in UTC.
-    char buffer[100];
-    strftime(buffer, 100, "%s", &tp);
-    int64_t value = atoll(buffer);
-    value -= timezone;
-    value += (daylight ? 3600 : 0);
-    *ret = value * 1000;
+    return path;
     
-    return 0;
+error:
+    Path_destroy(path);
+    return NULL;
 }
 
 /*
- * Returns the number of milliseconds since the epoch.
- *
- * ret - The reference to the variable that will be assigned the timestamp.
+ * Removes a path reference from memory.
  */
-int Timestamp_now(int64_t *ret)
+void Path_destroy(Path *path)
 {
-    struct timeval tv;
-    check(gettimeofday(&tv, NULL) == 0, "Cannot obtain current time");
-    *ret = (tv.tv_sec*1000) + (tv.tv_usec/1000);
-    return 0;
+    if(path) {
+        // Destroy paths.
+        if(path->event_count > 0) {
+            uint32_t i=0;
+            for(i=0; i<path->event_count; i++) {
+                // TODO: Free event struct members only. Events will be freed at the end of loop.
+                // Event_destroy(path->events[i]);
+            }
+        }
+        
+        if(path->events) free(path->events);
+        path->events = NULL;
+        path->event_count = 0;
 
-error:
-    return -1;
+        free(path);
+    }
+}
+
+
+//======================================
+// Event Management
+//======================================
+
+int Path_add_event(Path *path, Event *event)
+{
+    // TODO: Validate arguments.
+    // TODO: Append event and resort events.
+
+    return 0;
 }

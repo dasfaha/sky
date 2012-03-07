@@ -77,7 +77,8 @@ various database files. This is roughly in Extended Backus-Naur Form EBNF.
     EVENTS_LENGTH = uint32
     PATH  = 0x02 OBJECT_ID EVENTS_LENGTH EVENT*
 
-    BLOCK = 0x03 PATH_LENGTH PATH*
+    PATHS_LENGTH = uint32
+    BLOCK = 0x03 PATHS_LENGTH PATH*
 
 The code byte is the first byte in an event, path or block. It is split in two
 halves: the first 4 bits are options and the second 4 bits represent the code.

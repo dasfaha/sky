@@ -60,7 +60,7 @@ typedef struct Options {
     enum e_command command;
     bstring database;
     bstring object_type;
-    long long object_id;
+    int64_t object_id;
     bstring timestamp;
     bstring action;
     bstring *data;
@@ -207,7 +207,7 @@ void usage()
 void add_event(Options *options)
 {
     int rc;
-    long long ts;
+    int64_t ts;
     bstring path = bstrcpy(options->database);
     bstring timestamp = bstrcpy(options->timestamp);
 

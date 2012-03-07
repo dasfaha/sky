@@ -41,7 +41,7 @@
  * object_id - The identifier for the object that the event is related to.
  * action    - The name of the action that was performed.
  */
-Event *Event_create(long long timestamp, long long object_id, bstring action)
+Event *Event_create(int64_t timestamp, int64_t object_id, bstring action)
 {
     Event *event;
     
