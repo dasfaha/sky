@@ -39,6 +39,7 @@ where it is headed. The following is what is coming up:
 1. Standalone Server - A simple server to store and retrieve events and
    paths for an object.
 1. PQL Query Engine - Parsing, lexing and execution of a PQL query.
+1. Multi-Threaded Server - Daemon server for production use.
 1. Write Ahead Log - Periodically write events to the database to improve write
    performance.
 1. Cache - Cache paths in memory for active objects.

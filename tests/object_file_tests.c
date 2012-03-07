@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <database.h>
 #include <object_file.h>
@@ -25,16 +26,21 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 //==============================================================================
 
 char *test_ObjectFile_open() {
+    struct stat buffer;
+    int rc;
+    
     copydb("simple");
     
     Database *database = Database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
-    int rc = ObjectFile_open(object_file);
-
+    rc = ObjectFile_open(object_file);
+    
     mu_assert(rc == 0, "Object file could not be opened");
     mu_assert(object_file->block_count == 9, "Expected 9 blocks");
 
-    // TODO: Verify lock.
+    // Verify lock file.
+    rc = stat("tmp/db/users/.lock", &buffer);
+    mu_assert(rc == 0, "Expected lock file to exist");
 
     // Verify block info.
     mu_assert_block_info(0, 1, 1, 3);
@@ -61,7 +67,10 @@ char *test_ObjectFile_open() {
 
     ObjectFile_close(object_file);
 
-    // TODO: Verify lock is gone.
+    // Verify lock is gone.
+    rc = stat("tmp/db/users/.lock", &buffer);
+    mu_assert(rc == -1, "Expected lock file to not exist");
+    mu_assert(errno == ENOENT, "Expected stat error on lock file to be ENOENT");
 
     ObjectFile_destroy(object_file);
     Database_destroy(database);
