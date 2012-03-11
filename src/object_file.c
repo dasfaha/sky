@@ -71,18 +71,37 @@ int compare_block_info(const void *_a, const void *_b)
         return -1;
     }
     else {
-        // If min object ids are the same then sort by block id.
-        if(a->id > b->id) {
+        // If min object ids are the same then sort by min timestamp.
+        if(a->min_timestamp > b->min_timestamp) {
             return 1;
         }
-        else if(a->id < b->id) {
+        else if(a->min_timestamp < b->min_timestamp) {
             return -1;
         }
         else {
-            return 0;
+            // If min timestamps are the same then sort by block id.
+            if(a->id > b->id) {
+                return 1;
+            }
+            else if(a->id < b->id) {
+                return -1;
+            }
+            else {
+                return 0;
+            }
         }
     }
 }
+
+// Sorts blocks by object id and block id.
+//
+// object_file - The object file whose blocks should be sorted.
+int sort_blocks(ObjectFile *object_file)
+{
+    qsort(infos, block_count, sizeof(BlockInfo), compare_block_info);
+    return 0;
+}
+
 
 
 //======================================
@@ -118,13 +137,38 @@ int load_header(ObjectFile *object_file)
 
         // Read block info items until end of file.
         uint32_t i;
+        int64_t last_object_id = -1;
         for(i=0; i<block_count && !feof(file); i++) {
             // Set index.
             infos[i].id = i;
+            infos[i].spanned = false;
             
             // Read object id range.
             check(fread(&infos[i].min_object_id, sizeof(infos[i].min_object_id), 1, file) == 1, "Corrupt header file");
             check(fread(&infos[i].max_object_id, sizeof(infos[i].max_object_id), 1, file) == 1, "Corrupt header file");
+            
+            // Read timestamp range.
+            check(fread(&infos[i].min_timestamp, sizeof(infos[i].min_timestamp), 1, file) == 1, "Corrupt header file");
+            check(fread(&infos[i].max_timestamp, sizeof(infos[i].max_timestamp), 1, file) == 1, "Corrupt header file");
+
+            // If this is a single object block then track the object id to
+            // possibly mark it as spanned.
+            if(infos[i].min_object_id == infos[i].max_object_id) {
+                // If it has spanned since the last block then mark it and the
+                // previous block.
+                if(infos[i].min_object_id == last_object_id) {
+                    infos[i].spanned = true;
+                    infos[i-1].spanned = true;
+                }
+                // If this is the first block with one object then store the id.
+                else {
+                    last_object_id = infos[i].min_object_id;
+                }
+            }
+            // Clear out last object id for multi-object blocks.
+            else {
+                last_object_id = -1;
+            }
         }
 
         // Close the file.
@@ -132,7 +176,7 @@ int load_header(ObjectFile *object_file)
     }
 
     // Sort ranges by starting object id.
-    qsort(infos, block_count, sizeof(BlockInfo), compare_block_info);
+    check(sort_blocks(object_file) == 0, "Could not sort object file blocks");
 
     // Store version and block information on object file.
     object_file->version = version;
@@ -354,22 +398,104 @@ int create_block(ObjectFile *object_file, BlockInfo *info)
     info->id = object_file->block_count-1;
     info->min_object_id = 0LL;
     info->max_object_id = 0LL;
-    
+
+    // Sort blocks.
+    check(sort_blocks(object_file) == 0, "Could not sort object file blocks");
+
     return 0;
     
 error:
     return -1;
 }
 
-/**
- * Finds the correct block to add an event to.
- */
-int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *info)
+// Finds the correct block to add an event to.
+//
+// Insertion has several rules to ensure consistency. There are two types of
+// blocks: single object blocks and multi-object blocks. Single object blocks
+// are spans of two or more blocks that have a single object. Multi-object
+// blocks are single blocks that have multiple object ids. An object that is
+// stored in a single block (i.e. doesn't span blocks) is considered a
+// multi-object block since there is probably room to add more objects.
+// 
+// 1. An object id range is unique to a block. If a block has object ids 5 - 8
+//    then no other block can overlap into those ids.
+//
+// 2. Only multi-object blocks can have object ids outside its range added.
+//
+// 3. Objects are added to the first block where the object id is included in
+//    the object id range or is less than the minimum object id of the block.
+//
+// 4. If no block is found by the end then the last block is used for insertion.
+//
+// object_file - The object file that the event is being added to.
+// event       - The event to add to the object file.
+// ret         - A reference to the correct block info returned to the caller.
+//
+// Returns 0 if successfully finds a block. Otherwise returns -1.
+int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
 {
-    // TODO: Find first block where object id in range.
-    // TODO: If no exact match found then find first one before id exceeds range.
+    int i, n;
+    int BlockInfo *info = NULL;
+    info = NULL;
+    
+    // Extract object id and timestamp from event.
+    int64_t object_id = event->object_id;
+    int64_t timestamp = event->timestamp;
 
+    // Loop over sorted blocks to find the appropriate insertion point.
+    n = object_file->block_count;
+    for(i=0; i<n; i++) {
+        info = object_file->infos[i];
+        
+        // If block is within range then use the block.
+        if(object_id >= info->min_object_id && object_id <= info->max_object_id) {
+            // If this is a single object block then find the appropriate block
+            // based on timestamp.
+            if(info->spanned) {
+                // Find first block where timestamp is before the max.
+                while(i<n && infos[i].min_object_id == object_id) {
+                    if(timestamp <= infos[i].max_timestamp) {
+                        ret = info;
+                        break;
+                    }
+                    i++;
+                }
+                
+                // If this event is being appended to the object path then use
+                // the last block.
+                if(ret == NULL) {
+                    ret = infos[i-1];
+                }
+
+                break;
+            }
+            // If this is a multi-object block then simply use it.
+            else {
+                ret = info;
+                break;
+            }
+        }
+        // If block is before this object id range, then use the block if it
+        // is a multi-object block.
+        else if(object_id < info->min_object_id && !info.spanned) {
+            ret = info;
+            break;
+        }
+    }
+    
+    // If we haven't found a block then it means that the object id is after all
+    // other object ids or that we are inserting before a single object block or
+    // that we have no blocks. Either way, simply create a new block and add it
+    // to the end.
+    if(ret == NULL) {
+        rc = create_block(object_file, ret);
+        check(rc == 0, "Unable to create block");
+    }
+    
     return 0;
+
+error:
+    return -1;
 }
 
 /**
@@ -608,19 +734,11 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 
     check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
     
-    // If there are no blocks then create a block.
-    if(object_file->block_count == 0) {
-        rc = create_block(object_file, info);
-        check(rc == 0, "Unable to create block");
-    }
-    // If there are blocks then find the correct one to insert into.
-    else {
-        // Find appropriate block to insert into.
-        rc = find_insertion_block(object_file, event, info);
-        check(rc == 0, "Unable to find an insertion block");
-    }
+    // Find the appropriate block to insert into.
+    rc = find_insertion_block(object_file, event, info);
+    check(rc == 0, "Unable to find an insertion block");
 
-    // Load block from memory and deserialize.
+    // Load block to memory and deserialize.
     rc = load_block(object_file, info, block);
     check(rc == 0, "Unable to load block %d", info->id);
     
@@ -629,17 +747,25 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     check(rc == 0, "Unable to add event to block %d", info->id);
     
     // Update the block info stats.
+    bool updated = false;
     if(event->object_id < info->min_object_id) {
         info->min_object_id = event->object_id;
+        updated = true;
     }
     if(event->object_id > info->max_object_id) {
         info->max_object_id = event->object_id;
+        updated = true;
+    }
+
+    // Re-sort blocks.
+    if(updated) {
+        check(sort_blocks(object_file) == 0, "Could not sort object file blocks");
     }
 
     // Serialize the block back to disk.
     rc = save_block(object_file, info, block);
     check(rc == 0, "Unable to save block %d", info->id);
-    
+
     // Clean up.
     free(block);
     

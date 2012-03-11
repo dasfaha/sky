@@ -15,7 +15,6 @@ timestamp = 0; \
 str = bfromcstr(STR); \
 rc = Timestamp_parse(str, &timestamp); \
 mu_assert(rc == 0, "Invalid return code for timestamp: " #STR); \
-printf("timestamp: %s=%lld\n", STR, timestamp); \
 mu_assert(timestamp == VALUE, "Expected " #STR " to convert to " #VALUE); \
 bdestroy(str);
 
