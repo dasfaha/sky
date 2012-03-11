@@ -56,13 +56,13 @@ int Timestamp_parse(bstring str, int64_t *ret)
     
     // Set timezone information.
     tzset();
+    printf("tz: %d\n", daylight);
 
     // Convert to milliseconds since epoch in UTC.
     char buffer[100];
     strftime(buffer, 100, "%s", &tp);
     int64_t value = atoll(buffer);
     value -= timezone;
-    value += (daylight ? 3600 : 0);
     *ret = value * 1000;
     
     return 0;

@@ -364,7 +364,7 @@ error:
 /**
  * Finds the correct block to add an event to.
  */
-int find_insertion_block(ObjectFile *object_file, BlockInfo *info)
+int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *info)
 {
     // TODO: Find first block where object id in range.
     // TODO: If no exact match found then find first one before id exceeds range.
@@ -598,9 +598,9 @@ error:
 
 int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 {
-    int rc;
-    BlockInfo *info;
-    Block *block;
+    int rc = 0;
+    BlockInfo *info = NULL;
+    Block *block = NULL;
     
     // Verify arguments.
     check(object_file != NULL, "Object file is required");
@@ -610,18 +610,18 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     
     // If there are no blocks then create a block.
     if(object_file->block_count == 0) {
-        rc = create_block(object_file, &info);
+        rc = create_block(object_file, info);
         check(rc == 0, "Unable to create block");
     }
     // If there are blocks then find the correct one to insert into.
     else {
         // Find appropriate block to insert into.
-        rc = find_insertion_block(event, &info);
+        rc = find_insertion_block(object_file, event, info);
         check(rc == 0, "Unable to find an insertion block");
     }
 
     // Load block from memory and deserialize.
-    rc = load_block(object_file, info, &block);
+    rc = load_block(object_file, info, block);
     check(rc == 0, "Unable to load block %d", info->id);
     
     // Add event to block.

@@ -210,7 +210,8 @@ void add_event(Options *options)
     int64_t ts;
     bstring path = bstrcpy(options->database);
     bstring timestamp = bstrcpy(options->timestamp);
-
+    Event *event = NULL;
+    
     // Validate options.
     if(!options->object_type) {
         fprintf(stderr, "Object type is required.\n"); exit(1);
@@ -251,7 +252,8 @@ void add_event(Options *options)
     }
     
     // Create an event object.
-    Event *event = Event_create(ts, options->object_id, options->action);
+    event = Event_create(ts, options->object_id, options->action);
+
     // TODO: Set data.
 
     // Print parameters.
