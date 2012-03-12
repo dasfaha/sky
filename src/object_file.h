@@ -24,6 +24,7 @@
 #define _object_file_h
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <sys/stat.h>
 
 #include "bstring.h"
@@ -86,10 +87,10 @@
  */
 typedef struct BlockInfo {
     uint32_t id;
-    uint64_t min_object_id;
-    uint64_t max_object_id;
-    uint64_t min_timestamp;
-    uint64_t max_timestamp;
+    int64_t min_object_id;
+    int64_t max_object_id;
+    int64_t min_timestamp;
+    int64_t max_timestamp;
     bool spanned;
 } BlockInfo;
 

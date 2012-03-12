@@ -21,8 +21,9 @@
  */
 
 #include <stdlib.h>
-#include <unistd.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <unistd.h>
 
 #include "dbg.h"
 #include "bstring.h"
@@ -39,10 +40,12 @@
 // Utility
 //======================================
 
-/**
- * Checks if a file exists.
- */
-int file_exists(bstring path)
+// Checks if a file exists.
+//
+// path - The path of the file.
+//
+// Returns true if the file exists. Otherwise returns false.
+bool file_exists(bstring path)
 {
     struct stat buffer;
     int rc = stat(bdata(path), &buffer);
@@ -54,10 +57,8 @@ int file_exists(bstring path)
 // Block Sorting
 //======================================
 
-/**
- * Compares two blocks and sorts them based on starting min object identifier
- * and then by id.
- */
+// Compares two blocks and sorts them based on starting min object identifier
+// and then by id.
 int compare_block_info(const void *_a, const void *_b)
 {
     const BlockInfo *a = (BlockInfo *)_a;
@@ -96,9 +97,16 @@ int compare_block_info(const void *_a, const void *_b)
 // Sorts blocks by object id and block id.
 //
 // object_file - The object file whose blocks should be sorted.
+//
+// Returns 0 if successful, otherwise returns -1.
 int sort_blocks(ObjectFile *object_file)
 {
-    qsort(infos, block_count, sizeof(BlockInfo), compare_block_info);
+    qsort(
+        object_file->infos,
+        object_file->block_count,
+        sizeof(BlockInfo),
+        compare_block_info
+    );
     return 0;
 }
 
@@ -108,9 +116,11 @@ int sort_blocks(ObjectFile *object_file)
 // Header Management
 //======================================
 
-/**
- * Loads the header data into the object file structure.
- */
+// Loads header information from file.
+//
+// object_file - The object file where the header is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
 int load_header(ObjectFile *object_file)
 {
     FILE *file;
@@ -195,9 +205,11 @@ error:
     return -1;
 }
 
-/**
- * Unloads the header data.
- */
+// Unloads the header data.
+//
+// object_file - The object file where the header data is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
 int unload_header(ObjectFile *object_file)
 {
     if(object_file) {
@@ -217,9 +229,11 @@ int unload_header(ObjectFile *object_file)
 // Action Management
 //======================================
 
-/**
- * Loads action information from file.
- */
+// Loads action information from file.
+//
+// object_file - The object file where the action information is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
 int load_actions(ObjectFile *object_file)
 {
     FILE *file;
@@ -274,9 +288,11 @@ error:
     return -1;
 }
 
-/**
- * Unloads the action data.
- */
+// Unloads the action data.
+//
+// object_file - The object file where the action data is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
 int unload_actions(ObjectFile *object_file)
 {
     if(object_file) {
@@ -300,9 +316,11 @@ int unload_actions(ObjectFile *object_file)
 // Property Management
 //======================================
 
-/**
- * Loads property information from file.
- */
+// Loads property information from file.
+//
+// object_file - The object file from which to load property definitions.
+//
+// Returns 0 if sucessfuly, otherwise returns -1.
 int load_properties(ObjectFile *object_file)
 {
     FILE *file;
@@ -357,9 +375,11 @@ error:
     return -1;
 }
 
-/**
- * Unloads the property data.
- */
+// Unloads the property data.
+//
+// object_file - The object file where the property data is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
 int unload_properties(ObjectFile *object_file)
 {
     if(object_file) {
@@ -383,9 +403,33 @@ int unload_properties(ObjectFile *object_file)
 // Block Management
 //======================================
 
-/**
- * Creates a block in the object file and returns a reference to its info object.
- */
+// Retrieves the file path of an object file's data file.
+//
+// object_file - The object file who owns the data file.
+bstring get_data_file_path(ObjectFile *object_file)
+{
+    return bformat("%s/data", bdata(object_file->path)); 
+}
+
+
+// Calculates the byte offset in a data file for a block. This is simply the
+// block index multiplied by the block size.
+//
+// object_file - The object file that contains the block.
+// info        - The header info about the block.
+//
+// Returns the number of bytes from the start of the data file where the block
+// begins.
+int get_block_offset(ObjectFile *object_file, BlockInfo *info)
+{
+    return (object_file->block_size * info->id);
+}
+
+// Creates a block in the object file and returns a reference to its info object.
+//
+// object_file - The object file that will own the new block.
+//
+// Returns 0 if successful, otherwise returns -1.
 int create_block(ObjectFile *object_file, BlockInfo *info)
 {
     // Increment block count and resize block info memory.
@@ -434,8 +478,8 @@ error:
 // Returns 0 if successfully finds a block. Otherwise returns -1.
 int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
 {
-    int i, n;
-    int BlockInfo *info = NULL;
+    int i, n, rc;
+    BlockInfo *info = NULL;
     info = NULL;
     
     // Extract object id and timestamp from event.
@@ -445,7 +489,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
     // Loop over sorted blocks to find the appropriate insertion point.
     n = object_file->block_count;
     for(i=0; i<n; i++) {
-        info = object_file->infos[i];
+        info = &object_file->infos[i];
         
         // If block is within range then use the block.
         if(object_id >= info->min_object_id && object_id <= info->max_object_id) {
@@ -453,8 +497,8 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
             // based on timestamp.
             if(info->spanned) {
                 // Find first block where timestamp is before the max.
-                while(i<n && infos[i].min_object_id == object_id) {
-                    if(timestamp <= infos[i].max_timestamp) {
+                while(i<n && object_file->infos[i].min_object_id == object_id) {
+                    if(timestamp <= object_file->infos[i].max_timestamp) {
                         ret = info;
                         break;
                     }
@@ -464,7 +508,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
                 // If this event is being appended to the object path then use
                 // the last block.
                 if(ret == NULL) {
-                    ret = infos[i-1];
+                    ret = &object_file->infos[i-1];
                 }
 
                 break;
@@ -477,7 +521,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
         }
         // If block is before this object id range, then use the block if it
         // is a multi-object block.
-        else if(object_id < info->min_object_id && !info.spanned) {
+        else if(object_id < info->min_object_id && !info->spanned) {
             ret = info;
             break;
         }
@@ -498,28 +542,84 @@ error:
     return -1;
 }
 
-/**
- * Reads a block in from disk and deserializes it.
- */
-int load_block(ObjectFile *object_file, BlockInfo *info, Block *block)
+// Reads a block in from disk and deserializes it.
+// 
+// object_file - The object file that contains the block.
+// info        - A reference to the block position.
+// ret         - The reference to the block returned to the caller.
+//
+// Returns 0 if successful. Otherwise returns -1.
+int load_block(ObjectFile *object_file, BlockInfo *info, Block *ret)
 {
-    // TODO: Open data file.
-    // TODO: Seek to starting position of block.
-    // TODO: Delegate deserialization to block.
+    int rc;
+    
+    // Retrieve data file path.
+    bstring path = get_data_file_path(object_file);
+    check_mem(path);
+
+    // Open data file.
+    int file = open(bdata(path), O_RDONLY);
+    check(file, "Failed to open data file for reading: %s",  bdata(path));
+
+    // Seek to starting position of block.
+    int offset = get_block_offset(object_file, info);
+    rc = lseek(file, offset, SEEK_SET);
+    check(rc != -1, "Failed to seek to read block: %s#%d",  bdata(path), info->id);
+
+    // Deserialize block.
+    Block *block = Block_create(object_file, info);
+    rc = Block_deserialize(block, file);
+    check(rc == 0, "Failed to deserialize block: %s#%d",  bdata(path), info->id);
+    
+    // Clean up.
+    close(file);
+    
+    // Assign block to return value.
+    ret = block;
     
     return 0;
+
+error:
+    if(file) close(file);
+    return -1;
 }
 
-/**
- * Serializes a block and writes it to disk.
- */
-int save_block(object_file, info, block)
+// Serializes a block in memory and writes it to disk.
+// 
+// object_file - The object file that contains the block.
+// info        - A reference to the block position.
+// block       - The in-memory block to write to disk.
+//
+// Returns 0 if successful. Otherwise returns -1.
+int save_block(ObjectFile *object_file, BlockInfo *info, Block *block)
 {
-    // TODO: Open data file for writing.
-    // TODO: Seek to starting position of block.
-    // TODO: Delegate serialization to block.
-    
+    int rc;
+
+    // Retrieve data file path.
+    bstring path = get_data_file_path(object_file);
+    check_mem(path);
+
+    // Open data file.
+    int file = open(bdata(path), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    check(file != -1, "Failed to open data file for writing: %s",  bdata(path));
+
+    // Seek to starting position of block.
+    int offset = get_block_offset(object_file, info);
+    rc = lseek(file, offset, SEEK_SET);
+    check(rc != -1, "Failed to seek to write block: %s#%d",  bdata(path), info->id);
+
+    // Serialize block.
+    rc = Block_serialize(block, file);
+    check(rc == 0, "Failed to serialize block: %s#%d",  bdata(path), info->id);
+
+    // Clean up.
+    close(file);
+
     return 0;
+
+error:
+    if(file) close(file);
+    return -1;
 }
 
 
@@ -527,12 +627,14 @@ int save_block(object_file, info, block)
 // Lifecycle
 //======================================
 
-/*
- * Creates a reference to an object file.
- *
- * database - A reference to the database that the object file belongs to.
- * name - The name of the object file.
- */
+
+// Creates a reference to an object file.
+// 
+// database - A reference to the database that the object file belongs to.
+// name - The name of the object file.
+//
+// Returns a reference to the new object file if successful. Otherwise returns
+// null.
 ObjectFile *ObjectFile_create(Database *database, bstring name)
 {
     ObjectFile *object_file;
@@ -562,9 +664,9 @@ error:
     return NULL;
 }
 
-/*
- * Removes an object file reference from memory.
- */
+// Removes an object file reference from memory.
+//
+// object_file - The object file to free.
 void ObjectFile_destroy(ObjectFile *object_file)
 {
     if(object_file) {
@@ -579,11 +681,11 @@ void ObjectFile_destroy(ObjectFile *object_file)
 // State
 //======================================
 
-/**
- * Opens the object file for reading and writing events.
- *
- * object_file - The object file to open.
- */
+// Opens the object file for reading and writing events.
+// 
+// object_file - The object file to open.
+//
+// Returns 0 if successful, otherwise returns -1.
 int ObjectFile_open(ObjectFile *object_file)
 {
     // Validate arguments.
@@ -604,9 +706,11 @@ error:
     return -1;
 }
 
-/**
- * Closes the object file.
- */
+// Closes an object file.
+//
+// object_file - The object file to close.
+//
+// Returns 0 if successful, otherwise returns -1.
 int ObjectFile_close(ObjectFile *object_file)
 {
     // Validate arguments.
@@ -632,11 +736,12 @@ error:
 // Locking
 //======================================
 
-/**
- * Locks an object file for writing.
- *
- * object_file - The object file to lock.
- */
+
+// Locks an object file for writing.
+// 
+// object_file - The object file to lock.
+//
+// Returns 0 if successful, otherwise returns -1.
 int ObjectFile_lock(ObjectFile *object_file)
 {
     FILE *file;
@@ -671,11 +776,11 @@ error:
     return -1;
 }
 
-/**
- * Unlocks an object file.
- *
- * object_file - The object file to unlock.
- */
+// Unlocks an object file.
+// 
+// object_file - The object file to unlock.
+//
+// Returns 0 if successful, otherwise returns -1.
 int ObjectFile_unlock(ObjectFile *object_file)
 {
     FILE *file;

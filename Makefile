@@ -2,7 +2,7 @@
 # Variables
 ################################################################################
 
-CFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -D_FILE_OFFSET_BITS=64
+CFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64
 
 SOURCES=$(wildcard src/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES})
