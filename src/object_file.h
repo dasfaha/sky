@@ -38,31 +38,24 @@
 //
 //==============================================================================
 
-/**
- * The object file represents the storage for a type of object. The object file
- * is analogous to a table in a relational database. The object file is
- * represented on the file system as a directory that contains a header file
- * and multiple data extent files numbered sequentially (1, 2, 3, etc).
- *
- * Extents are a collection of 64k blocks. Each block can store any number of
- * paths that can fit into it. If the size of the paths is larger than the block
- * can handle then the block is split into multiple blocks.
- *
- * Blocks are stored in the order in which they are created. This means that 
- * while objects are stored in order within a block, they are not necessarily 
- * stored in order from one block to the next. Because of this, the header file
- * is used to store a range of object ids for each block and serves as an index
- * when looking up a single object.
- *
- * Because of the redundancy of action names and data keys, those strings are
- * cached and converted into integer identifiers. The action cache is located
- * in the 'actions' file and the data keys cache is located in the 'keys' file.
- *
- *
- * TODOS
- * - Change qsorted block infos to a red-black tree for better block insertion
- *   performance.
- */
+// The object file represents the storage for a type of object. The object file
+// is analogous to a table in a relational database. The object file is
+// represented on the file system as a directory that contains a header file
+// and multiple data extent files numbered sequentially (1, 2, 3, etc).
+//
+// Extents are a collection of 64k blocks. Each block can store any number of
+// paths that can fit into it. If the size of the paths is larger than the block
+// can handle then the block is split into multiple blocks.
+//
+// Blocks are stored in the order in which they are created. This means that 
+// while objects are stored in order within a block, they are not necessarily 
+// stored in order from one block to the next. Because of this, the header file
+// is used to store a range of object ids for each block and serves as an index
+// when looking up a single object.
+//
+// Because of the redundancy of action names and data keys, those strings are
+// cached and converted into integer identifiers. The action cache is located
+// in the 'actions' file and the data keys cache is located in the 'keys' file.
 
 
 //==============================================================================
@@ -80,11 +73,9 @@
 //
 //==============================================================================
 
-/**
- * The block info stores the sequential block identifier as well as the object
- * identifier range that is stored in that block. The block info is used in the
- * header file as an index when looking up block data.
- */
+// The block info stores the sequential block identifier as well as the object
+// identifier range that is stored in that block. The block info is used in the
+// header file as an index when looking up block data.
 typedef struct BlockInfo {
     uint32_t id;
     int64_t min_object_id;
@@ -94,44 +85,36 @@ typedef struct BlockInfo {
     bool spanned;
 } BlockInfo;
 
-/**
- * An action defines a verb that is performed in an event. 4 billion (2^32)
- * unique types of actions can be defined within an object file. The name of the
- * action is stored in the 'actions' file and the action identifier is used when
- * storing event data in a block.
- */
+// An action defines a verb that is performed in an event. 4 billion (2^32)
+// unique types of actions can be defined within an object file. The name of the
+// action is stored in the 'actions' file and the action identifier is used when
+// storing event data in a block.
 typedef struct Action {
     int32_t id;
     bstring name;
 } Action;
 
-/**
- * A property is a key used on data in an event. The property identifier's range
- * is split up: positive ids are used for data attached to an object, negative
- * ids are used for data attached to an action and id 0 is reserved.
- *
- * Property identifiers are used when storing events in blocks because of their
- * redundancy. Property definitions are stored in the 'properties' file.
- */
+// A property is a key used on data in an event. The property identifier's range
+// is split up: positive ids are used for data attached to an object, negative
+// ids are used for data attached to an action and id 0 is reserved.
+//
+// Property identifiers are used when storing events in blocks because of their
+// redundancy. Property definitions are stored in the 'properties' file.
 typedef struct Property {
     int16_t id;
     bstring name;
 } Property;
 
-/**
- * The various states that an object file can be in.
- */
+// The various states that an object file can be in.
 typedef enum ObjectFileState {
     OBJECT_FILE_STATE_CLOSED,
     OBJECT_FILE_STATE_OPEN,
     OBJECT_FILE_STATE_LOCKED
 } ObjectFileState;
 
-/**
- * The object file is a reference to the disk location where data is stored. The
- * object file also maintains a cache of block info and predefined actions and
- * properties.
- */
+// The object file is a reference to the disk location where data is stored. The
+// object file also maintains a cache of block info and predefined actions and
+// properties.
 typedef struct ObjectFile {
     Database *database;
     bstring name;

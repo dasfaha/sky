@@ -36,10 +36,13 @@
 // Lifecycle
 //======================================
 
-/*
- * Creates a reference to a block.
- */
-Block *Block_create()
+// Creates a reference to an in-memory block.
+//
+// object_file - The object file that this block belongs to.
+// info        - The header information about block.
+//
+// Returns a new block if successful, otherwise returns null.
+Block *Block_create(ObjectFile *object_file, BlockInfo *info)
 {
     Block *block;
     
@@ -54,9 +57,9 @@ error:
     return NULL;
 }
 
-/*
- * Removes a block reference from memory.
- */
+// Removes a block reference from memory.
+//
+// block - The block to free.
 void Block_destroy(Block *block)
 {
     if(block) {
@@ -64,8 +67,7 @@ void Block_destroy(Block *block)
         if(block->path_count > 0) {
             uint32_t i=0;
             for(i=0; i<block->path_count; i++) {
-                // TODO: Release path struct members. Releasing full path list at the end of this loop.
-                // Path_destroy(block->paths[i]);
+                Path_destroy(&block->paths[i]);
             }
         }
         
@@ -79,9 +81,51 @@ void Block_destroy(Block *block)
 
 
 //======================================
+// Serialization
+//======================================
+
+// Serializes a block to a given file at the file's current offset.
+//
+// block - The block to serialize.
+// file  - The file descriptor.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Block_serialize(Block *block, int file)
+{
+    // TODO: Write path count.
+    // TODO: Loop over paths and delegate serialization to each path.
+    
+    return 0;
+}
+
+// Deserializes a block from a given file at the file's current offset.
+//
+// block - The block to serialize.
+// file  - The file descriptor.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Block_deserialize(Block *block, int file)
+{
+    // TODO: Read path count.
+    // TODO: Loop over paths and delegate serialization to each path.
+
+    return 0;
+}
+
+
+
+//======================================
 // Event Management
 //======================================
 
+// Adds an event to an in-memory block. The event will automatically be inserted
+// into an existing path if one exists with the same object id or a new path 
+// will be created.
+//
+// block - The block to insert the event into.
+// event - The event that is to be inserted.
+//
+// Returns 0 if successful, otherwise returns -1.
 int Block_add_event(Block *block, Event *event)
 {
     // TODO: Validate arguments.

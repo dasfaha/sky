@@ -71,25 +71,19 @@ various database files. This is roughly in Extended Backus-Naur Form EBNF.
     PROPERTIES = PROPERTY_COUNT (PROPERTY_ID PROPERTY_NAME_LENGTH PROPERTY_NAME)*
 
     # Data File
-    EVENT_CODE = 0x01 | 0x11 | 0x21 | 0x31
-    EVENT = EVENT_CODE TIMESTAMP ACTION_ID? (PROPERTY_LENGTH PROPERTY_CHANGE*)?
+    EVENT_FLAGS = 0x01 | 0x02 | 0x03
+    EVENT = EVENT_FLAGS TIMESTAMP ACTION_ID? (PROPERTY_LENGTH PROPERTY_CHANGE*)?
 
     EVENTS_LENGTH = uint32
-    PATH  = 0x02 OBJECT_ID EVENTS_LENGTH EVENT*
+    PATH  = OBJECT_ID EVENTS_LENGTH EVENT*
 
     PATHS_LENGTH = uint32
-    BLOCK = 0x03 PATHS_LENGTH PATH*
+    BLOCK = PATH_COUNT PATH*
 
-The code byte is the first byte in an event, path or block. It is split in two
-halves: the first 4 bits are options and the second 4 bits represent the code.
-The code identifies the type of data (EVENT=1, PATH=2, BLOCK=3). The options
-are only used by the event.
-
-The event options have two flags: `ACTION FLAG=0001XXXX`,
-`PROPERTY FLAG=00001XXXX`. If the action flag is set then the `ACTION ID` is
-expected to be present in the event. If the property flag is set then the
-`PROPERTY LENGTH` and `PROPERTY CHANGE` elements are expected to be present in
-the event.
+The event flags are the `action` flag (`0x01`) and the `property` flag (`0x02`).
+If the action flag is set then the `ACTION_ID` is expected to be present in the
+event. If the property flag is set then the `PROPERTY_LENGTH` and
+`PROPERTY_CHANGE` elements are expected to be present in the event.
 
 
 ### Block Spanning

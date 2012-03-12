@@ -35,11 +35,9 @@
 //
 //==============================================================================
 
-/**
- * A block represents a contiguous area of storage for paths. A block can store
- * multiple paths or paths can span across multiple blocks (block spanning).
- * The 
- */
+// A block represents a contiguous area of storage for paths. A block can store
+// multiple paths or paths can span across multiple blocks (block spanning).
+
 
 //==============================================================================
 //
@@ -47,10 +45,10 @@
 //
 //==============================================================================
 
-/**
- * The block stores an array of paths.
- */
+// The block stores an array of paths.
 typedef struct Block {
+    ObjectFile *object_file;
+    BlockInfo *info;
     uint32_t path_count;
     Path *paths;
 } Block;
@@ -75,9 +73,9 @@ void Block_destroy(Block *block);
 // Serialization
 //======================================
 
-//int Block_serialize(Block *block, FILE *file);
+int Block_serialize(Block *block, int file);
 
-//int Block_deserialize(Block *block, FILE *file);
+int Block_deserialize(Block *block, int file);
 
 
 //======================================

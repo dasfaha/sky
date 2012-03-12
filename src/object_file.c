@@ -877,6 +877,6 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     return 0;
 
 error:
-    if(block) free(block);
+    Block_destroy(block);
     return -1;
 }
