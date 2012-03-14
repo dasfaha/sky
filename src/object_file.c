@@ -28,6 +28,7 @@
 #include "dbg.h"
 #include "bstring.h"
 #include "database.h"
+#include "block.h"
 #include "object_file.h"
 
 //==============================================================================
@@ -96,18 +97,11 @@ int compare_block_info(const void *_a, const void *_b)
 
 // Sorts blocks by object id and block id.
 //
-// object_file - The object file whose blocks should be sorted.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sort_blocks(ObjectFile *object_file)
+// infos - The array of block info objects.
+// count - The number of blocks.
+void sort_blocks(BlockInfo *infos, uint32_t count)
 {
-    qsort(
-        object_file->infos,
-        object_file->block_count,
-        sizeof(BlockInfo),
-        compare_block_info
-    );
-    return 0;
+    qsort(infos, count, sizeof(BlockInfo), compare_block_info);
 }
 
 
@@ -147,7 +141,6 @@ int load_header(ObjectFile *object_file)
 
         // Read block info items until end of file.
         uint32_t i;
-        int64_t last_object_id = -1;
         for(i=0; i<block_count && !feof(file); i++) {
             // Set index.
             infos[i].id = i;
@@ -160,10 +153,20 @@ int load_header(ObjectFile *object_file)
             // Read timestamp range.
             check(fread(&infos[i].min_timestamp, sizeof(infos[i].min_timestamp), 1, file) == 1, "Corrupt header file");
             check(fread(&infos[i].max_timestamp, sizeof(infos[i].max_timestamp), 1, file) == 1, "Corrupt header file");
+        }
 
+        // Close the file.
+        fclose(file);
+
+        // Sort ranges by starting object id.
+        sort_blocks(infos, block_count);
+        
+        // Determine spanned blocks.
+        int64_t last_object_id = -1;
+        for(i=0; i<block_count; i++) {
             // If this is a single object block then track the object id to
             // possibly mark it as spanned.
-            if(infos[i].min_object_id == infos[i].max_object_id) {
+            if(infos[i].min_object_id == infos[i].max_object_id && infos[i].min_object_id > 0) {
                 // If it has spanned since the last block then mark it and the
                 // previous block.
                 if(infos[i].min_object_id == last_object_id) {
@@ -180,13 +183,7 @@ int load_header(ObjectFile *object_file)
                 last_object_id = -1;
             }
         }
-
-        // Close the file.
-        fclose(file);
     }
-
-    // Sort ranges by starting object id.
-    check(sort_blocks(object_file) == 0, "Could not sort object file blocks");
 
     // Store version and block information on object file.
     object_file->version = version;
@@ -444,7 +441,7 @@ int create_block(ObjectFile *object_file, BlockInfo *info)
     info->max_object_id = 0LL;
 
     // Sort blocks.
-    check(sort_blocks(object_file) == 0, "Could not sort object file blocks");
+    sort_blocks(object_file->infos, object_file->block_count);
 
     return 0;
     
@@ -864,7 +861,7 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 
     // Re-sort blocks.
     if(updated) {
-        check(sort_blocks(object_file) == 0, "Could not sort object file blocks");
+        sort_blocks(object_file->infos, object_file->block_count);
     }
 
     // Serialize the block back to disk.

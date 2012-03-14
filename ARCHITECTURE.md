@@ -46,8 +46,8 @@ various database files. This is roughly in Extended Backus-Naur Form EBNF.
 
     # Basic Types
     TIMESTAMP = int64
-    ACTION_ID = int64
     OBJECT_ID = int64
+    ACTION_ID = int32
 
     MIN_OBJECT_ID = OBJECT_ID
     MAX_OBJECT_ID = OBJECT_ID
@@ -65,14 +65,14 @@ various database files. This is roughly in Extended Backus-Naur Form EBNF.
     ACTIONS = ACTION_COUNT (ACTION_ID ACTION_NAME_LENGTH ACTION_NAME)*
 
     # Properties File
-    PROPERTY_COUNT = uint32
-    PROPERTY_NAME_LENGTH = uint16
-    PROPERTY_NAME = char*
-    PROPERTIES = PROPERTY_COUNT (PROPERTY_ID PROPERTY_NAME_LENGTH PROPERTY_NAME)*
+    PROPERTY_ID = uint16
+    PROPERTY_VALUE_LENGTH = uint8
+    PROPERTY_VALUE = char*
+    PROPERTIES = (PROPERTY_ID PROPERTY_VALUE_LENGTH PROPERTY_VALUE)*
 
     # Data File
     EVENT_FLAGS = 0x01 | 0x02 | 0x03
-    EVENT = EVENT_FLAGS TIMESTAMP ACTION_ID? (PROPERTY_LENGTH PROPERTY_CHANGE*)?
+    EVENT = EVENT_FLAGS TIMESTAMP ACTION_ID? (PROPERTY_LENGTH PROPERTIES*)?
 
     EVENTS_LENGTH = uint32
     PATH  = OBJECT_ID EVENTS_LENGTH EVENT*
@@ -83,7 +83,7 @@ various database files. This is roughly in Extended Backus-Naur Form EBNF.
 The event flags are the `action` flag (`0x01`) and the `property` flag (`0x02`).
 If the action flag is set then the `ACTION_ID` is expected to be present in the
 event. If the property flag is set then the `PROPERTY_LENGTH` and
-`PROPERTY_CHANGE` elements are expected to be present in the event.
+`PROPERTIES` elements are expected to be present in the event.
 
 
 ### Block Spanning

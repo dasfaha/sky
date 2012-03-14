@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+#include <unistd.h>
 
 #include "dbg.h"
 #include "block.h"
@@ -47,6 +48,10 @@ Block *Block_create(ObjectFile *object_file, BlockInfo *info)
     Block *block;
     
     block = malloc(sizeof(Block)); check_mem(block);
+
+    block->object_file = object_file;
+    block->info = info;
+
     block->paths = NULL;
     block->path_count = 0;
 
@@ -63,12 +68,13 @@ error:
 void Block_destroy(Block *block)
 {
     if(block) {
+        block->object_file = NULL;
+        block->info = NULL;
+
         // Destroy paths.
-        if(block->path_count > 0) {
-            uint32_t i=0;
-            for(i=0; i<block->path_count; i++) {
-                Path_destroy(&block->paths[i]);
-            }
+        uint32_t i=0;
+        for(i=0; i<block->path_count; i++) {
+            Path_destroy(block->paths[i]);
         }
         
         if(block->paths) free(block->paths);
@@ -87,24 +93,41 @@ void Block_destroy(Block *block)
 // Serializes a block to a given file at the file's current offset.
 //
 // block - The block to serialize.
-// file  - The file descriptor.
+// fd    - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_serialize(Block *block, int file)
+int Block_serialize(Block *block, int fd)
 {
-    // TODO: Write path count.
-    // TODO: Loop over paths and delegate serialization to each path.
+    int rc;
+
+    // Validate.
+    check(block != NULL, "Block required");
+    check(fd != -1, "File descriptor required");
+    
+    // Write path count.
+    rc = write(fd, &block->path_count, sizeof(block->path_count));
+    check(rc == sizeof(block->path_count), "Unable to serialize block path count: %d", block->path_count);
+    
+    // Loop over paths and delegate serialization to each path.
+    uint32_t i;
+    for(i=0; i<block->path_count; i++) {
+        rc = Path_serialize(block->paths[i], fd);
+        check(rc == 0, "Unable to serialize block path: %d", i);
+    }
     
     return 0;
+
+error:
+    return -1;
 }
 
 // Deserializes a block from a given file at the file's current offset.
 //
 // block - The block to serialize.
-// file  - The file descriptor.
+// fd    - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_deserialize(Block *block, int file)
+int Block_deserialize(Block *block, int fd)
 {
     // TODO: Read path count.
     // TODO: Loop over paths and delegate serialization to each path.

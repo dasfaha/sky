@@ -48,8 +48,9 @@
  * The path stores an array of events.
  */
 typedef struct Path {
+    int64_t object_id;
     uint32_t event_count;
-    Event *events;
+    Event **events;
 } Path;
 
 
@@ -72,9 +73,11 @@ void Path_destroy(Path *path);
 // Serialization
 //======================================
 
-//int Path_serialize(Path *path, FILE *file);
+uint32_t Path_get_serialized_length(Path *path);
 
-//int Path_deserialize(Path *path, FILE *file);
+int Path_serialize(Path *path, int fd);
+
+int Path_deserialize(Path *path, int fd);
 
 
 //======================================

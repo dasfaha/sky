@@ -20,13 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _event_h
-#define _event_h
+#ifndef _event_data_h
+#define _event_data_h
 
 #include <inttypes.h>
 
 #include "bstring.h"
-#include "event_data.h"
 
 
 //==============================================================================
@@ -35,34 +34,9 @@
 //
 //==============================================================================
 
-/**
- * The event is the basic unit of data in a behavioral database. It is composed
- * of several elements: a timestamp, an object identifier, an action and a set
- * of key/value data. The timestamp and object identifier are always required.
- * The timestamp states when the event occurred and the object identifier states
- * who (or what) the event is related to.
- *
- * The action and data are optional but at least one of them needs to be
- * present. The action represents a verb that the object has performed. This
- * could be something like a user signing up or a product being being
- * discontinued. The data represents the state of the object. These can be
- * things like the date of birth of a user or it could be the color of a car.
- *
- * Because there is a timestamp attached to every event, this data can
- * change over time without destroying data stored in the past. That also means
- * that searches across the data will take into account the state of an object
- * at a specific point in time.
- */
-
-
-//==============================================================================
-//
-// Definitions
-//
-//==============================================================================
-
-#define EVENT_FLAG_ACTION  1
-#define EVENT_FLAG_DATA    2
+// Event data is a simple hash of keys and values. Keys are stored as the id
+// of the property they represent. Additional property information such as the
+// property name is stored globally in the object file.
 
 
 //==============================================================================
@@ -71,13 +45,10 @@
 //
 //==============================================================================
 
-typedef struct Event {
-    int64_t timestamp;
-    int64_t object_id;
-    int32_t action_id;
-    uint16_t data_count;
-    EventData **data;
-} Event;
+typedef struct EventData {
+    int16_t key;
+    bstring value;
+} EventData;
 
 
 //==============================================================================
@@ -90,31 +61,20 @@ typedef struct Event {
 // Create/Destroy
 //======================================
 
-Event *Event_create(int64_t timestamp, int64_t object_id, int32_t action_id);
+EventData *EventData_create(int16_t key, bstring value);
 
-void Event_destroy(Event *event);
-
-// Event *Event_copy(Event *event);
+void EventData_destroy(EventData *event);
 
 
 //======================================
 // Serialization
 //======================================
 
-uint32_t Event_get_serialized_length(Event *event);
+uint32_t EventData_get_serialized_length(EventData *data);
 
-int Event_serialize(Event *event, int fd);
+int EventData_serialize(EventData *data, int file);
 
-int Event_deserialize(Event *event, int fd);
-
-
-//======================================
-// Data Management
-//======================================
-
-// Event *Event_set_data(bstring key, bstring value);
-
-// Event *Event_unset_data(bstring key);
+int EventData_deserialize(EventData *data, int file);
 
 
 #endif

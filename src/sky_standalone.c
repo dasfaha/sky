@@ -62,7 +62,7 @@ typedef struct Options {
     bstring object_type;
     int64_t object_id;
     bstring timestamp;
-    bstring action;
+    int32_t action_id;
     bstring *data;
     int data_count;
 } Options;
@@ -78,6 +78,7 @@ Options *parseopts(int argc, char **argv)
 {
     int c;
     int command;
+    bstring action;
     Options *options = (Options*)calloc(1, sizeof(Options));
     check_mem(options);
     
@@ -123,7 +124,10 @@ Options *parseopts(int argc, char **argv)
             break;
 
         case 'a':
-            options->action = bfromcstr(optarg); check_mem(options->action);
+            action = bfromcstr(optarg); check_mem(action);
+
+            // TODO: Lookup action id from object file.
+            options->action_id = -1;
             break;
 
         case 'D':
@@ -162,7 +166,6 @@ void Options_destroy(Options *options)
         bdestroy(options->database); options->database = NULL;
         bdestroy(options->object_type); options->object_type = NULL;
         bdestroy(options->timestamp); options->timestamp = NULL;
-        bdestroy(options->action); options->action = NULL;
 
         options->object_id = 0;
 
@@ -219,7 +222,7 @@ void add_event(Options *options)
     if(!options->object_id) {
         fprintf(stderr, "Object id is required.\n"); exit(1);
     }
-    if(!options->action) {
+    if(!options->action_id) {
         fprintf(stderr, "Action is required.\n"); exit(1);
     }
 
@@ -252,7 +255,7 @@ void add_event(Options *options)
     }
     
     // Create an event object.
-    event = Event_create(ts, options->object_id, options->action);
+    event = Event_create(ts, options->object_id, options->action_id);
 
     // TODO: Set data.
 
@@ -260,7 +263,7 @@ void add_event(Options *options)
     printf("DATABASE:    %s\n", bdata(database->path));
     printf("OBJECT TYPE: %s\n", bdata(object_file->name));
     printf("OBJECT ID:   %lld\n", event->object_id);
-    printf("ACTION:      %s\n", bdata(event->action));
+    printf("ACTION ID:   %d\n", event->action_id);
     printf("TIMESTAMP:   %lld\n", event->timestamp);
     printf("\n");
     

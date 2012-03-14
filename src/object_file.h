@@ -29,7 +29,6 @@
 
 #include "bstring.h"
 #include "database.h"
-#include "block.h"
 #include "event.h"
 
 //==============================================================================

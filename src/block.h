@@ -25,6 +25,7 @@
 
 #include <inttypes.h>
 
+#include "object_file.h"
 #include "path.h"
 #include "event.h"
 
@@ -50,7 +51,7 @@ typedef struct Block {
     ObjectFile *object_file;
     BlockInfo *info;
     uint32_t path_count;
-    Path *paths;
+    Path **paths;
 } Block;
 
 
@@ -73,9 +74,9 @@ void Block_destroy(Block *block);
 // Serialization
 //======================================
 
-int Block_serialize(Block *block, int file);
+int Block_serialize(Block *block, int fd);
 
-int Block_deserialize(Block *block, int file);
+int Block_deserialize(Block *block, int fd);
 
 
 //======================================

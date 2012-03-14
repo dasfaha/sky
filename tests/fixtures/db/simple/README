@@ -1,3 +1,25 @@
+# Simple Database
+
+## Overview
+
 The 'simple' database is composed of a single object file ('users') that has
 only a couple actions, properties and blocks. The purpose of the simple database
 is to verify that the basic open/close functions of the object file are working.
+
+
+## Blocks
+
+The following blocks exist:
+
+    ID     OBJECT IDS        TIMESTAMP RANGE
+    --     ----------        -------------------------
+    0      6                 JAN-01-2012 - FEB-01-2012
+    1      1 - 3             JAN-01-2012 - FEB-01-2012
+    2      7 - 9             JAN-01-2012 - FEB-01-2012
+    3      6                 MAR-01-2012 - APR-01-2012
+    4      10                JAN-01-2012 - FEB-01-2012
+    5      6                 JUN-01-2012 - JUL-01-2012
+    6      10                MAY-01-2012 - JUN-01-2012
+    7      10                APR-01-2012 - MAY-01-2012
+    8      4 - 5             JAN-01-2012 - FEB-01-2012
+

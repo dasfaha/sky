@@ -10,21 +10,13 @@ LIB_SOURCES=$(filter-out $(wildcard src/sky_*.c),${SOURCES})
 LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
 TEST_SOURCES=$(wildcard tests/*_tests.c)
 TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
-EXEC=
+
 
 ################################################################################
 # Default Target
 ################################################################################
 
 all: bin/libsky.a bin/sky-standalone test
-
-
-################################################################################
-# Valgrind
-################################################################################
-
-valgrind:
-	EXEC=valgrind --leak-check=full --show-reachable=yes --log-file=valgrind.log
 
 
 ################################################################################
