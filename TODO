@@ -1,0 +1,1 @@
+- Write serialization tests at all levels (block, path, event, event data).

@@ -230,3 +230,127 @@ int Event_deserialize(Event *event, int fd)
 
     return 0;
 }
+
+
+
+//======================================
+// Serialization
+//======================================
+
+// Retrieves the data element for a given key on an event.
+//
+// event - The event containing the data.
+// key   - The key to lookup.
+// data  - A reference to the matching data if found. Otherwise this is set to
+//         NULL.
+//
+// Returns 0 if successful, otherwise -1.
+int Event_get_data(Event *event, int16_t key, EventData **data)
+{
+    int i;
+    bool found = false;
+    
+    // Validation.
+    check(event != NULL, "Event required");
+
+    // Loop over data to find matching key.
+    for(i=0; i<event->data_count; i++) {
+        if(event->data[i]->key == key) {
+            *data = event->data[i];
+            found = true;
+            break;
+        }
+    }
+    
+    // Return null if not found.
+    if(!found) {
+        *data = NULL;
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Sets data on an event.
+//
+// key - The key id to set for the data.
+// value - The value to set on the data.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Event_set_data(Event *event, int16_t key, bstring value)
+{
+    int i, rc;
+    EventData *data = NULL;
+    
+    // Validation.
+    check(event != NULL, "Event required");
+    
+    // Find data with existing key.
+    rc = Event_get_data(event, key, &data);
+    check(rc == 0, "Unable to find event data")
+    
+    // If existing key is found then update value.
+    if(data != NULL) {
+        // Cleanup old value.
+        if(data->value != NULL) {
+            bdestroy(data->value);
+        }
+    
+        // Assign new value.
+        data->value = value;
+    }
+    // Otherwise append a new data item.
+    else {
+        event->data_count++;
+        event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
+        check_mem(event->data);
+        event->data[event->data_count-1] = EventData_create(key, value);
+    }
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+// Removes the value associated with a given key on the event data.
+//
+// event - The event that contains the data.
+// key   - The key to unset.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Event_unset_data(Event *event, int16_t key)
+{
+    int i, j;
+    
+    // Validation.
+    check(event != NULL, "Event required");
+
+    // Loop over data to find matching key.
+    for(i=0; i<event->data_count; i++) {
+        // If found then unload item and resize array down.
+        if(event->data[i]->key == key) {
+            // Destroy data.
+            EventData_destroy(event->data[i]);
+            
+            // Shift all items left.
+            for(j=i+1; j<event->data_count; j++) {
+                event->data[j-1] = event->data[j];
+            }
+
+            // Resize array.
+            event->data_count--;
+            event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
+            check_mem(event->data);
+
+            break;
+        }
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}

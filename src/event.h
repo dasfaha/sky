@@ -112,9 +112,11 @@ int Event_deserialize(Event *event, int fd);
 // Data Management
 //======================================
 
-// Event *Event_set_data(bstring key, bstring value);
+int Event_get_data(Event *event, int16_t key, EventData **data);
 
-// Event *Event_unset_data(bstring key);
+int Event_set_data(Event *event, int16_t key, bstring value);
+
+int Event_unset_data(Event *event, int16_t key);
 
 
 #endif
