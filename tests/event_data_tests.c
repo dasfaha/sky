@@ -14,6 +14,10 @@
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 char *test_EventData_create() {
     struct tagbstring value = bsStatic("foo");
     
@@ -26,6 +30,11 @@ char *test_EventData_create() {
 
     return NULL;
 }
+
+
+//--------------------------------------
+// Serialization
+//--------------------------------------
 
 char *test_EventData_get_serialized_length() {
     struct tagbstring value = bsStatic("foo");
@@ -48,7 +57,7 @@ char *test_EventData_serialize() {
     EventData_destroy(data);
     fclose(file);
 
-    mu_assert_tempfile("tests/fixtures/serialization/event_data");
+    mu_assert_tempfile("tests/fixtures/serialization/event_data", "Serialize Event Data");
 
     return NULL;
 }

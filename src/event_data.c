@@ -170,7 +170,7 @@ int EventData_deserialize(EventData *data, FILE *file)
     }
     
     // Read value.
-    str = malloc(value_length+1);
+    str = calloc(1, value_length+1); check_mem(str);
     rc = fread(str, value_length, 1, file);
     check(rc == 1, "Unable to deserialize event data value: %s", bdata(data->value));
     data->value = bfromcstr(str);

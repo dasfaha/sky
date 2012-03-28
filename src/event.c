@@ -148,6 +148,9 @@ uint32_t Event_get_serialized_length(Event *event)
 {
     uint32_t length = 0;
     
+    // Add event flag.
+    length += 1;
+    
     // Add timestamp.
     length += sizeof(event->timestamp);
     
@@ -170,43 +173,43 @@ uint32_t Event_get_serialized_length(Event *event)
 // Serializes an event to a given file at the file's current offset.
 //
 // event - The event to serialize.
-// fd    - The file descriptor.
+// file  - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_serialize(Event *event, int fd)
+int Event_serialize(Event *event, FILE *file)
 {
     int rc;
     
     // Validate.
     check(event != NULL, "Event required");
-    check(fd != -1, "File descriptor required");
+    check(file != NULL, "File descriptor required");
     
     // Write event flag.
     uint8_t flag = get_event_flag(event);
-    rc = write(fd, &flag, sizeof(flag));
-    check(rc == sizeof(flag), "Unable to serialize event flag: %x", (int)flag);
+    rc = fwrite(&flag, sizeof(flag), 1, file);
+    check(rc == 1, "Unable to serialize event flag: %x", (int)flag);
     
     // Write timestamp.
-    rc = write(fd, &event->timestamp, sizeof(event->timestamp));
-    check(rc == sizeof(event->timestamp), "Unable to serialize event timestamp: %lld", event->timestamp);
+    rc = fwrite(&event->timestamp, sizeof(event->timestamp), 1, file);
+    check(rc == 1, "Unable to serialize event timestamp: %lld", event->timestamp);
     
     // Write action if set.
     if(has_action(event)) {
-        rc = write(fd, &event->action_id, sizeof(event->action_id));
-        check(rc == sizeof(event->action_id), "Unable to serialize event action: %d", event->action_id);
+        rc = fwrite(&event->action_id, sizeof(event->action_id), 1, file);
+        check(rc == 1, "Unable to serialize event action: %d", event->action_id);
     }
 
     // Write data if set.
     if(has_data(event)) {
         // Write data length.
         uint16_t data_length = get_data_length(event);
-        write(fd, &data_length, sizeof(data_length));
-        check(rc == sizeof(data_length), "Unable to serialize event data length: %d", data_length);
+        rc = fwrite(&data_length, sizeof(data_length), 1, file);
+        check(rc == 1, "Unable to serialize event data length: %d", data_length);
         
         // Serialize data.
         int i;
         for(i=0; i<event->data_count; i++) {
-            rc = EventData_serialize(event->data[i], fd);
+            rc = EventData_serialize(event->data[i], file);
             check(rc == 0, "Unable to serialize event data: %d", i);
         }
     }
@@ -220,10 +223,10 @@ error:
 // Deserializes an event from a given file at the file's current offset.
 //
 // event - The event to serialize.
-// fd    - The file descriptor.
+// file  - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_deserialize(Event *event, int fd)
+int Event_deserialize(Event *event, FILE *file)
 {
     // TODO: Read path count.
     // TODO: Loop over paths and delegate serialization to each path.
@@ -234,7 +237,7 @@ int Event_deserialize(Event *event, int fd)
 
 
 //======================================
-// Serialization
+// Event Data
 //======================================
 
 // Retrieves the data element for a given key on an event.

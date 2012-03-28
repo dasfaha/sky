@@ -103,9 +103,9 @@ void Event_destroy(Event *event);
 
 uint32_t Event_get_serialized_length(Event *event);
 
-int Event_serialize(Event *event, int fd);
+int Event_serialize(Event *event, FILE *file);
 
-int Event_deserialize(Event *event, int fd);
+int Event_deserialize(Event *event, FILE *file);
 
 
 //======================================
