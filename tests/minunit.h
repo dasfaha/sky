@@ -71,20 +71,23 @@ int tests_run;
     mu_assert(biseqcstr(object_file->properties[INDEX].name, NAME) == 1, "Expected property #" #INDEX " name to be: " #NAME);
 
 // Asserts the contents of the temp file.
-#define mu_assert_tempfile(LENGTH, CONTENTS) \
-    int i; \
+#define mu_assert_tempfile(EXP_FILENAME) \
     char tempch; \
+    char expch; \
     FILE *tempfile = fopen(TEMPFILE, "r"); \
+    FILE *expfile = fopen(EXP_FILENAME, "r"); \
     if(tempfile == NULL) return "Cannot open tempfile"; \
-    for(i=0; i<LENGTH; i++) { \
-        if(feof(tempfile)) return "Tempfile length shorter than expected"; \
-        int rc = fread(&tempch, 1, 1, tempfile); \
-        if(rc != 1) return "Unable to read from tempfile"; \
-        if(tempch != CONTENTS[i]) { \
-            fprintf(stderr, "Expected %02x, received %02x at location %d in tempfile.\n", CONTENTS[i], tempch, i); \
+    if(expfile == NULL) return "Cannot open expectation file"; \
+    while(1) { \
+        fread(&expch, 1, 1, expfile); \
+        fread(&tempch, 1, 1, tempfile); \
+        if(feof(expfile) || feof(tempfile)) break; \
+        if(tempch != expch) { \
+            fprintf(stderr, "Expected 0x%02x, received 0x%02x at location %ld in tempfile.\n", expch, tempch, ftell(expfile)); \
             return "Tempfile does not match expected value"; \
         } \
     } \
-    fread(&tempch, 1, 1, tempfile); \
     if(!feof(tempfile)) return "Tempfile length longer than expected"; \
-    fclose(tempfile);
+    if(!feof(expfile)) return "Tempfile length shorter than expected"; \
+    fclose(tempfile); \
+    fclose(expfile);

@@ -41,7 +41,6 @@ char *test_EventData_get_serialized_length() {
 
 char *test_EventData_serialize() {
     struct tagbstring value = bsStatic("foo");
-    char exp[] = {0x0A, 0x00, 0x03, 'f', 'o', 'o'};
 
     FILE *file = fopen(TEMPFILE, "w");
     EventData *data = EventData_create(10, &value);
@@ -49,7 +48,7 @@ char *test_EventData_serialize() {
     EventData_destroy(data);
     fclose(file);
 
-    mu_assert_tempfile(6, exp);
+    mu_assert_tempfile("tests/fixtures/serialization/event_data");
 
     return NULL;
 }
