@@ -73,17 +73,18 @@ int tests_run;
 // Asserts the contents of the temp file.
 #define mu_assert_tempfile(LENGTH, CONTENTS) \
     int i; \
-    char ch; \
-    FILE *file = fopen(TEMPFILE, "r"); \
-    if(file == NULL) return "Cannot open tempfile"; \
+    char tempch; \
+    FILE *tempfile = fopen(TEMPFILE, "r"); \
+    if(tempfile == NULL) return "Cannot open tempfile"; \
     for(i=0; i<LENGTH; i++) { \
-        if(feof(file)) return "Tempfile length shorter than expected"; \
-        fread(&ch, 1, 1, file); \
-        if(ch != CONTENTS[i]) { \
-            fprintf(stderr, "Expected %02x, received %02x at location %d in tempfile", CONTENTS[i], ch, i); \
+        if(feof(tempfile)) return "Tempfile length shorter than expected"; \
+        int rc = fread(&tempch, 1, 1, tempfile); \
+        if(rc != 1) return "Unable to read from tempfile"; \
+        if(tempch != CONTENTS[i]) { \
+            fprintf(stderr, "Expected %02x, received %02x at location %d in tempfile.\n", CONTENTS[i], tempch, i); \
             return "Tempfile does not match expected value"; \
         } \
     } \
-    fread(&ch, 1, 1, file); \
-    if(!feof(file)) return "Tempfile length longer than expected"; \
-    fclose(file);
+    fread(&tempch, 1, 1, tempfile); \
+    if(!feof(tempfile)) return "Tempfile length longer than expected"; \
+    fclose(tempfile);

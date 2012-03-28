@@ -106,32 +106,32 @@ uint32_t EventData_get_serialized_length(EventData *data)
 // Serializes event data to a given file at the file's current offset.
 //
 // data - The event data to serialize.
-// fd   - The file descriptor.
+// file - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_serialize(EventData *data, int fd)
+int EventData_serialize(EventData *data, FILE *file)
 {
     int rc;
     
     // Validate.
     check(data != NULL, "Event data required");
-    check(fd != -1, "File descriptor required");
+    check(file != NULL, "File descriptor required");
     
     // Clean data structure.
     clean(data);
 
     // Write key.
-    rc = write(fd, &data->key, sizeof(data->key));
-    check(rc == sizeof(data->key), "Unable to serialize event data key: %d", data->key);
+    rc = fwrite(&data->key, sizeof(data->key), 1, file);
+    check(rc == 1, "Unable to serialize event data key: %d", data->key);
     
     // Write value length.
     uint8_t value_length = blength(data->value);
-    rc = write(fd, &value_length, sizeof(value_length));
-    check(rc == sizeof(value_length), "Unable to serialize event data value length: %d", value_length);
+    rc = fwrite(&value_length, sizeof(value_length), 1, file);
+    check(rc == 1, "Unable to serialize event data value length: %d", value_length);
 
     // Write value.
-    rc = write(fd, bdata(data->value), value_length);
-    check(rc == value_length, "Unable to serialize event data value: %s", bdata(data->value));
+    rc = fwrite(bdata(data->value), value_length, 1, file);
+    check(rc == 1, "Unable to serialize event data value: %s", bdata(data->value));
     
     return 0;
 
@@ -142,10 +142,10 @@ error:
 // Deserializes event data from a given file at the file's current offset.
 //
 // data - The event data to deserialize into.
-// fd   - The file descriptor.
+// file - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_deserialize(EventData *data, int fd)
+int EventData_deserialize(EventData *data, FILE *file)
 {
     // TODO: Read path count.
     // TODO: Loop over paths and delegate serialization to each path.

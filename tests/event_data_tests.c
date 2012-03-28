@@ -43,12 +43,13 @@ char *test_EventData_serialize() {
     struct tagbstring value = bsStatic("foo");
     char exp[] = {0x0A, 0x00, 0x03, 'f', 'o', 'o'};
 
-    int fd = open(TEMPFILE, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    FILE *file = fopen(TEMPFILE, "w");
     EventData *data = EventData_create(10, &value);
-    EventData_serialize(data, fd);
-    mu_assert_tempfile(6, exp);
+    EventData_serialize(data, file);
     EventData_destroy(data);
-    close(fd);
+    fclose(file);
+
+    mu_assert_tempfile(6, exp);
 
     return NULL;
 }

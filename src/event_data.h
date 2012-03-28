@@ -72,9 +72,9 @@ void EventData_destroy(EventData *event);
 
 uint32_t EventData_get_serialized_length(EventData *data);
 
-int EventData_serialize(EventData *data, int file);
+int EventData_serialize(EventData *data, FILE *file);
 
-int EventData_deserialize(EventData *data, int file);
+int EventData_deserialize(EventData *data, FILE *file);
 
 
 #endif
