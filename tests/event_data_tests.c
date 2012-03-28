@@ -53,6 +53,20 @@ char *test_EventData_serialize() {
     return NULL;
 }
 
+char *test_EventData_deserialize() {
+    FILE *file = fopen("tests/fixtures/serialization/event_data", "r");
+    EventData *data = EventData_create(0, NULL);
+    EventData_deserialize(data, file);
+    fclose(file);
+
+    mu_assert(data->key == 10, "Expected data key to equal 10");
+    mu_assert(biseqcstr(data->value, "foo"), "Expected data value to equal 'foo'");
+
+    EventData_destroy(data);
+
+    return NULL;
+}
+
 
 //==============================================================================
 //
@@ -64,6 +78,7 @@ char *all_tests() {
     mu_run_test(test_EventData_create);
     mu_run_test(test_EventData_get_serialized_length);
     mu_run_test(test_EventData_serialize);
+    mu_run_test(test_EventData_deserialize);
     return NULL;
 }
 

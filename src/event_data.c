@@ -63,7 +63,7 @@ EventData *EventData_create(int16_t key, bstring value)
     
     data = malloc(sizeof(EventData));
     data->key = key;
-    data->value = bstrcpy(value); check_mem(data->value);
+    data->value = bstrcpy(value); if(value) check_mem(data->value);
 
     return data;
     
@@ -147,8 +147,39 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int EventData_deserialize(EventData *data, FILE *file)
 {
-    // TODO: Read path count.
-    // TODO: Loop over paths and delegate serialization to each path.
+    int rc;
+    char *str;
 
+    // Validate.
+    check(data != NULL, "Event data required");
+    check(file != NULL, "File descriptor required");
+
+    // Read key.
+    rc = fread(&data->key, sizeof(data->key), 1, file);
+    check(rc == 1, "Unable to deserialize event data key: %d", data->key);
+
+    // Read value length.
+    uint8_t value_length;
+    rc = fread(&value_length, sizeof(value_length), 1, file);
+    check(rc == 1, "Unable to deserialize event data value length: %d", value_length);
+
+    // Clear existing value if set.
+    if(data->value != NULL) {
+        bdestroy(data->value);
+        data->value = NULL;
+    }
+    
+    // Read value.
+    str = malloc(value_length+1);
+    rc = fread(str, value_length, 1, file);
+    check(rc == 1, "Unable to deserialize event data value: %s", bdata(data->value));
+    data->value = bfromcstr(str);
+    check_mem(data->value);
+    free(str);
+    
     return 0;
+
+error:
+    free(str);
+    return -1;
 }
