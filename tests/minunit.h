@@ -29,6 +29,15 @@ int tests_run;
 
 
 
+//==============================================================================
+//
+// Constants
+//
+//==============================================================================
+
+// The temporary file used for file operations in the test suite.
+#define TEMPFILE "/tmp/skytemp"
+
 
 //==============================================================================
 //
@@ -60,3 +69,21 @@ int tests_run;
 #define mu_assert_property(INDEX, ID, NAME) \
     mu_assert(object_file->properties[INDEX].id == ID, "Expected property #" #INDEX " id to be: " #ID); \
     mu_assert(biseqcstr(object_file->properties[INDEX].name, NAME) == 1, "Expected property #" #INDEX " name to be: " #NAME);
+
+// Asserts the contents of the temp file.
+#define mu_assert_tempfile(LENGTH, CONTENTS) \
+    int i; \
+    char ch; \
+    FILE *file = fopen(TEMPFILE, "r"); \
+    if(file == NULL) return "Cannot open tempfile"; \
+    for(i=0; i<LENGTH; i++) { \
+        if(feof(file)) return "Tempfile length shorter than expected"; \
+        fread(&ch, 1, 1, file); \
+        if(ch != CONTENTS[i]) { \
+            fprintf(stderr, "Expected %02x, received %02x at location %d in tempfile", CONTENTS[i], ch, i); \
+            return "Tempfile does not match expected value"; \
+        } \
+    } \
+    fread(&ch, 1, 1, file); \
+    if(!feof(file)) return "Tempfile length longer than expected"; \
+    fclose(file);

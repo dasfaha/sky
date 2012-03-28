@@ -281,7 +281,7 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int Event_set_data(Event *event, int16_t key, bstring value)
 {
-    int i, rc;
+    int rc;
     EventData *data = NULL;
     
     // Validation.
