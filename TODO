@@ -1,1 +1,53 @@
-- Write serialization tests at all levels (block, path, event, event data).
+- Path
+  - Add events.
+  - Remove events.
+  - Serialization length
+  - Serialize
+  - Deserialize
+
+- Block
+  - Add paths
+  - Remove paths
+  - Serialization length
+  - Serialize
+  - Deserialize
+
+- Object file
+  - Add event
+  - Remove event
+  - Find object path
+
+- Standalone client
+  - Add event
+  - Remove event
+  - Find object path
+  - Cucumber
+
+- Server
+  - Command parser
+  - Add event
+  - Remove event
+  - Find object path
+
+- Iterator
+  - Aggregate to DAG
+  - Add standalone support
+  - Add server support
+  - Benchmark
+
+- PQL
+  - flex/bison -> AST
+  - AST -> LLVM
+  - Integrate LLVM with iterator.
+  - Add standalone support
+  - Add server support
+
+- Multicore
+  - ZMQ messaging
+  - Shard object files
+
+- Distributed
+  - ZMQ messaging
+  - Load balancing
+  - Heartbeat
+  
