@@ -34,6 +34,50 @@
 //==============================================================================
 
 //======================================
+// Event Sorting
+//======================================
+
+// Compares two events and sorts them by timestamp and then orders data events
+// before action events.
+int compare_events(const void *_a, const void *_b)
+{
+    Event **a = (Event**)_a;
+    Event **b = (Event**)_b;
+
+    // Sort by timestamp first.
+    if((*a)->timestamp > (*b)->timestamp) {
+        return 1;
+    }
+    else if((*a)->timestamp < (*a)->timestamp) {
+        return -1;
+    }
+    else {
+        // Place data items first.
+        int ad = ((*a)->data_count > 0);
+        int bd = ((*b)->data_count > 0);
+
+        if(ad > bd) {
+            return 1;
+        }
+        else if(ad < bd) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
+    }
+}
+
+// Sorts events in a path.
+//
+// path - The path containing the events.
+void sort_events(Path *path)
+{
+    qsort(path->events, path->event_count, sizeof(Event*), compare_events);
+}
+
+
+//======================================
 // Lifecycle
 //======================================
 
@@ -122,27 +166,27 @@ uint32_t Path_get_serialized_length(Path *path)
 // fd   - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_serialize(Path *path, int fd)
+int Path_serialize(Path *path, FILE *file)
 {
     uint32_t i;
     int rc;
     
     // Validate.
     check(path != NULL, "Block required");
-    check(fd != -1, "File descriptor required");
+    check(file != NULL, "File descriptor required");
 
     // Write object id.
-    rc = write(fd, &path->object_id, sizeof(path->object_id));
-    check(rc == sizeof(path->object_id), "Unable to serialize path object id: %lld", path->object_id);
+    rc = fwrite(&path->object_id, sizeof(path->object_id), 1, file);
+    check(rc == 1, "Unable to serialize path object id: %lld", path->object_id);
     
     // Write events length.
     uint32_t events_length = get_events_length(path);
-    rc = write(fd, &events_length, sizeof(events_length));
-    check(rc == sizeof(events_length), "Unable to serialize path events length: %d", events_length);
+    rc = fwrite(&events_length, sizeof(events_length), 1, file);
+    check(rc == 1, "Unable to serialize path events length: %d", events_length);
 
     // Serialize events.
     for(i=0; i<path->event_count; i++) {
-        rc = Event_serialize(path->events[i], fd);
+        rc = Event_serialize(path->events[i], file);
         check(rc == 0, "Unable to serialize path event: %d", i);
     }
 
@@ -158,7 +202,7 @@ error:
 // fd   - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_deserialize(Path *path, int fd)
+int Path_deserialize(Path *path, FILE *file)
 {
     // TODO: Read path count.
     // TODO: Loop over paths and delegate serialization to each path.
@@ -171,10 +215,81 @@ int Path_deserialize(Path *path, int fd)
 // Event Management
 //======================================
 
+// Adds an event to a path. An event can only be added if the event's object id
+// matches the path's object id.
+//
+// path  - The path to add the event to.
+// event - The event to add to the path.
+//
+// Returns 0 if successful, otherwise returns -1.
 int Path_add_event(Path *path, Event *event)
 {
-    // TODO: Validate arguments.
-    // TODO: Append event and resort events.
+    // Validation.
+    check(path != NULL, "Path required");
+    check(path->object_id != 0, "Path object id cannot be null");
+    check(event != NULL, "Event required");
+    check(path->object_id == event->object_id, "Event object id (%lld) does not match path object id (%lld)", event->object_id, path->object_id);
+
+    // Raise error if event has already been added.
+    unsigned int i;
+    for(i=0; i<path->event_count; i++) {
+        if(path->events[i] == event) {
+            sentinel("Event has already been added to path");
+        }
+    }
+
+    // Allocate space for event.
+    path->event_count++;
+    path->events = realloc(path->events, sizeof(Event*) * path->event_count);
+    check_mem(path->events);
+
+    // Append event to the end.
+    path->events[path->event_count-1] = event;
+
+    // Sort events.
+    sort_events(path);
 
     return 0;
+
+error:
+    return -1;
+}
+
+// Removes an event from a path.
+//
+// path  - The path that contains the event.
+// event - The event to remove.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Path_remove_event(Path *path, Event *event)
+{
+    // Validation.
+    check(path != NULL, "Path required");
+    check(event != NULL, "Event required");
+
+    // Find event.
+    unsigned int i, j;
+    for(i=0; i<path->event_count; i++) {
+        if(path->events[i] == event) {
+            // Shift events over.
+            for(j=i+1; j<path->event_count; j++) {
+                path->events[j-1] = path->events[j];
+            }
+            
+            // Reallocate memory.
+            path->event_count--;
+            path->events = realloc(path->events, sizeof(Event*) * path->event_count);
+            check_mem(path->events);
+            
+            break;
+        }
+    }
+
+    // Sort events.
+    sort_events(path);
+
+    return 0;
+
+error:
+    return -1;
 }

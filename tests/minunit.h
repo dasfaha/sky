@@ -7,7 +7,7 @@
 /* file: minunit.h */
 #define mu_assert(test, message) do {\
 if (!(test)) \
-    return message;\
+    return __FILE__ ": Expected: " #test;\
 } while (0)
 
 #define mu_run_test(test) do { char *message = test(); tests_run++; \

@@ -64,7 +64,7 @@ typedef struct Path {
 // Lifecycle
 //======================================
 
-Path *Path_create();
+Path *Path_create(int64_t object_id);
 
 void Path_destroy(Path *path);
 
@@ -75,9 +75,9 @@ void Path_destroy(Path *path);
 
 uint32_t Path_get_serialized_length(Path *path);
 
-int Path_serialize(Path *path, int fd);
+int Path_serialize(Path *path, FILE *file);
 
-int Path_deserialize(Path *path, int fd);
+int Path_deserialize(Path *path, FILE *file);
 
 
 //======================================
@@ -85,5 +85,7 @@ int Path_deserialize(Path *path, int fd);
 //======================================
 
 int Path_add_event(Path *path, Event *event);
+
+int Path_remove_event(Path *path, Event *event);
 
 #endif
