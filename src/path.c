@@ -172,7 +172,7 @@ int Path_serialize(Path *path, FILE *file)
     int rc;
     
     // Validate.
-    check(path != NULL, "Block required");
+    check(path != NULL, "Path required");
     check(file != NULL, "File descriptor required");
 
     // Write object id.
@@ -204,10 +204,39 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int Path_deserialize(Path *path, FILE *file)
 {
-    // TODO: Read path count.
-    // TODO: Loop over paths and delegate serialization to each path.
+    int rc;
+
+    // Validate.
+    check(path != NULL, "Path required");
+    check(file != NULL, "File descriptor required");
+
+    // Read object id.
+    rc = fread(&path->object_id, sizeof(path->object_id), 1, file);
+    check(rc == 1, "Unable to deserialize path object id");
+
+    // Read events length.
+    uint32_t events_length;
+    rc = fread(&events_length, sizeof(events_length), 1, file);
+    check(rc == 1, "Unable to deserialize path events length: %d", events_length);
+
+    // Deserialize events.
+    int index = 0;
+    long endpos = ftell(file) + events_length;
+    while(!feof(file) && ftell(file) < endpos) {
+        path->event_count++;
+        path->events = realloc(path->events, sizeof(Event*) * path->event_count);
+        check_mem(path->events);
+
+        path->events[index] = Event_create(0, path->object_id, 0);
+        rc = Event_deserialize(path->events[index], file);
+        check(rc == 0, "Unable to deserialize event: %d", index);
+        index++;
+    }
 
     return 0;
+
+error:
+    return -1;
 }
 
 

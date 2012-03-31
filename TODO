@@ -1,11 +1,4 @@
-- Path [11:30]
-  - Add events.
-  - Remove events.
-  - Serialization length
-  - Serialize
-  - Deserialize
-
-- Block [12:30]
+- Block
   - Add paths
   - Remove paths
   - Serialization length
@@ -13,8 +6,8 @@
   - Deserialize
 
 - Object file
-  - Add event [2:30]
-  - Remove event [3:30]
+  - Add event
+  - Remove event
   - Find object path
 
 - Convert timestamp to use microseconds instead of milliseconds.

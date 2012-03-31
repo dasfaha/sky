@@ -326,7 +326,7 @@ int Event_deserialize(Event *event, FILE *file)
             check(allocate_data(event) == 0, "Unable to append event data");
             event->data[index] = EventData_create(0, NULL);
             rc = EventData_deserialize(event->data[index], file);
-            check(rc == 0, "Unable to serialize event data: %d", index);
+            check(rc == 0, "Unable to deserialize event data: %d", index);
             index++;
         }
     }
