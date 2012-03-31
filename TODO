@@ -1,25 +1,17 @@
-- Block
-  - Serialization length
-  - Serialize
-  - Deserialize
+- Convert timestamp to use microseconds instead of milliseconds.
 
 - Object file
   - Add event
-  - Remove event
   - Find object path
-
-- Convert timestamp to use microseconds instead of milliseconds.
 
 - Standalone client
   - Add event
-  - Remove event
   - Find object path
   - Cucumber
 
 - Server
   - Command parser
   - Add event
-  - Remove event
   - Find object path
 
 - Iterator

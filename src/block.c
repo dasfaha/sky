@@ -121,6 +121,36 @@ void Block_destroy(Block *block)
 // Serialization
 //======================================
 
+// Calculates the total number of bytes needed to store just the paths section
+// of the block.
+uint32_t get_paths_length(Block *block)
+{
+    uint32_t i;
+    uint32_t length = 0;
+    
+    // Add size for each path.
+    for(i=0; i<block->path_count; i++) {
+        length += Path_get_serialized_length(block->paths[i]);
+    }
+    
+    return length;
+}
+
+// Calculates the total number of bytes needed to store a block and its paths.
+// This number does not include the padding added after the block.
+//
+// block - The block.
+uint32_t Block_get_serialized_length(Block *block)
+{
+    uint32_t length = 0;
+
+    // Add path count and path length.
+    length += sizeof(block->path_count);
+    length += get_paths_length(block);
+    
+    return length;
+}
+
 // Serializes a block to a given file at the file's current offset.
 //
 // block - The block to serialize.
@@ -135,6 +165,9 @@ int Block_serialize(Block *block, FILE *file)
     check(block != NULL, "Block required");
     check(file != NULL, "File descriptor required");
     
+    // Retrieve initial position.
+    long startpos = ftell(file);
+    
     // Write path count.
     rc = fwrite(&block->path_count, sizeof(block->path_count), 1, file);
     check(rc == 1, "Unable to serialize block path count: %d", block->path_count);
@@ -145,6 +178,12 @@ int Block_serialize(Block *block, FILE *file)
         rc = Path_serialize(block->paths[i], file);
         check(rc == 0, "Unable to serialize block path: %d", i);
     }
+    
+    // Null fill the rest of the block.
+    int fillcount = block->object_file->block_size - (ftell(file)-startpos);
+    char *null = calloc(fillcount, 1); check_mem(null);
+    rc = fwrite(null, 1, fillcount, file);
+    check(rc == fillcount, "Unable to null fill end of block");
     
     return 0;
 
@@ -160,10 +199,34 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int Block_deserialize(Block *block, FILE *file)
 {
-    // TODO: Read path count.
-    // TODO: Loop over paths and delegate serialization to each path.
+    int rc;
+
+    // Validate.
+    check(block != NULL, "Block required");
+    check(file != NULL, "File descriptor required");
+
+    // Read path count.
+    rc = fread(&block->path_count, sizeof(block->path_count), 1, file);
+    check(rc == 1, "Unable to deserialize block path count");
+
+    // Allocate paths.
+    block->paths = realloc(block->paths, sizeof(Path*) * block->path_count);
+    check_mem(block->paths);
+
+    // Loop over paths and delegate deserialization to each path.
+    uint32_t i;
+    for(i=0; i<block->path_count; i++) {
+        Path *path = Path_create(0); check_mem(path);
+        block->paths[i] = path;
+        
+        rc = Path_deserialize(path, file);
+        check(rc == 0, "Unable to deserialize block path: %d", i);
+    }
 
     return 0;
+
+error:
+    return -1;
 }
 
 

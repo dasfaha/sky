@@ -77,7 +77,7 @@ various database files. This is roughly in Extended Backus-Naur Form EBNF.
     EVENTS_LENGTH = uint32
     PATH  = OBJECT_ID EVENTS_LENGTH EVENT*
 
-    PATHS_LENGTH = uint32
+    PATH_COUNT = uint32
     BLOCK = PATH_COUNT PATH*
 
 The event flags are the `action` flag (`0x01`) and the `property` flag (`0x02`).

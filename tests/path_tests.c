@@ -99,14 +99,9 @@ char *test_Path_add_remove_event() {
 //--------------------------------------
 
 char *test_Path_get_serialized_length() {
-    // Create path.
     Path *path = create_test_path0();
-    
-    // Verify
     mu_assert(Path_get_serialized_length(path) == 69, "");
-
     Path_destroy(path);
-
     return NULL;
 }
 

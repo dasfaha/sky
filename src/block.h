@@ -74,6 +74,8 @@ void Block_destroy(Block *block);
 // Serialization
 //======================================
 
+uint32_t Block_get_serialized_length(Block *block);
+
 int Block_serialize(Block *block, FILE *file);
 
 int Block_deserialize(Block *block, FILE *file);

@@ -14,6 +14,9 @@
 //
 //==============================================================================
 
+struct tagbstring dbpath = bsStatic("/tmp/sky");
+struct tagbstring objname = bsStatic("users");
+
 struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
@@ -23,15 +26,20 @@ struct tagbstring baz = bsStatic("baz");
 Block *create_test_block0()
 {
     Event *event;
+    BlockInfo info;
 
-    Block *block = Block_create();
+    Database *database = Database_create(&dbpath);
+    ObjectFile *object_file = ObjectFile_create(database, &objname);
+    object_file->block_size = 0x10000;  // 64K
 
-    // Path 1
+    Block *block = Block_create(object_file, info);
+
+    // Path 2 (len=17)
     event = Event_create(946692000000LL, 11, 0);
     Event_set_data(event, 1, &bar);
     Block_add_event(block, event);
 
-    // Path 2
+    // Path 1 (len=46)
     event = Event_create(946684800000LL, 10, 6);
     Block_add_event(block, event);
     event = Event_create(946688400000LL, 10, 7);
@@ -96,6 +104,86 @@ char *test_Block_add_remove_events() {
 }
 
 
+//--------------------------------------
+// Serialization length
+//--------------------------------------
+
+char *test_Block_get_serialized_length() {
+    Block *block = create_test_block0();
+    mu_assert(Block_get_serialized_length(block) == 79, "");
+    Block_destroy(block);
+    return NULL;
+}
+
+
+//--------------------------------------
+// Serialization
+//--------------------------------------
+
+char *test_Block_serialize() {
+    FILE *file = fopen(TEMPFILE, "w");
+    Block *block = create_test_block0();
+    Block_serialize(block, file);
+    Block_destroy(block);
+    fclose(file);
+    mu_assert_tempfile("tests/fixtures/serialization/block", "Serialize Block");
+    return NULL;
+}
+
+//--------------------------------------
+// Deserialization
+//--------------------------------------
+
+char *test_Block_deserialize() {
+    EventData *data;
+    Path *path;
+    BlockInfo info;
+
+    Database *database = Database_create(&dbpath);
+    ObjectFile *object_file = ObjectFile_create(database, &objname);
+    object_file->block_size = 0x10000;  // 64K
+
+    FILE *file = fopen("tests/fixtures/serialization/block", "r");
+    Block *block = Block_create(object_file, info);
+    Block_deserialize(block, file);
+    fclose(file);
+
+    // Block
+    mu_assert(block->path_count == 2, "");
+
+    // Path 1
+    path = block->paths[0];
+    mu_assert(path->object_id == 10, "");
+    mu_assert(path->event_count == 2, "");
+
+    mu_assert(path->events[0]->timestamp == 946684800000LL, "");
+    mu_assert(path->events[0]->object_id == 10, "");
+    mu_assert(path->events[0]->action_id == 6, "");
+
+    mu_assert(path->events[1]->timestamp == 946688400000LL, "");
+    mu_assert(path->events[1]->object_id == 10, "");
+    mu_assert(path->events[1]->action_id == 7, "");
+
+    Event_get_data(path->events[1], 1, &data);
+    mu_assert(biseqcstr(data->value, "foo"), "");
+
+    // Path 2
+    path = block->paths[1];
+    mu_assert(path->object_id == 11, "");
+    mu_assert(path->event_count == 1, "");
+
+    mu_assert(path->events[0]->timestamp == 946692000000LL, "");
+    mu_assert(path->events[0]->object_id == 11, "");
+    mu_assert(path->events[0]->action_id == 0, "");
+
+    Event_get_data(path->events[0], 1, &data);
+    mu_assert(biseqcstr(data->value, "bar"), "");
+
+    Path_destroy(path);
+    
+    return NULL;
+}
+
 
 //==============================================================================
 //
@@ -106,6 +194,9 @@ char *test_Block_add_remove_events() {
 char *all_tests() {
     mu_run_test(test_Block_create);
     mu_run_test(test_Block_add_remove_events);
+    mu_run_test(test_Block_get_serialized_length);
+    mu_run_test(test_Block_serialize);
+    mu_run_test(test_Block_deserialize);
 
     return NULL;
 }

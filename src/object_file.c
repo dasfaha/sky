@@ -120,7 +120,7 @@ int load_header(ObjectFile *object_file)
     FILE *file;
     BlockInfo *infos = NULL;
     uint32_t version = 1;
-    uint32_t block_size = 2 ^ 16;
+    uint32_t block_size = 0x10000;  // Default to 64K
     uint64_t block_count = 0;
 
     // Retrieve file stats on header file
