@@ -34,6 +34,37 @@
 //==============================================================================
 
 //======================================
+// Path Sorting
+//======================================
+
+// Compares two paths and sorts them by object id.
+int compare_paths(const void *_a, const void *_b)
+{
+    Path **a = (Path**)_a;
+    Path **b = (Path**)_b;
+
+    // Sort by object id.
+    if((*a)->object_id > (*b)->object_id) {
+        return 1;
+    }
+    else if((*a)->object_id < (*a)->object_id) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
+}
+
+// Sorts paths in a block.
+//
+// block - The block containing the paths.
+void sort_paths(Block *block)
+{
+    qsort(block->paths, block->path_count, sizeof(Path*), compare_paths);
+}
+
+
+//======================================
 // Lifecycle
 //======================================
 
@@ -93,25 +124,25 @@ void Block_destroy(Block *block)
 // Serializes a block to a given file at the file's current offset.
 //
 // block - The block to serialize.
-// fd    - The file descriptor.
+// file    - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_serialize(Block *block, int fd)
+int Block_serialize(Block *block, FILE *file)
 {
     int rc;
 
     // Validate.
     check(block != NULL, "Block required");
-    check(fd != -1, "File descriptor required");
+    check(file != NULL, "File descriptor required");
     
     // Write path count.
-    rc = write(fd, &block->path_count, sizeof(block->path_count));
-    check(rc == sizeof(block->path_count), "Unable to serialize block path count: %d", block->path_count);
+    rc = fwrite(&block->path_count, sizeof(block->path_count), 1, file);
+    check(rc == 1, "Unable to serialize block path count: %d", block->path_count);
     
     // Loop over paths and delegate serialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
-        rc = Path_serialize(block->paths[i], fd);
+        rc = Path_serialize(block->paths[i], file);
         check(rc == 0, "Unable to serialize block path: %d", i);
     }
     
@@ -127,7 +158,7 @@ error:
 // fd    - The file descriptor.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_deserialize(Block *block, int fd)
+int Block_deserialize(Block *block, FILE *file)
 {
     // TODO: Read path count.
     // TODO: Loop over paths and delegate serialization to each path.
@@ -151,10 +182,107 @@ int Block_deserialize(Block *block, int fd)
 // Returns 0 if successful, otherwise returns -1.
 int Block_add_event(Block *block, Event *event)
 {
-    // TODO: Validate arguments.
-    // TODO: Find path in block with matching event's object id.
-    // TODO: If none found then append a new path.
-    // TODO: Add event to path.
+    uint32_t i;
+    int rc;
+    
+    // Validation.
+    check(block != NULL, "Block required");
+    check(event != NULL, "Event required");
+    check(event->object_id != 0, "Event object id cannot be 0");
+
+    // Find existing path by object id.
+    Path *path = NULL;
+    for(i=0; i<block->path_count; i++) {
+        if(block->paths[i]->object_id == event->object_id) {
+            path = block->paths[i];
+            break;
+        }
+    }
+    
+    // If matching path could not be found then create one.
+    if(path == NULL) {
+        // Allocate space for path.
+        block->path_count++;
+        block->paths = realloc(block->paths, sizeof(Event*) * block->path_count);
+        check_mem(block->paths);
+
+        // Create and append path.
+        path = Path_create(event->object_id); check_mem(path);
+        block->paths[block->path_count-1] = path;
+
+        // Sort paths.
+        sort_paths(block);
+    }
+    
+    // Add event to path.
+    rc = Path_add_event(path, event);
+    check(rc == 0, "Unable to add event to path");
 
     return 0;
+
+error:
+    return -1;
+}
+
+// Removes an event from a path in the block. If the event's path no longer has
+// any events then it will automatically be removed too.
+//
+// block - The block that contains the event.
+// event - The event that will be removed.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Block_remove_event(Block *block, Event *event)
+{
+    uint32_t i, j, index;
+    int rc;
+    
+    // Validation.
+    check(block != NULL, "Block required");
+    check(event != NULL, "Event required");
+    check(event->object_id != 0, "Event object id cannot be 0");
+
+    // Find event in paths.
+    Path *path;
+
+    for(i=0; i<block->path_count; i++) {
+        bool found = false;
+        path = block->paths[i];
+        
+        // If object id matches then search path.
+        if(path->object_id == event->object_id) {
+            for(j=0; j<path->event_count; j++) {
+                // If event is found then remove it.
+                if(path->events[j] == event) {
+                    rc = Path_remove_event(path, event);
+                    check(rc == 0, "Unable to remove event from path");
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        // Stop searching if the event was found.
+        if(found) {
+            index = i;
+            break;
+        }
+    }
+    
+    // If path has no events then remove path from block.
+    if(path != NULL && path->event_count == 0) {
+        // Shift paths over.
+        for(i=index+1; i<block->path_count; i++) {
+            block->paths[i-1] = block->paths[i];
+        }
+
+        // Reallocate memory.
+        block->path_count--;
+        block->paths = realloc(block->paths, sizeof(Event*) * block->path_count);
+        check_mem(block->paths);
+    }
+
+    return 0;
+
+error:
+    return -1;
 }

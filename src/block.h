@@ -74,9 +74,9 @@ void Block_destroy(Block *block);
 // Serialization
 //======================================
 
-int Block_serialize(Block *block, int fd);
+int Block_serialize(Block *block, FILE *file);
 
-int Block_deserialize(Block *block, int fd);
+int Block_deserialize(Block *block, FILE *file);
 
 
 //======================================
@@ -84,5 +84,7 @@ int Block_deserialize(Block *block, int fd);
 //======================================
 
 int Block_add_event(Block *block, Event *event);
+
+int Block_remove_event(Block *block, Event *event);
 
 #endif

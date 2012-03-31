@@ -1,6 +1,4 @@
 - Block
-  - Add paths
-  - Remove paths
   - Serialization length
   - Serialize
   - Deserialize

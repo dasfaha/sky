@@ -417,7 +417,7 @@ bstring get_data_file_path(ObjectFile *object_file)
 //
 // Returns the number of bytes from the start of the data file where the block
 // begins.
-int get_block_offset(ObjectFile *object_file, BlockInfo *info)
+off_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
 {
     return (object_file->block_size * info->id);
 }
@@ -555,12 +555,12 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block *ret)
     check_mem(path);
 
     // Open data file.
-    int file = open(bdata(path), O_RDONLY);
-    check(file, "Failed to open data file for reading: %s",  bdata(path));
+    FILE *file = fopen(bdata(path), "r");
+    check(file != NULL, "Failed to open data file for reading: %s",  bdata(path));
 
     // Seek to starting position of block.
-    int offset = get_block_offset(object_file, info);
-    rc = lseek(file, offset, SEEK_SET);
+    off_t offset = get_block_offset(object_file, info);
+    rc = fseek(file, offset, SEEK_SET);
     check(rc != -1, "Failed to seek to read block: %s#%d",  bdata(path), info->id);
 
     // Deserialize block.
@@ -569,7 +569,7 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block *ret)
     check(rc == 0, "Failed to deserialize block: %s#%d",  bdata(path), info->id);
     
     // Clean up.
-    close(file);
+    fclose(file);
     
     // Assign block to return value.
     ret = block;
@@ -577,7 +577,7 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block *ret)
     return 0;
 
 error:
-    if(file) close(file);
+    if(file) fclose(file);
     return -1;
 }
 
@@ -597,12 +597,14 @@ int save_block(ObjectFile *object_file, BlockInfo *info, Block *block)
     check_mem(path);
 
     // Open data file.
-    int file = open(bdata(path), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
-    check(file != -1, "Failed to open data file for writing: %s",  bdata(path));
+    int fd = open(bdata(path), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    check(fd != -1, "Failed to open data file descriptor for writing: %s",  bdata(path));
+    FILE *file = fdopen(fd, "w");
+    check(file != NULL, "Failed to open data file for writing: %s",  bdata(path));
 
     // Seek to starting position of block.
-    int offset = get_block_offset(object_file, info);
-    rc = lseek(file, offset, SEEK_SET);
+    off_t offset = get_block_offset(object_file, info);
+    rc = fseek(file, offset, SEEK_SET);
     check(rc != -1, "Failed to seek to write block: %s#%d",  bdata(path), info->id);
 
     // Serialize block.
@@ -610,12 +612,12 @@ int save_block(ObjectFile *object_file, BlockInfo *info, Block *block)
     check(rc == 0, "Failed to serialize block: %s#%d",  bdata(path), info->id);
 
     // Clean up.
-    close(file);
+    fclose(file);
 
     return 0;
 
 error:
-    if(file) close(file);
+    if(file) fclose(file);
     return -1;
 }
 
