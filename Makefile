@@ -16,24 +16,24 @@ TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 # Default Target
 ################################################################################
 
-all: bin/libsky.a bin/sky-standalone test
+all: build/libsky.a build/sky-standalone test
 
 
 ################################################################################
 # Binaries
 ################################################################################
 
-bin/libsky.a: bin ${LIB_OBJECTS}
-	rm -f bin/libsky.a
+build/libsky.a: build ${LIB_OBJECTS}
+	rm -f build/libsky.a
 	ar rcs $@ ${LIB_OBJECTS}
 	ranlib $@
 
-bin/sky-standalone: bin ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_standalone.o -o $@ bin/libsky.a
+build/sky-standalone: build ${OBJECTS}
+	$(CC) $(CFLAGS) src/sky_standalone.o -o $@ build/libsky.a
 	chmod 700 $@
 
-bin:
-	mkdir -p bin
+build:
+	mkdir -p build
 
 
 ################################################################################
@@ -44,8 +44,11 @@ bin:
 test: $(TEST_OBJECTS)
 	@sh ./tests/runtests.sh
 
-$(TEST_OBJECTS): %: %.c bin/libsky.a
-	$(CC) $(CFLAGS) -Isrc -o $@ $< bin/libsky.a
+build/tests:
+	mkdir -p build/tests
+
+$(TEST_OBJECTS): %: %.c build/tests build/libsky.a
+	$(CC) $(CFLAGS) -Isrc -o build/$@ $< build/libsky.a
 
 
 ################################################################################
@@ -53,6 +56,6 @@ $(TEST_OBJECTS): %: %.c bin/libsky.a
 ################################################################################
 
 clean: 
-	rm -rf bin ${OBJECTS} ${TEST_OBJECTS}
+	rm -rf build ${OBJECTS} ${TEST_OBJECTS}
 	rm -rf tests/*.dSYM
 	rm -rf tmp/*

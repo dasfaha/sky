@@ -1,4 +1,5 @@
 bin/
+build/
 src/*.o
 src/**/*.o
 tests/*_tests
