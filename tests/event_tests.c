@@ -162,21 +162,76 @@ char *test_Event_action_data_event_serialize() {
     return NULL;
 }
 
-/*
-char *test_Event_deserialize() {
-    FILE *file = fopen("tests/fixtures/serialization/event_data", "r");
-    EventData *data = EventData_create(0, NULL);
-    EventData_deserialize(data, file);
+//--------------------------------------
+// Deserialization
+//--------------------------------------
+
+// Action event.
+char *test_Event_action_event_deserialize() {
+    FILE *file = fopen("tests/fixtures/serialization/action_event", "r");
+    Event *event = Event_create(0, 0, 0);
+    Event_deserialize(event, file);
     fclose(file);
 
-    mu_assert(data->key == 10, "Expected data key to equal 10");
-    mu_assert(biseqcstr(data->value, "foo"), "Expected data value to equal 'foo'");
+    mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
+    mu_assert(event->action_id == 20, "Expected action id to equal 20");
+    mu_assert(event->object_id == 0, "Expected object id to equal 0");
+    mu_assert(event->data == NULL, "Expected data to be NULL");
+    mu_assert(event->data_count == 0, "Expected data count to be 0");
 
-    EventData_destroy(data);
-
+    Event_destroy(event);
+    
     return NULL;
 }
-*/
+
+// Data event.
+char *test_Event_data_event_deserialize() {
+    FILE *file = fopen("tests/fixtures/serialization/data_event", "r");
+    Event *event = Event_create(0, 0, 0);
+    Event_deserialize(event, file);
+    fclose(file);
+
+    mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
+    mu_assert(event->action_id == 0, "Expected action id to equal 0");
+    mu_assert(event->object_id == 0, "Expected object id to equal 0");
+    mu_assert(event->data != NULL, "Expected data to not be NULL");
+    mu_assert(event->data_count == 2, "Expected data count to be 2");
+
+    EventData *data = NULL;
+    Event_get_data(event, 1, &data);
+    mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
+    Event_get_data(event, 2, &data);
+    mu_assert(biseqcstr(data->value, "bar"), "Expected data 1 to equal 'bar'");
+
+    Event_destroy(event);
+    
+    return NULL;
+}
+
+// Action+Data event.
+char *test_Event_action_data_event_deserialize() {
+    FILE *file = fopen("tests/fixtures/serialization/action_data_event", "r");
+    Event *event = Event_create(0, 0, 0);
+    Event_deserialize(event, file);
+    fclose(file);
+
+    mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
+    mu_assert(event->action_id == 20, "Expected action id to equal 20");
+    mu_assert(event->object_id == 0, "Expected object id to equal 0");
+    mu_assert(event->data != NULL, "Expected data to not be NULL");
+    mu_assert(event->data_count == 2, "Expected data count to be 2");
+
+    EventData *data = NULL;
+    Event_get_data(event, 1, &data);
+    mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
+    Event_get_data(event, 2, &data);
+    mu_assert(biseqcstr(data->value, "bar"), "Expected data 1 to equal 'bar'");
+
+    Event_destroy(event);
+    
+    return NULL;
+}
+
 
 
 //==============================================================================
@@ -199,7 +254,9 @@ char *all_tests() {
     mu_run_test(test_Event_data_event_serialize);
     mu_run_test(test_Event_action_data_event_serialize);
 
-    //mu_run_test(test_Event_deserialize);
+    mu_run_test(test_Event_action_event_deserialize);
+    mu_run_test(test_Event_data_event_deserialize);
+    mu_run_test(test_Event_action_data_event_deserialize);
 
     return NULL;
 }

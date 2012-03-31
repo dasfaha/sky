@@ -180,6 +180,6 @@ int EventData_deserialize(EventData *data, FILE *file)
     return 0;
 
 error:
-    free(str);
+    if(str) free(str);
     return -1;
 }

@@ -67,6 +67,66 @@ uint8_t get_event_flag(Event *event)
 }
 
 
+//======================================
+// Data Allocation
+//======================================
+
+// Deallocates all event data items for an event.
+//
+// event - The event to clear data for.
+//
+// Return 0 if successful, otherwise returns -1.
+void clear_data(Event *event)
+{
+    event->data_count = 0;
+    if(event->data) free(event->data);
+    event->data = NULL;
+}
+
+// Allocates an additional event data item for an event.
+//
+// event - The event to allocate data for.
+//
+// Return 0 if successful, otherwise returns -1.
+int allocate_data(Event *event)
+{
+    event->data_count++;
+    event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
+    check_mem(event->data);
+    return 0;
+    
+error:
+    return -1;
+}
+
+// Deallocates a single event data item for an event.
+//
+// event - The event to deallocate data for.
+//
+// Return 0 if successful, otherwise returns -1.
+int deallocate_data(Event *event)
+{
+    // Raise error if no data left.
+    if(event->data_count == 0) {
+        sentinel("Requested to deallocate more event data than available");
+    }
+    // Completely clear data if data count is 0.
+    else if(event->data_count == 1) {
+        clear_data(event);
+    }
+    // Otherwise deallocate items.
+    else {
+        event->data_count--;
+        event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
+        check_mem(event->data);
+    }
+
+    return 0;
+    
+error:
+    return -1;
+}
+
 
 //======================================
 // Lifecycle
@@ -228,10 +288,53 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int Event_deserialize(Event *event, FILE *file)
 {
-    // TODO: Read path count.
-    // TODO: Loop over paths and delegate serialization to each path.
+    int rc;
+
+    // Validate.
+    check(event != NULL, "Event required");
+    check(file != NULL, "File descriptor required");
+
+    // Read event flag.
+    uint8_t flag;
+    rc = fread(&flag, sizeof(flag), 1, file);
+    check(rc == 1, "Unable to deserialize event flag");
+
+    // Read timestamp.
+    rc = fread(&event->timestamp, sizeof(event->timestamp), 1, file);
+    check(rc == 1, "Unable to deserialize event timestamp");
+
+    // Read action if one exists.
+    if(flag & EVENT_FLAG_ACTION) {
+        rc = fread(&event->action_id, sizeof(event->action_id), 1, file);
+        check(rc == 1, "Unable to deserialize event action");
+    }
+
+    // Clear existing data.
+    clear_data(event);
+    
+    // Read data if set.
+    if(flag & EVENT_FLAG_DATA) {
+        // Read data length.
+        uint16_t data_length;
+        rc = fread(&data_length, sizeof(data_length), 1, file);
+        check(rc == 1, "Unable to deserialize event data length");
+
+        // Deserialize data.
+        int index = 0;
+        long endpos = ftell(file) + data_length;
+        while(!feof(file) && ftell(file) < endpos) {
+            check(allocate_data(event) == 0, "Unable to append event data");
+            event->data[index] = EventData_create(0, NULL);
+            rc = EventData_deserialize(event->data[index], file);
+            check(rc == 0, "Unable to serialize event data: %d", index);
+            index++;
+        }
+    }
 
     return 0;
+
+error:
+    return -1;
 }
 
 
@@ -306,9 +409,7 @@ int Event_set_data(Event *event, int16_t key, bstring value)
     }
     // Otherwise append a new data item.
     else {
-        event->data_count++;
-        event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
-        check_mem(event->data);
+        check(allocate_data(event) == 0, "Unable to allocate event data");
         event->data[event->data_count-1] = EventData_create(key, value);
     }
 
@@ -344,9 +445,7 @@ int Event_unset_data(Event *event, int16_t key)
             }
 
             // Resize array.
-            event->data_count--;
-            event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
-            check_mem(event->data);
+            check(deallocate_data(event) == 0, "Unable to deallocate event data");
 
             break;
         }
