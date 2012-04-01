@@ -34,7 +34,7 @@
 
 /*
  * Parses a timestamp from a C string. The return value is the number of
- * milliseconds before or after the epoch (Jan 1, 1970).
+ * microseconds before or after the epoch (Jan 1, 1970).
  *
  * NOTE: Parsing seems to only work back to around the first decade of the
  *       1900's. Need to investigate further why this is.
@@ -56,20 +56,19 @@ int Timestamp_parse(bstring str, int64_t *ret)
     
     // Set timezone information.
     tzset();
-    printf("tz: %d\n", daylight);
 
-    // Convert to milliseconds since epoch in UTC.
+    // Convert to microseconds since epoch in UTC.
     char buffer[100];
     strftime(buffer, 100, "%s", &tp);
     int64_t value = atoll(buffer);
     value -= timezone;
-    *ret = value * 1000;
+    *ret = value * 1000000;
     
     return 0;
 }
 
 /*
- * Returns the number of milliseconds since the epoch.
+ * Returns the number of microseconds since the epoch.
  *
  * ret - The reference to the variable that will be assigned the timestamp.
  */
@@ -77,7 +76,7 @@ int Timestamp_now(int64_t *ret)
 {
     struct timeval tv;
     check(gettimeofday(&tv, NULL) == 0, "Cannot obtain current time");
-    *ret = (tv.tv_sec*1000) + (tv.tv_usec/1000);
+    *ret = (tv.tv_sec*1000000) + (tv.tv_usec);
     return 0;
 
 error:

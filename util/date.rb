@@ -11,7 +11,7 @@ end
 
 
 date = DateTime.parse(str)
-timestamp = date.strftime('%Q').to_i
+timestamp = date.strftime('%Q').to_i * 1000
 hex = [timestamp].pack('q').bytes.map{|x| "%02x" % x}.join('')
 puts "TIMESTAMP: #{timestamp}"
 puts "BYTES:     #{hex}"

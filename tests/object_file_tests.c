@@ -50,15 +50,15 @@ char *test_ObjectFile_open() {
     mu_assert(rc == 0, "Expected lock file to exist");
 
     // Verify block info.
-    mu_assert_block_info(0, 1, 1, 3, 1325376000000LL, 1328054400000LL, false);
-    mu_assert_block_info(1, 8, 4, 5, 1325376000000LL, 1328054400000LL, false);
-    mu_assert_block_info(2, 0, 6, 6, 1325376000000LL, 1328054400000LL, true);
-    mu_assert_block_info(3, 3, 6, 6, 1330560000000LL, 1333238400000LL, true);
-    mu_assert_block_info(4, 5, 6, 6, 1338508800000LL, 1341100800000LL, true);
-    mu_assert_block_info(5, 2, 7, 9, 1325376000000LL, 1328054400000LL, false);
-    mu_assert_block_info(6, 4, 10, 10, 1325376000000LL, 1328054400000LL, true);
-    mu_assert_block_info(7, 7, 10, 10, 1333238400000LL, 1335830400000LL, true);
-    mu_assert_block_info(8, 6, 10, 10, 1335830400000LL, 1338508800000LL, true);
+    mu_assert_block_info(0, 1, 1, 3, 1325376000000000LL, 1328054400000000LL, false);
+    mu_assert_block_info(1, 8, 4, 5, 1325376000000000LL, 1328054400000000LL, false);
+    mu_assert_block_info(2, 0, 6, 6, 1325376000000000LL, 1328054400000000LL, true);
+    mu_assert_block_info(3, 3, 6, 6, 1330560000000000LL, 1333238400000000LL, true);
+    mu_assert_block_info(4, 5, 6, 6, 1338508800000000LL, 1341100800000000LL, true);
+    mu_assert_block_info(5, 2, 7, 9, 1325376000000000LL, 1328054400000000LL, false);
+    mu_assert_block_info(6, 4, 10, 10, 1325376000000000LL, 1328054400000000LL, true);
+    mu_assert_block_info(7, 7, 10, 10, 1333238400000000LL, 1335830400000000LL, true);
+    mu_assert_block_info(8, 6, 10, 10, 1335830400000000LL, 1338508800000000LL, true);
 
     // Verify actions.
     mu_assert(object_file->action_count == 3, "Expected 3 actions");

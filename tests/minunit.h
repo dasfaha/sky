@@ -72,8 +72,8 @@ int tests_run;
 
 // Asserts the contents of the temp file.
 #define mu_assert_tempfile(EXP_FILENAME, MESSAGE) \
-    char tempch; \
-    char expch; \
+    unsigned char tempch; \
+    unsigned char expch; \
     FILE *tempfile = fopen(TEMPFILE, "r"); \
     FILE *expfile = fopen(EXP_FILENAME, "r"); \
     if(tempfile == NULL) return MESSAGE ": Cannot open tempfile"; \
@@ -83,7 +83,7 @@ int tests_run;
         fread(&tempch, 1, 1, tempfile); \
         if(feof(expfile) || feof(tempfile)) break; \
         if(tempch != expch) { \
-            fprintf(stderr, "%s:%d: Expected 0x%02x, received 0x%02x at location %ld in tempfile.\n", __FILE__, __LINE__, expch, tempch, ftell(expfile)); \
+            fprintf(stderr, "%s:%d: Expected 0x%02x, received 0x%02x at location %ld in tempfile.\n", __FILE__, __LINE__, expch, tempch, (ftell(expfile)-1)); \
             return MESSAGE ": Tempfile does not match expected value"; \
         } \
     } \

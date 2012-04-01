@@ -1,5 +1,3 @@
-- Convert timestamp to use microseconds instead of milliseconds.
-
 - Object file
   - Add event
   - Find object path

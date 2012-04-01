@@ -32,25 +32,25 @@ char *test_Timestamp_parse()
     bstring str;
 
     // Parse ISO 8601 date.
-    mu_timestamp_assert("2010-01-02T10:30:20Z", 1262428220000);
+    mu_timestamp_assert("2010-01-02T10:30:20Z", 1262428220000000);
 
     // Parse ISO 8601 date past 2036.
-    mu_timestamp_assert("2080-01-01T00:00:00Z", 3471292800000);
+    mu_timestamp_assert("2080-01-01T00:00:00Z", 3471292800000000);
 
     // Parse ISO 8601 date on the epoch.
     mu_timestamp_assert("1970-01-01T00:00:00Z", 0);
 
     // Parse ISO 8601 date just before the epoch.
-    mu_timestamp_assert("1969-12-31T23:59:59Z", -1000);
+    mu_timestamp_assert("1969-12-31T23:59:59Z", -1000000);
 
     // Parse ISO 8601 date a year before the epoch.
-    mu_timestamp_assert("1969-01-01T00:00:00Z", -31536000000);
+    mu_timestamp_assert("1969-01-01T00:00:00Z", -31536000000000);
 
     // Parse ISO 8601 date a decade before the epoch.
-    mu_timestamp_assert("1960-01-01T00:00:00Z", -315619200000);
+    mu_timestamp_assert("1960-01-01T00:00:00Z", -315619200000000);
 
     // Parse ISO 8601 date a long time before the epoch.
-    mu_timestamp_assert("1910-01-01T00:00:00Z", -1893456000000);
+    mu_timestamp_assert("1910-01-01T00:00:00Z", -1893456000000000);
 
     return NULL;
 }

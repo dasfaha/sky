@@ -35,14 +35,14 @@ Block *create_test_block0()
     Block *block = Block_create(object_file, info);
 
     // Path 2 (len=17)
-    event = Event_create(946692000000LL, 11, 0);
+    event = Event_create(946692000000000LL, 11, 0);
     Event_set_data(event, 1, &bar);
     Block_add_event(block, event);
 
     // Path 1 (len=46)
-    event = Event_create(946684800000LL, 10, 6);
+    event = Event_create(946684800000000LL, 10, 6);
     Block_add_event(block, event);
-    event = Event_create(946688400000LL, 10, 7);
+    event = Event_create(946688400000000LL, 10, 7);
     Event_set_data(event, 1, &foo);
     Block_add_event(block, event);
     
@@ -94,7 +94,7 @@ char *test_Block_add_remove_events() {
     mu_assert(block->path_count == 1, "");
     mu_assert(block->paths[0]->object_id == 10, "");
     mu_assert(block->paths[0]->event_count == 1, "");
-    mu_assert(block->paths[0]->events[0]->timestamp == 946688400000LL, "");
+    mu_assert(block->paths[0]->events[0]->timestamp == 946688400000000LL, "");
     Event_destroy(event);
     
     // Clean up.
@@ -156,11 +156,11 @@ char *test_Block_deserialize() {
     mu_assert(path->object_id == 10, "");
     mu_assert(path->event_count == 2, "");
 
-    mu_assert(path->events[0]->timestamp == 946684800000LL, "");
+    mu_assert(path->events[0]->timestamp == 946684800000000LL, "");
     mu_assert(path->events[0]->object_id == 10, "");
     mu_assert(path->events[0]->action_id == 6, "");
 
-    mu_assert(path->events[1]->timestamp == 946688400000LL, "");
+    mu_assert(path->events[1]->timestamp == 946688400000000LL, "");
     mu_assert(path->events[1]->object_id == 10, "");
     mu_assert(path->events[1]->action_id == 7, "");
 
@@ -172,7 +172,7 @@ char *test_Block_deserialize() {
     mu_assert(path->object_id == 11, "");
     mu_assert(path->event_count == 1, "");
 
-    mu_assert(path->events[0]->timestamp == 946692000000LL, "");
+    mu_assert(path->events[0]->timestamp == 946692000000000LL, "");
     mu_assert(path->events[0]->object_id == 11, "");
     mu_assert(path->events[0]->action_id == 0, "");
 
