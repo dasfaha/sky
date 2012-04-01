@@ -4,25 +4,33 @@
 //
 //==============================================================================
 
-/* file: minunit.h */
-#define mu_assert(test, message) do {\
-if (!(test)) \
-    return __FILE__ ": Expected: " #test;\
+#define mu_fail(MSG, ...) do {\
+    fprintf(stderr, "%s:%d: " MSG "\n", __FILE__, __LINE__, ##__VA_ARGS__);\
+    return 1;\
+} while(0)
+
+#define mu_assert(TEST, MSG, ...) do {\
+    if (!(TEST)) {\
+        fprintf(stderr, "%s:%d: %s " MSG "\n", __FILE__, __LINE__, #TEST, ##__VA_ARGS__);\
+        return 1;\
+    }\
 } while (0)
 
-#define mu_run_test(test) do { char *message = test(); tests_run++; \
-                               if (message) return message; } while (0)
+#define mu_run_test(TEST) do {\
+    int rc = TEST();\
+    tests_run++; \
+    if (rc) {\
+        return rc;\
+    }\
+} while (0)
 
-#define RUN_TESTS(name) int main() {\
-   char *result = all_tests();\
-   if (result != 0) {\
-       printf("%s\n", result);\
-   }\
-   else {\
+#define RUN_TESTS() int main() {\
+   int rc = all_tests();\
+   if(rc == 0) {\
        printf("ALL TESTS PASSED\n");\
    }\
    printf("Tests run: %d\n", tests_run);\
-   return result != 0;\
+   return rc;\
 }
 
 int tests_run;
@@ -71,23 +79,22 @@ int tests_run;
     mu_assert(biseqcstr(object_file->properties[INDEX].name, NAME) == 1, "Expected property #" #INDEX " name to be: " #NAME);
 
 // Asserts the contents of the temp file.
-#define mu_assert_tempfile(EXP_FILENAME, MESSAGE) \
+#define mu_assert_tempfile(EXP_FILENAME) \
     unsigned char tempch; \
     unsigned char expch; \
     FILE *tempfile = fopen(TEMPFILE, "r"); \
     FILE *expfile = fopen(EXP_FILENAME, "r"); \
-    if(tempfile == NULL) return MESSAGE ": Cannot open tempfile"; \
-    if(expfile == NULL) return MESSAGE ": Cannot open expectation file"; \
+    if(tempfile == NULL) mu_fail("Cannot open tempfile: %s", TEMPFILE); \
+    if(expfile == NULL) mu_fail("Cannot open expectation file: %s", EXP_FILENAME); \
     while(1) { \
         fread(&expch, 1, 1, expfile); \
         fread(&tempch, 1, 1, tempfile); \
         if(feof(expfile) || feof(tempfile)) break; \
         if(tempch != expch) { \
-            fprintf(stderr, "%s:%d: Expected 0x%02x, received 0x%02x at location %ld in tempfile.\n", __FILE__, __LINE__, expch, tempch, (ftell(expfile)-1)); \
-            return MESSAGE ": Tempfile does not match expected value"; \
+            mu_fail("Expected 0x%02x, received 0x%02x at location %ld in tempfile", expch, tempch, (ftell(expfile)-1)); \
         } \
     } \
-    if(!feof(tempfile)) return MESSAGE ": Tempfile length longer than expected"; \
-    if(!feof(expfile)) return MESSAGE ": Tempfile length shorter than expected"; \
+    if(!feof(tempfile)) mu_fail("Tempfile length longer than expected: %s", TEMPFILE); \
+    if(!feof(expfile)) mu_fail("Tempfile length shorter than expected: %s", EXP_FILENAME); \
     fclose(tempfile); \
     fclose(expfile);

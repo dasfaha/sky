@@ -60,11 +60,11 @@ Block *create_test_block0()
 // Lifecycle
 //--------------------------------------
 
-char *test_Block_create() {
+int test_Block_create() {
     Block *block = Block_create();
     mu_assert(block != NULL, "Unable to allocate block");
     Block_destroy(block);
-    return NULL;
+    return 0;
 }
 
 
@@ -72,7 +72,7 @@ char *test_Block_create() {
 // Event management
 //--------------------------------------
 
-char *test_Block_add_remove_events() {
+int test_Block_add_remove_events() {
     Block *block = create_test_block0();
     Event *event;
 
@@ -100,7 +100,7 @@ char *test_Block_add_remove_events() {
     // Clean up.
     Block_destroy(block);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -108,11 +108,11 @@ char *test_Block_add_remove_events() {
 // Serialization length
 //--------------------------------------
 
-char *test_Block_get_serialized_length() {
+int test_Block_get_serialized_length() {
     Block *block = create_test_block0();
     mu_assert(Block_get_serialized_length(block) == 79, "");
     Block_destroy(block);
-    return NULL;
+    return 0;
 }
 
 
@@ -120,21 +120,21 @@ char *test_Block_get_serialized_length() {
 // Serialization
 //--------------------------------------
 
-char *test_Block_serialize() {
+int test_Block_serialize() {
     FILE *file = fopen(TEMPFILE, "w");
     Block *block = create_test_block0();
     Block_serialize(block, file);
     Block_destroy(block);
     fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/block", "Serialize Block");
-    return NULL;
+    mu_assert_tempfile("tests/fixtures/serialization/block");
+    return 0;
 }
 
 //--------------------------------------
 // Deserialization
 //--------------------------------------
 
-char *test_Block_deserialize() {
+int test_Block_deserialize() {
     EventData *data;
     Path *path;
     BlockInfo info;
@@ -181,7 +181,7 @@ char *test_Block_deserialize() {
 
     Path_destroy(path);
     
-    return NULL;
+    return 0;
 }
 
 
@@ -191,14 +191,14 @@ char *test_Block_deserialize() {
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_Block_create);
     mu_run_test(test_Block_add_remove_events);
     mu_run_test(test_Block_get_serialized_length);
     mu_run_test(test_Block_serialize);
     mu_run_test(test_Block_deserialize);
 
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()

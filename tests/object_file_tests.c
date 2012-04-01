@@ -25,7 +25,11 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 //
 //==============================================================================
 
-char *test_ObjectFile_open() {
+//--------------------------------------
+// Open
+//--------------------------------------
+
+int test_ObjectFile_open() {
     struct stat buffer;
     int rc;
     
@@ -88,8 +92,9 @@ char *test_ObjectFile_open() {
     ObjectFile_destroy(object_file);
     Database_destroy(database);
 
-    return NULL;
+    return 0;
 }
+
 
 
 //==============================================================================
@@ -98,9 +103,9 @@ char *test_ObjectFile_open() {
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_ObjectFile_open);
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()

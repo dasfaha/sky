@@ -25,7 +25,7 @@ bdestroy(str);
 //
 //==============================================================================
 
-char *test_Timestamp_parse()
+int test_Timestamp_parse()
 {
     int64_t timestamp = 0;
     int rc;
@@ -52,10 +52,10 @@ char *test_Timestamp_parse()
     // Parse ISO 8601 date a long time before the epoch.
     mu_timestamp_assert("1910-01-01T00:00:00Z", -1893456000000000);
 
-    return NULL;
+    return 0;
 }
 
-char *test_Timestamp_parse_invalid()
+int test_Timestamp_parse_invalid()
 {
     int64_t timestamp = 0;
     int rc;
@@ -64,7 +64,7 @@ char *test_Timestamp_parse_invalid()
     rc = Timestamp_parse(bfromcstr("foo"), &timestamp);
     mu_assert(rc == -1, "Timestamp should not have been parsed");
     
-    return NULL;
+    return 0;
 }
 
 //==============================================================================
@@ -73,10 +73,10 @@ char *test_Timestamp_parse_invalid()
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_Timestamp_parse);
     mu_run_test(test_Timestamp_parse_invalid);
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()

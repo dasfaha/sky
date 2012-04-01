@@ -10,7 +10,7 @@
 //
 //==============================================================================
 
-char *test_Database_create_destroy() {
+int test_Database_create_destroy() {
     struct tagbstring root = bsStatic("/etc/sky/data");
     Database *database = Database_create(&root);
     mu_assert(database != NULL, "Could not create database");
@@ -18,7 +18,7 @@ char *test_Database_create_destroy() {
 
     Database_destroy(database);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -29,9 +29,9 @@ char *test_Database_create_destroy() {
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_Database_create_destroy);
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()

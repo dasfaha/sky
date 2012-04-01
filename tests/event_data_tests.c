@@ -18,7 +18,7 @@
 // Lifecycle
 //--------------------------------------
 
-char *test_EventData_create() {
+int test_EventData_create() {
     struct tagbstring value = bsStatic("foo");
     
     EventData *data = EventData_create(10, &value);
@@ -28,7 +28,7 @@ char *test_EventData_create() {
 
     EventData_destroy(data);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -36,7 +36,7 @@ char *test_EventData_create() {
 // Serialization
 //--------------------------------------
 
-char *test_EventData_get_serialized_length() {
+int test_EventData_get_serialized_length() {
     struct tagbstring value = bsStatic("foo");
     EventData *data;
     
@@ -45,10 +45,10 @@ char *test_EventData_get_serialized_length() {
     mu_assert(length == 6, "Expected length of 6 for 'foo'");
     EventData_destroy(data);
 
-    return NULL;
+    return 0;
 }
 
-char *test_EventData_serialize() {
+int test_EventData_serialize() {
     struct tagbstring value = bsStatic("foo");
 
     FILE *file = fopen(TEMPFILE, "w");
@@ -57,12 +57,12 @@ char *test_EventData_serialize() {
     EventData_destroy(data);
     fclose(file);
 
-    mu_assert_tempfile("tests/fixtures/serialization/event_data", "Serialize Event Data");
+    mu_assert_tempfile("tests/fixtures/serialization/event_data");
 
-    return NULL;
+    return 0;
 }
 
-char *test_EventData_deserialize() {
+int test_EventData_deserialize() {
     FILE *file = fopen("tests/fixtures/serialization/event_data", "r");
     EventData *data = EventData_create(0, NULL);
     EventData_deserialize(data, file);
@@ -73,7 +73,7 @@ char *test_EventData_deserialize() {
 
     EventData_destroy(data);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -83,12 +83,12 @@ char *test_EventData_deserialize() {
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_EventData_create);
     mu_run_test(test_EventData_get_serialized_length);
     mu_run_test(test_EventData_serialize);
     mu_run_test(test_EventData_deserialize);
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()

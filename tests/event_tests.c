@@ -28,7 +28,7 @@ struct tagbstring baz = bsStatic("baz");
 // Lifecycle
 //--------------------------------------
 
-char *test_Event_create() {
+int test_Event_create() {
     Event *event = Event_create(1325376000000LL, 10, 200);
     mu_assert(event != NULL, "Unable to allocate event");
     mu_assert(event->timestamp == 1325376000000LL, "Event timestamp not assigned");
@@ -39,7 +39,7 @@ char *test_Event_create() {
 
     Event_destroy(event);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -47,7 +47,7 @@ char *test_Event_create() {
 // Event data
 //--------------------------------------
 
-char *test_Event_set_data() {
+int test_Event_set_data() {
     EventData *data = NULL;
 
     Event *event = Event_create(0, 0, 0);
@@ -65,10 +65,10 @@ char *test_Event_set_data() {
 
     Event_destroy(event);
 
-    return NULL;
+    return 0;
 }
 
-char *test_Event_unset_data() {
+int test_Event_unset_data() {
     EventData *data = NULL;
 
     Event *event = Event_create(0, 0, 0);
@@ -85,7 +85,7 @@ char *test_Event_unset_data() {
 
     Event_destroy(event);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -94,31 +94,31 @@ char *test_Event_unset_data() {
 //--------------------------------------
 
 // Action-only event.
-char *test_Event_action_event_get_serialized_length() {
+int test_Event_action_event_get_serialized_length() {
     Event *event = Event_create(1325376000000LL, 0, 20);
     mu_assert(Event_get_serialized_length(event) == 13, "Unexpected length for action-only event.");
     Event_destroy(event);
-    return NULL;
+    return 0;
 }
 
 // Data-only event.
-char *test_Event_data_event_get_serialized_length() {
+int test_Event_data_event_get_serialized_length() {
     Event *event = Event_create(1325376000000LL, 0, 0);
     Event_set_data(event, 1, &foo);
     Event_set_data(event, 2, &bar);
     mu_assert(Event_get_serialized_length(event) == 23, "Unexpected length for data-only event.");
     Event_destroy(event);
-    return NULL;
+    return 0;
 }
 
 // Action + data event.
-char *test_Event_action_data_event_get_serialized_length() {
+int test_Event_action_data_event_get_serialized_length() {
     Event *event = Event_create(1325376000000LL, 0, 100);
     Event_set_data(event, 1, &foo);
     Event_set_data(event, 2, &bar);
     mu_assert(Event_get_serialized_length(event) == 27, "Unexpected length for action+data event.");
     Event_destroy(event);
-    return NULL;
+    return 0;
 }
 
 //--------------------------------------
@@ -126,18 +126,18 @@ char *test_Event_action_data_event_get_serialized_length() {
 //--------------------------------------
 
 // Action event.
-char *test_Event_action_event_serialize() {
+int test_Event_action_event_serialize() {
     FILE *file = fopen(TEMPFILE, "w");
     Event *event = Event_create(1325376000000LL, 0, 20);
     Event_serialize(event, file);
     Event_destroy(event);
     fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/action_event", "Serialize Action Event");
-    return NULL;
+    mu_assert_tempfile("tests/fixtures/serialization/action_event");
+    return 0;
 }
 
 // Data event.
-char *test_Event_data_event_serialize() {
+int test_Event_data_event_serialize() {
     FILE *file = fopen(TEMPFILE, "w");
     Event *event = Event_create(1325376000000LL, 0, 0);
     Event_set_data(event, 1, &foo);
@@ -145,12 +145,12 @@ char *test_Event_data_event_serialize() {
     Event_serialize(event, file);
     Event_destroy(event);
     fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/data_event", "Serialize Data Event");
-    return NULL;
+    mu_assert_tempfile("tests/fixtures/serialization/data_event");
+    return 0;
 }
 
 // Action+Data event.
-char *test_Event_action_data_event_serialize() {
+int test_Event_action_data_event_serialize() {
     FILE *file = fopen(TEMPFILE, "w");
     Event *event = Event_create(1325376000000LL, 0, 20);
     Event_set_data(event, 1, &foo);
@@ -158,8 +158,8 @@ char *test_Event_action_data_event_serialize() {
     Event_serialize(event, file);
     Event_destroy(event);
     fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/action_data_event", "Serialize Action+Data Event");
-    return NULL;
+    mu_assert_tempfile("tests/fixtures/serialization/action_data_event");
+    return 0;
 }
 
 //--------------------------------------
@@ -167,7 +167,7 @@ char *test_Event_action_data_event_serialize() {
 //--------------------------------------
 
 // Action event.
-char *test_Event_action_event_deserialize() {
+int test_Event_action_event_deserialize() {
     FILE *file = fopen("tests/fixtures/serialization/action_event", "r");
     Event *event = Event_create(0, 0, 0);
     Event_deserialize(event, file);
@@ -181,11 +181,11 @@ char *test_Event_action_event_deserialize() {
 
     Event_destroy(event);
     
-    return NULL;
+    return 0;
 }
 
 // Data event.
-char *test_Event_data_event_deserialize() {
+int test_Event_data_event_deserialize() {
     FILE *file = fopen("tests/fixtures/serialization/data_event", "r");
     Event *event = Event_create(0, 0, 0);
     Event_deserialize(event, file);
@@ -205,11 +205,11 @@ char *test_Event_data_event_deserialize() {
 
     Event_destroy(event);
     
-    return NULL;
+    return 0;
 }
 
 // Action+Data event.
-char *test_Event_action_data_event_deserialize() {
+int test_Event_action_data_event_deserialize() {
     FILE *file = fopen("tests/fixtures/serialization/action_data_event", "r");
     Event *event = Event_create(0, 0, 0);
     Event_deserialize(event, file);
@@ -229,7 +229,7 @@ char *test_Event_action_data_event_deserialize() {
 
     Event_destroy(event);
     
-    return NULL;
+    return 0;
 }
 
 
@@ -240,7 +240,7 @@ char *test_Event_action_data_event_deserialize() {
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_Event_create);
 
     mu_run_test(test_Event_set_data);
@@ -258,7 +258,7 @@ char *all_tests() {
     mu_run_test(test_Event_data_event_deserialize);
     mu_run_test(test_Event_action_data_event_deserialize);
 
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()

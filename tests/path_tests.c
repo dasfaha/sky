@@ -54,13 +54,13 @@ Path *create_test_path0()
 // Lifecycle
 //--------------------------------------
 
-char *test_Path_create() {
+int test_Path_create() {
     Path *path = Path_create(10);
     mu_assert(path != NULL, "Unable to allocate path");
     mu_assert(path->object_id == 10, "Path object id not assigned");
     Path_destroy(path);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -68,7 +68,7 @@ char *test_Path_create() {
 // Event management
 //--------------------------------------
 
-char *test_Path_add_remove_event() {
+int test_Path_add_remove_event() {
     Path *path = Path_create(10);
 
     Event *event0 = Event_create(1325377000000LL, 10, 200);
@@ -90,7 +90,7 @@ char *test_Path_add_remove_event() {
     Event_destroy(event1);
     Path_destroy(path);
 
-    return NULL;
+    return 0;
 }
 
 
@@ -98,11 +98,11 @@ char *test_Path_add_remove_event() {
 // Serialization length
 //--------------------------------------
 
-char *test_Path_get_serialized_length() {
+int test_Path_get_serialized_length() {
     Path *path = create_test_path0();
     mu_assert(Path_get_serialized_length(path) == 69, "");
     Path_destroy(path);
-    return NULL;
+    return 0;
 }
 
 
@@ -110,14 +110,14 @@ char *test_Path_get_serialized_length() {
 // Serialization
 //--------------------------------------
 
-char *test_Path_serialize() {
+int test_Path_serialize() {
     FILE *file = fopen(TEMPFILE, "w");
     Path *path = create_test_path0();
     Path_serialize(path, file);
     Path_destroy(path);
     fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/path", "Serialize Path");
-    return NULL;
+    mu_assert_tempfile("tests/fixtures/serialization/path");
+    return 0;
 }
 
 
@@ -125,7 +125,7 @@ char *test_Path_serialize() {
 // Deserialization
 //--------------------------------------
 
-char *test_Path_deserialize() {
+int test_Path_deserialize() {
     EventData *data;
     FILE *file = fopen("tests/fixtures/serialization/path", "r");
     Path *path = Path_create(0);
@@ -158,7 +158,7 @@ char *test_Path_deserialize() {
 
     Path_destroy(path);
     
-    return NULL;
+    return 0;
 }
 
 
@@ -168,14 +168,14 @@ char *test_Path_deserialize() {
 //
 //==============================================================================
 
-char *all_tests() {
+int all_tests() {
     mu_run_test(test_Path_create);
     mu_run_test(test_Path_add_remove_event);
     mu_run_test(test_Path_get_serialized_length);
     mu_run_test(test_Path_serialize);
     mu_run_test(test_Path_deserialize);
 
-    return NULL;
+    return 0;
 }
 
-RUN_TESTS(all_tests)
+RUN_TESTS()
