@@ -65,6 +65,7 @@
 
 #define OBJECT_FILE_LOCK_NAME ".lock"
 
+#define DEFAULT_BLOCK_SIZE 0x10000
 
 //==============================================================================
 //

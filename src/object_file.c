@@ -120,7 +120,6 @@ int load_header(ObjectFile *object_file)
     FILE *file;
     BlockInfo *infos = NULL;
     uint32_t version = 1;
-    uint32_t block_size = 0x10000;  // Default to 64K
     uint64_t block_count = 0;
 
     // Retrieve file stats on header file
@@ -132,11 +131,11 @@ int load_header(ObjectFile *object_file)
         check(file, "Failed to open header file: %s",  bdata(path));
 
         // Read database format version & block size.
-        check(fread(&version, sizeof(version), 1, file) == 1, "Corrupt header file");
-        check(fread(&block_size, sizeof(block_size), 1, file) == 1, "Corrupt header file");
+        check(fread(&version, sizeof(version), 1, file) == 1, "Unable to read version");
+        check(fread(&object_file->block_size, sizeof(object_file->block_size), 1, file) == 1, "Unable to read block size");
 
         // Read block count.
-        check(fread(&block_count, sizeof(block_count), 1, file) == 1, "Corrupt header file");
+        check(fread(&block_count, sizeof(block_count), 1, file) == 1, "Unable to read block count");
         infos = malloc(sizeof(BlockInfo) * block_count); check_mem(infos);
 
         // Read block info items until end of file.
@@ -147,12 +146,12 @@ int load_header(ObjectFile *object_file)
             infos[i].spanned = false;
             
             // Read object id range.
-            check(fread(&infos[i].min_object_id, sizeof(infos[i].min_object_id), 1, file) == 1, "Corrupt header file");
-            check(fread(&infos[i].max_object_id, sizeof(infos[i].max_object_id), 1, file) == 1, "Corrupt header file");
+            check(fread(&infos[i].min_object_id, sizeof(infos[i].min_object_id), 1, file) == 1, "Unable to read min object id : blk%d", i);
+            check(fread(&infos[i].max_object_id, sizeof(infos[i].max_object_id), 1, file) == 1, "Unable to read max object id : blk%d", i);
             
             // Read timestamp range.
-            check(fread(&infos[i].min_timestamp, sizeof(infos[i].min_timestamp), 1, file) == 1, "Corrupt header file");
-            check(fread(&infos[i].max_timestamp, sizeof(infos[i].max_timestamp), 1, file) == 1, "Corrupt header file");
+            check(fread(&infos[i].min_timestamp, sizeof(infos[i].min_timestamp), 1, file) == 1, "Unable to read min timestamp : blk%d", i);
+            check(fread(&infos[i].max_timestamp, sizeof(infos[i].max_timestamp), 1, file) == 1, "Unable to read max timestamp : blk%d", i);
         }
 
         // Close the file.
@@ -188,7 +187,6 @@ int load_header(ObjectFile *object_file)
     // Store version and block information on object file.
     object_file->version = version;
     object_file->block_count = block_count;
-    object_file->block_size = block_size;
     object_file->infos = infos;
 
     // Clean up.
@@ -214,7 +212,7 @@ int unload_header(ObjectFile *object_file)
         object_file->infos = NULL;
 
         object_file->version = 0;
-        object_file->block_size = 0;
+        object_file->block_size = DEFAULT_BLOCK_SIZE;
         object_file->block_count = 0;
     }
     
@@ -647,6 +645,7 @@ ObjectFile *ObjectFile_create(Database *database, bstring name)
     object_file->path = bformat("%s/%s", bdata(database->path), bdata(object_file->name));
     check_mem(object_file->path);
 
+    object_file->block_size = DEFAULT_BLOCK_SIZE;  // Default to 64K blocks.
     object_file->infos = NULL;
     object_file->block_count = 0;
 

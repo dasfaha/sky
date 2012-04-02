@@ -38,12 +38,14 @@ int test_ObjectFile_open() {
     Database *database = Database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     mu_assert(object_file->state == OBJECT_FILE_STATE_CLOSED, "Expected state initialize as closed");
+    mu_assert(object_file->block_size == DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
 
     rc = ObjectFile_open(object_file);
     mu_assert(rc == 0, "Object file could not be opened");
 
     mu_assert(object_file->state == OBJECT_FILE_STATE_OPEN, "Expected state to be open");
     mu_assert(object_file->block_count == 9, "Expected 9 blocks");
+    mu_assert(object_file->block_size == 0x10000, "Expected block size to be 64K");
 
     rc = ObjectFile_lock(object_file);
     mu_assert(rc == 0, "Object file could not be locked");
@@ -88,6 +90,7 @@ int test_ObjectFile_open() {
     rc = ObjectFile_close(object_file);
     mu_assert(rc == 0, "Object file could not be closed");
     mu_assert(object_file->state == OBJECT_FILE_STATE_CLOSED, "Expected state to be closed");
+    mu_assert(object_file->block_size == DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
 
     ObjectFile_destroy(object_file);
     Database_destroy(database);
@@ -95,6 +98,19 @@ int test_ObjectFile_open() {
     return 0;
 }
 
+
+//--------------------------------------
+// Add events
+//--------------------------------------
+
+int test_ObjectFile_add_events() {
+    // Open object file.
+    
+    // TODO: Add events.
+    // TODO: Verify files.
+    
+    return 0;
+}
 
 
 //==============================================================================
@@ -105,6 +121,7 @@ int test_ObjectFile_open() {
 
 int all_tests() {
     mu_run_test(test_ObjectFile_open);
+    mu_run_test(test_ObjectFile_add_events);
     return 0;
 }
 
