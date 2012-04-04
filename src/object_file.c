@@ -577,11 +577,20 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
     
     // If we haven't found a block then it means that the object id is after all
     // other object ids or that we are inserting before a single object block or
-    // that we have no blocks. Either way, simply create a new block and add it
-    // to the end.
+    // that we have no blocks.
     if(*ret == NULL) {
-        rc = create_block(object_file, ret);
-        check(rc == 0, "Unable to create block");
+        // Find the last block if one exists.
+        BlockInfo *last_info = (object_file->block_count > 0 ? &object_file->infos[object_file->block_count-1] : NULL);
+
+        // If the last block available is unspanned then use it.
+        if(last_info != NULL && !last_info->spanned) {
+            *ret = last_info;
+        }
+        // Otherwise just create a new block.
+        else {
+            rc = create_block(object_file, ret);
+            check(rc == 0, "Unable to create block");
+        }
     }
     
     return 0;
@@ -872,6 +881,8 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     // Add event to block.
     rc = Block_add_event(block, event);
     check(rc == 0, "Unable to add event to block %d", info->id);
+    
+    // TODO: Split block if necessary!
     
     // Update the block info stats.
     bool updated = false;

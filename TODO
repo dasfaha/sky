@@ -1,5 +1,6 @@
 - Object file
   - Add event
+    - Split blocks (*)
   - Find object path
 
 - Standalone client

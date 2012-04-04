@@ -181,6 +181,7 @@ int Block_serialize(Block *block, FILE *file)
     
     // Null fill the rest of the block.
     int fillcount = block->object_file->block_size - (ftell(file)-startpos);
+    fprintf(stderr, "fillcount: %d, %ld, %ld\n", block->object_file->block_size, ftell(file), startpos);
     char *null = calloc(fillcount, 1); check_mem(null);
     rc = fwrite(null, 1, fillcount, file);
     check(rc == fillcount, "Unable to null fill end of block");

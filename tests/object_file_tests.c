@@ -21,6 +21,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
+struct tagbstring google = bsStatic("http://www.google.com/this is a test yay!!!");
 
 
 //==============================================================================
@@ -108,7 +109,6 @@ int test_ObjectFile_open() {
 //--------------------------------------
 
 int test_ObjectFile_add_event() {
-    int rc = 0;
     Event *event;
     
     cleandb();
@@ -121,26 +121,36 @@ int test_ObjectFile_add_event() {
     mu_assert(ObjectFile_lock(object_file) == 0, "");
 
     // Action-only event.
-    event = Event_create(1325376000000LL, 10, 20);
-    ObjectFile_add_event(object_file, event);
-    mu_assert(rc == 0, "Unable to add action-only event");
+    event = Event_create(946684800000000LL, 10, 20);
+    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
     Event_destroy(event);
 
     // Data-only event.
-    event = Event_create(1325376000000LL, 11, 0);
+    event = Event_create(946684800000000LL, 11, 0);
     Event_set_data(event, 1, &foo);
     Event_set_data(event, 2, &bar);
-    ObjectFile_add_event(object_file, event);
-    mu_assert(rc == 0, "Unable to add data-only event");
+    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
     Event_destroy(event);
 
     // Action+data event.
-    event = Event_create(1325376000000LL, 11, 20);
+    event = Event_create(946688400000000LL, 11, 20);
     Event_set_data(event, 1, &foo);
-    rc = ObjectFile_add_event(object_file, event);
-    mu_assert(rc == 0, "Unable to add action+data event");
+    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
+    Event_destroy(event);
+    
+    // More events added to test block splits.
+    event = Event_create(946688400000000LL, 10, 21);
+    Event_set_data(event, 1, &google);
+    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
     Event_destroy(event);
 
+    event = Event_create(946692000000000LL, 10, 22);
+    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
+    Event_destroy(event);
+
+    // Verify database files.
+    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/object_file_test0/users/data");
+    
     mu_assert(ObjectFile_unlock(object_file) == 0, "");
     mu_assert(ObjectFile_close(object_file) == 0, "");
 
