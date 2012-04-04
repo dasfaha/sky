@@ -18,6 +18,10 @@
 struct tagbstring ROOT = bsStatic("tmp/db");
 struct tagbstring OBJECT_TYPE = bsStatic("users");
 
+struct tagbstring foo = bsStatic("foo");
+struct tagbstring bar = bsStatic("bar");
+struct tagbstring baz = bsStatic("baz");
+
 
 //==============================================================================
 //
@@ -103,11 +107,45 @@ int test_ObjectFile_open() {
 // Add events
 //--------------------------------------
 
-int test_ObjectFile_add_events() {
-    // Open object file.
+int test_ObjectFile_add_event() {
+    int rc = 0;
+    Event *event;
     
-    // TODO: Add events.
-    // TODO: Verify files.
+    cleandb();
+    
+    Database *database = Database_create(&ROOT);
+    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
+    object_file->block_size = 128;
+
+    mu_assert(ObjectFile_open(object_file) == 0, "");
+    mu_assert(ObjectFile_lock(object_file) == 0, "");
+
+    // Action-only event.
+    event = Event_create(1325376000000LL, 10, 20);
+    ObjectFile_add_event(object_file, event);
+    mu_assert(rc == 0, "Unable to add action-only event");
+    Event_destroy(event);
+
+    // Data-only event.
+    event = Event_create(1325376000000LL, 11, 0);
+    Event_set_data(event, 1, &foo);
+    Event_set_data(event, 2, &bar);
+    ObjectFile_add_event(object_file, event);
+    mu_assert(rc == 0, "Unable to add data-only event");
+    Event_destroy(event);
+
+    // Action+data event.
+    event = Event_create(1325376000000LL, 11, 20);
+    Event_set_data(event, 1, &foo);
+    rc = ObjectFile_add_event(object_file, event);
+    mu_assert(rc == 0, "Unable to add action+data event");
+    Event_destroy(event);
+
+    mu_assert(ObjectFile_unlock(object_file) == 0, "");
+    mu_assert(ObjectFile_close(object_file) == 0, "");
+
+    ObjectFile_destroy(object_file);
+    Database_destroy(database);
     
     return 0;
 }
@@ -121,7 +159,7 @@ int test_ObjectFile_add_events() {
 
 int all_tests() {
     mu_run_test(test_ObjectFile_open);
-    mu_run_test(test_ObjectFile_add_events);
+    mu_run_test(test_ObjectFile_add_event);
     return 0;
 }
 

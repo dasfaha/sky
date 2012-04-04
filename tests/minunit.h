@@ -53,6 +53,10 @@ int tests_run;
 //
 //==============================================================================
 
+// Empties the tmp/db directory.
+#define cleandb() \
+    system("tests/cleandb.sh")
+    
 // Copy a database from the fixtures directory into the tmp/db directory.
 #define copydb(DB) \
     char _copydb_cmd[1024]; \

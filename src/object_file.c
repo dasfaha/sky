@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "dbg.h"
 #include "bstring.h"
@@ -124,7 +125,7 @@ int load_header(ObjectFile *object_file)
 
     // Retrieve file stats on header file
     bstring path = bformat("%s/header", bdata(object_file->path)); check_mem(path);
-
+    
     // Read in header file if it exists.
     if(file_exists(path)) {
         file = fopen(bdata(path), "r");
@@ -420,165 +421,6 @@ off_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
     return (object_file->block_size * info->id);
 }
 
-// Creates a block in the object file and returns a reference to its info object.
-//
-// object_file - The object file that will own the new block.
-//
-// Returns 0 if successful, otherwise returns -1.
-int create_block(ObjectFile *object_file, BlockInfo *info)
-{
-    // Increment block count and resize block info memory.
-    object_file->block_count++;
-    object_file->infos = realloc(object_file->infos, sizeof(BlockInfo) * object_file->block_count);
-    check_mem(object_file->infos);
-
-    // Create new block.
-    info = &object_file->infos[object_file->block_count];
-    info->id = object_file->block_count-1;
-    info->min_object_id = 0LL;
-    info->max_object_id = 0LL;
-
-    // Sort blocks.
-    sort_blocks(object_file->infos, object_file->block_count);
-
-    return 0;
-    
-error:
-    return -1;
-}
-
-// Finds the correct block to add an event to.
-//
-// Insertion has several rules to ensure consistency. There are two types of
-// blocks: single object blocks and multi-object blocks. Single object blocks
-// are spans of two or more blocks that have a single object. Multi-object
-// blocks are single blocks that have multiple object ids. An object that is
-// stored in a single block (i.e. doesn't span blocks) is considered a
-// multi-object block since there is probably room to add more objects.
-// 
-// 1. An object id range is unique to a block. If a block has object ids 5 - 8
-//    then no other block can overlap into those ids.
-//
-// 2. Only multi-object blocks can have object ids outside its range added.
-//
-// 3. Objects are added to the first block where the object id is included in
-//    the object id range or is less than the minimum object id of the block.
-//
-// 4. If no block is found by the end then the last block is used for insertion.
-//
-// object_file - The object file that the event is being added to.
-// event       - The event to add to the object file.
-// ret         - A reference to the correct block info returned to the caller.
-//
-// Returns 0 if successfully finds a block. Otherwise returns -1.
-int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo *ret)
-{
-    int i, n, rc;
-    BlockInfo *info = NULL;
-    info = NULL;
-    
-    // Extract object id and timestamp from event.
-    int64_t object_id = event->object_id;
-    int64_t timestamp = event->timestamp;
-
-    // Loop over sorted blocks to find the appropriate insertion point.
-    n = object_file->block_count;
-    for(i=0; i<n; i++) {
-        info = &object_file->infos[i];
-        
-        // If block is within range then use the block.
-        if(object_id >= info->min_object_id && object_id <= info->max_object_id) {
-            // If this is a single object block then find the appropriate block
-            // based on timestamp.
-            if(info->spanned) {
-                // Find first block where timestamp is before the max.
-                while(i<n && object_file->infos[i].min_object_id == object_id) {
-                    if(timestamp <= object_file->infos[i].max_timestamp) {
-                        ret = info;
-                        break;
-                    }
-                    i++;
-                }
-                
-                // If this event is being appended to the object path then use
-                // the last block.
-                if(ret == NULL) {
-                    ret = &object_file->infos[i-1];
-                }
-
-                break;
-            }
-            // If this is a multi-object block then simply use it.
-            else {
-                ret = info;
-                break;
-            }
-        }
-        // If block is before this object id range, then use the block if it
-        // is a multi-object block.
-        else if(object_id < info->min_object_id && !info->spanned) {
-            ret = info;
-            break;
-        }
-    }
-    
-    // If we haven't found a block then it means that the object id is after all
-    // other object ids or that we are inserting before a single object block or
-    // that we have no blocks. Either way, simply create a new block and add it
-    // to the end.
-    if(ret == NULL) {
-        rc = create_block(object_file, ret);
-        check(rc == 0, "Unable to create block");
-    }
-    
-    return 0;
-
-error:
-    return -1;
-}
-
-// Reads a block in from disk and deserializes it.
-// 
-// object_file - The object file that contains the block.
-// info        - A reference to the block position.
-// ret         - The reference to the block returned to the caller.
-//
-// Returns 0 if successful. Otherwise returns -1.
-int load_block(ObjectFile *object_file, BlockInfo *info, Block *ret)
-{
-    int rc;
-    
-    // Retrieve data file path.
-    bstring path = get_data_file_path(object_file);
-    check_mem(path);
-
-    // Open data file.
-    FILE *file = fopen(bdata(path), "r");
-    check(file != NULL, "Failed to open data file for reading: %s",  bdata(path));
-
-    // Seek to starting position of block.
-    off_t offset = get_block_offset(object_file, info);
-    rc = fseek(file, offset, SEEK_SET);
-    check(rc != -1, "Failed to seek to read block: %s#%d",  bdata(path), info->id);
-
-    // Deserialize block.
-    Block *block = Block_create(object_file, info);
-    rc = Block_deserialize(block, file);
-    check(rc == 0, "Failed to deserialize block: %s#%d",  bdata(path), info->id);
-    
-    // Clean up.
-    fclose(file);
-    
-    // Assign block to return value.
-    ret = block;
-    
-    return 0;
-
-error:
-    if(file) fclose(file);
-    return -1;
-}
-
 // Serializes a block in memory and writes it to disk.
 // 
 // object_file - The object file that contains the block.
@@ -618,6 +460,179 @@ error:
     if(file) fclose(file);
     return -1;
 }
+
+// Creates a block in the object file and returns a reference to its info object.
+//
+// object_file - The object file that will own the new block.
+// ret         - The block information object returned to the called.
+//
+// Returns 0 if successful, otherwise returns -1.
+int create_block(ObjectFile *object_file, BlockInfo **ret)
+{
+    int rc;
+    
+    // Increment block count and resize block info memory.
+    object_file->block_count++;
+    object_file->infos = realloc(object_file->infos, sizeof(BlockInfo) * object_file->block_count);
+    check_mem(object_file->infos);
+
+    // Create new block.
+    *ret = &object_file->infos[object_file->block_count-1];
+    (*ret)->id = object_file->block_count-1;
+    (*ret)->min_object_id = 0LL;
+    (*ret)->max_object_id = 0LL;
+
+    // Sort blocks.
+    sort_blocks(object_file->infos, object_file->block_count);
+
+    // Save empty block to file.
+    Block *block = Block_create(object_file, (*ret));
+    rc = save_block(object_file, (*ret), block);
+    check(rc == 0, "Unable to initialize new block");
+    Block_destroy(block);
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+// Finds the correct block to add an event to.
+//
+// Insertion has several rules to ensure consistency. There are two types of
+// blocks: single object blocks and multi-object blocks. Single object blocks
+// are spans of two or more blocks that have a single object. Multi-object
+// blocks are single blocks that have multiple object ids. An object that is
+// stored in a single block (i.e. doesn't span blocks) is considered a
+// multi-object block since there is probably room to add more objects.
+// 
+// 1. An object id range is unique to a block. If a block has object ids 5 - 8
+//    then no other block can overlap into those ids.
+//
+// 2. Only multi-object blocks can have object ids outside its range added.
+//
+// 3. Objects are added to the first block where the object id is included in
+//    the object id range or is less than the minimum object id of the block.
+//
+// 4. If no block is found by the end then the last block is used for insertion.
+//
+// object_file - The object file that the event is being added to.
+// event       - The event to add to the object file.
+// ret         - A reference to the correct block info returned to the caller.
+//
+// Returns 0 if successfully finds a block. Otherwise returns -1.
+int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
+{
+    int i, n, rc;
+    BlockInfo *info = NULL;
+    info = NULL;
+    
+    // Initialize return value to NULL.
+    *ret = NULL;
+    
+    // Extract object id and timestamp from event.
+    int64_t object_id = event->object_id;
+    int64_t timestamp = event->timestamp;
+
+    // Loop over sorted blocks to find the appropriate insertion point.
+    n = object_file->block_count;
+    for(i=0; i<n; i++) {
+        info = &object_file->infos[i];
+        
+        // If block is within range then use the block.
+        if(object_id >= info->min_object_id && object_id <= info->max_object_id) {
+            // If this is a single object block then find the appropriate block
+            // based on timestamp.
+            if(info->spanned) {
+                // Find first block where timestamp is before the max.
+                while(i<n && object_file->infos[i].min_object_id == object_id) {
+                    if(timestamp <= object_file->infos[i].max_timestamp) {
+                        *ret = info;
+                        break;
+                    }
+                    i++;
+                }
+                
+                // If this event is being appended to the object path then use
+                // the last block.
+                if(*ret == NULL) {
+                    *ret = &object_file->infos[i-1];
+                }
+
+                break;
+            }
+            // If this is a multi-object block then simply use it.
+            else {
+                *ret = info;
+                break;
+            }
+        }
+        // If block is before this object id range, then use the block if it
+        // is a multi-object block.
+        else if(object_id < info->min_object_id && !info->spanned) {
+            *ret = info;
+            break;
+        }
+    }
+    
+    // If we haven't found a block then it means that the object id is after all
+    // other object ids or that we are inserting before a single object block or
+    // that we have no blocks. Either way, simply create a new block and add it
+    // to the end.
+    if(*ret == NULL) {
+        rc = create_block(object_file, ret);
+        check(rc == 0, "Unable to create block");
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Reads a block in from disk and deserializes it.
+// 
+// object_file - The object file that contains the block.
+// info        - A reference to the block position.
+// ret         - The reference to the block returned to the caller.
+//
+// Returns 0 if successful. Otherwise returns -1.
+int load_block(ObjectFile *object_file, BlockInfo *info, Block **ret)
+{
+    int rc;
+    
+    // Retrieve data file path.
+    bstring path = get_data_file_path(object_file);
+    check_mem(path);
+
+    // Open data file.
+    FILE *file = fopen(bdata(path), "r");
+    check(file != NULL, "Failed to open data file for reading: %s",  bdata(path));
+
+    // Seek to starting position of block.
+    off_t offset = get_block_offset(object_file, info);
+    rc = fseek(file, offset, SEEK_SET);
+    check(rc != -1, "Failed to seek to read block: %s#%d",  bdata(path), info->id);
+
+    // Deserialize block.
+    Block *block = Block_create(object_file, info);
+    rc = Block_deserialize(block, file);
+    check(rc == 0, "Failed to deserialize block: %s#%d",  bdata(path), info->id);
+    
+    // Clean up.
+    fclose(file);
+    
+    // Assign block to return value.
+    *ret = block;
+    
+    return 0;
+
+error:
+    if(file) fclose(file);
+    bdestroy(path);
+    return -1;
+}
+
 
 
 //======================================
@@ -668,6 +683,8 @@ error:
 void ObjectFile_destroy(ObjectFile *object_file)
 {
     if(object_file) {
+        // TODO: Clean infos, actions, properties.
+        
         bdestroy(object_file->name);
         bdestroy(object_file->path);
         free(object_file);
@@ -686,9 +703,17 @@ void ObjectFile_destroy(ObjectFile *object_file)
 // Returns 0 if successful, otherwise returns -1.
 int ObjectFile_open(ObjectFile *object_file)
 {
+    int rc;
+    
     // Validate arguments.
     check(object_file != NULL, "Object file required to open");
     check(object_file->state == OBJECT_FILE_STATE_CLOSED, "Object file must be closed to open")
+
+    // Create directory if it doesn't exist.
+    if(!file_exists(object_file->path)) {
+        rc = mkdir(bdata(object_file->path), S_IRWXU);
+        check(rc == 0, "Unable to create object file directory: %s", bdata(object_file->path));
+    }
 
     // Load header, action and properties data.
     check(load_header(object_file) == 0, "Unable to load header data");
@@ -834,15 +859,14 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     // Verify arguments.
     check(object_file != NULL, "Object file is required");
     check(event != NULL, "Event is required");
-
     check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
     
     // Find the appropriate block to insert into.
-    rc = find_insertion_block(object_file, event, info);
+    rc = find_insertion_block(object_file, event, &info);
     check(rc == 0, "Unable to find an insertion block");
 
     // Load block to memory and deserialize.
-    rc = load_block(object_file, info, block);
+    rc = load_block(object_file, info, &block);
     check(rc == 0, "Unable to load block %d", info->id);
     
     // Add event to block.
