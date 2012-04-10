@@ -81,6 +81,26 @@ void EventData_destroy(EventData *data)
     }
 }
 
+// Creates a copy of an event data item.
+//
+// source - The event data to copy.
+// target - A reference to the new event data item.
+//
+// Returns 0 if successful, otherwise returns -1.
+int EventData_copy(EventData *source, EventData **target)
+{
+    check(source != NULL, "Event data source required for copy");
+
+    *target = EventData_create(source->key, source->value);
+
+    return 0;
+    
+error:
+    if(*target) EventData_destroy(*target);
+    *target = NULL;
+    
+    return -1;
+}
 
 
 //======================================

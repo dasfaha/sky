@@ -145,7 +145,7 @@ uint32_t Block_get_serialized_length(Block *block)
     uint32_t length = 0;
 
     // Add path count and path length.
-    length += sizeof(block->path_count);
+    length += BLOCK_HEADER_LENGTH;
     length += get_paths_length(block);
     
     return length;
@@ -181,7 +181,6 @@ int Block_serialize(Block *block, FILE *file)
     
     // Null fill the rest of the block.
     int fillcount = block->object_file->block_size - (ftell(file)-startpos);
-    fprintf(stderr, "fillcount: %d, %ld, %ld\n", block->object_file->block_size, ftell(file), startpos);
     char *null = calloc(fillcount, 1); check_mem(null);
     rc = fwrite(null, 1, fillcount, file);
     check(rc == fillcount, "Unable to null fill end of block");
@@ -265,17 +264,9 @@ int Block_add_event(Block *block, Event *event)
     
     // If matching path could not be found then create one.
     if(path == NULL) {
-        // Allocate space for path.
-        block->path_count++;
-        block->paths = realloc(block->paths, sizeof(Event*) * block->path_count);
-        check_mem(block->paths);
-
-        // Create and append path.
         path = Path_create(event->object_id); check_mem(path);
-        block->paths[block->path_count-1] = path;
-
-        // Sort paths.
-        sort_paths(block);
+        rc = Block_add_path(block, path);
+        check(rc == 0, "Unable to add new path to block")
     }
     
     // Add event to path.
@@ -334,17 +325,77 @@ int Block_remove_event(Block *block, Event *event)
     
     // If path has no events then remove path from block.
     if(path != NULL && path->event_count == 0) {
-        // Shift paths over.
-        for(i=index+1; i<block->path_count; i++) {
-            block->paths[i-1] = block->paths[i];
-        }
-
-        // Reallocate memory.
-        block->path_count--;
-        block->paths = realloc(block->paths, sizeof(Event*) * block->path_count);
-        check_mem(block->paths);
+        Block_remove_path(block, path);
     }
 
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//======================================
+// Path Management
+//======================================
+
+// Adds an entire path to a block.
+//
+// block - The block that will contain the path.
+// path  - The path to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Block_add_path(Block *block, Path *path)
+{
+    // Validation.
+    check(block != NULL, "Block required");
+    check(path != NULL, "Path required");
+    check(path->object_id != 0, "Path object id cannot be 0");
+
+    // Allocate space for path.
+    block->path_count++;
+    block->paths = realloc(block->paths, sizeof(Event*) * block->path_count);
+    check_mem(block->paths);
+
+    // Create and append path.
+    block->paths[block->path_count-1] = path;
+
+    // Sort paths.
+    sort_paths(block);
+
+    return 0;
+
+error:
+    return -1;
+}
+
+// Removes an entire path from a block.
+//
+// block - The block that contains the path.
+// path  - The path in the block to remove.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Block_remove_path(Block *block, Path *path)
+{
+    uint32_t i, j;
+
+    // Find index for path.
+    for(i=0; i<block->path_count; i++) {
+        if(block->paths[i] == path) {
+            // Shift paths over.
+            for(j=i+1; j<block->path_count; j++) {
+                block->paths[j-1] = block->paths[j];
+            }
+
+            // Reallocate memory.
+            block->path_count--;
+            block->paths = realloc(block->paths, sizeof(Path*) * block->path_count);
+            check_mem(block->paths);
+            
+            return 0;
+        }
+    }
+    
     return 0;
 
 error:

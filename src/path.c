@@ -149,12 +149,11 @@ uint32_t Path_get_serialized_length(Path *path)
 {
     uint32_t length = 0;
 
-    // Add object id.
-    length += sizeof(path->object_id);
+    // Add header length
+    length += PATH_HEADER_LENGTH;
 
     // Add event length.
     uint32_t events_length = get_events_length(path);
-    length += sizeof(events_length);
     length += events_length;
     
     return length;

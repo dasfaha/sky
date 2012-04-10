@@ -58,12 +58,14 @@ typedef struct EventData {
 //==============================================================================
 
 //======================================
-// Create/Destroy
+// Lifecycle
 //======================================
 
 EventData *EventData_create(int16_t key, bstring value);
 
 void EventData_destroy(EventData *event);
+
+int EventData_copy(EventData *source, EventData **target);
 
 
 //======================================

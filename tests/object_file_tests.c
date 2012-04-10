@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <dbg.h>
 #include <database.h>
 #include <object_file.h>
 #include <bstring.h>

@@ -34,9 +34,20 @@
 //
 //==============================================================================
 
-/**
- * A path is a collection of events that is associated with an object.
- */
+//
+// A path is a collection of events that is associated with an object.
+//
+
+
+//==============================================================================
+//
+// Constants
+//
+//==============================================================================
+
+// The length of non-event data bytes in a serialized path.
+#define PATH_HEADER_LENGTH sizeof(int64_t) + sizeof(uint32_t)
+
 
 //==============================================================================
 //

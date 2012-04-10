@@ -132,14 +132,12 @@ error:
 // Lifecycle
 //======================================
 
-/*
- * Creates a reference to an event.
- *
- * timestamp - When the event occurred (in milliseconds since midnight Jan 1,
- *             1970 UTC).
- * object_id - The identifier for the object that the event is related to.
- * action    - The name of the action that was performed.
- */
+// Creates a reference to an event.
+//
+// timestamp - When the event occurred (in milliseconds since midnight Jan 1,
+//             1970 UTC).
+// object_id - The identifier for the object that the event is related to.
+// action    - The name of the action that was performed.
 Event *Event_create(int64_t timestamp, int64_t object_id, int32_t action_id)
 {
     Event *event;
@@ -160,9 +158,7 @@ error:
     return NULL;
 }
 
-/*
- * Removes an event reference from memory.
- */
+// Removes an event reference from memory.
 void Event_destroy(Event *event)
 {
     if(event) {
@@ -178,6 +174,50 @@ void Event_destroy(Event *event)
 
         free(event);
     }
+}
+
+// Creates a copy of an event.
+//
+// source - The event to copy.
+// target - A reference to the new event object returned to the caller.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Event_copy(Event *source, Event **target)
+{
+    int rc;
+    EventData *data;
+
+    check(source != NULL, "Source event is required for copy");
+
+    // Copy basic properties.
+    Event *event = Event_create(source->timestamp, source->object_id, source->action_id);
+    
+    // Copy event data.
+    if(source->data_count > 0) {
+        // Allocate memory for data.
+        event->data_count = source->data_count;
+        event->data = malloc(sizeof(EventData*) * event->data_count);
+        check_mem(event->data);
+
+        // Copy each event data item.
+        int i;
+        for(i=0; i<event->data_count; i++) {
+            rc = EventData_copy(source->data[i], &data);
+            check(rc == 0, "Unable to copy event data");
+            event->data[i] = data;
+        }
+    }
+
+    // Return event to the caller.
+    *target = event;
+    
+    return 0;
+    
+error:
+    if(event) Event_destroy(event);
+    *target = NULL;
+
+    return -1;
 }
 
 

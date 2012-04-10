@@ -42,6 +42,16 @@
 
 //==============================================================================
 //
+// Constants
+//
+//==============================================================================
+
+// The length of non-path data in the block.
+#define BLOCK_HEADER_LENGTH sizeof(block->path_count)
+
+
+//==============================================================================
+//
 // Typedefs
 //
 //==============================================================================
@@ -65,7 +75,7 @@ typedef struct Block {
 // Lifecycle
 //======================================
 
-Block *Block_create();
+Block *Block_create(ObjectFile *object_file, BlockInfo *info);
 
 void Block_destroy(Block *block);
 
@@ -88,5 +98,14 @@ int Block_deserialize(Block *block, FILE *file);
 int Block_add_event(Block *block, Event *event);
 
 int Block_remove_event(Block *block, Event *event);
+
+
+//======================================
+// Path Management
+//======================================
+
+int Block_add_path(Block *block, Path *path);
+
+int Block_remove_path(Block *block, Path *path);
 
 #endif

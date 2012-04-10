@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <math.h>
 
 #include "dbg.h"
 #include "bstring.h"
@@ -461,13 +462,13 @@ error:
     return -1;
 }
 
-// Creates a block in the object file and returns a reference to its info object.
+// Creates an empty block in the object file and returns it.
 //
 // object_file - The object file that will own the new block.
-// ret         - The block information object returned to the called.
+// ret         - The block object returned to the caller.
 //
 // Returns 0 if successful, otherwise returns -1.
-int create_block(ObjectFile *object_file, BlockInfo **ret)
+int create_block(ObjectFile *object_file, Block **ret)
 {
     int rc;
     
@@ -477,23 +478,29 @@ int create_block(ObjectFile *object_file, BlockInfo **ret)
     check_mem(object_file->infos);
 
     // Create new block.
-    *ret = &object_file->infos[object_file->block_count-1];
-    (*ret)->id = object_file->block_count-1;
-    (*ret)->min_object_id = 0LL;
-    (*ret)->max_object_id = 0LL;
+    BlockInfo *info;
+    info = &object_file->infos[object_file->block_count-1];
+    info->id = object_file->block_count-1;
+    info->min_object_id = 0LL;
+    info->max_object_id = 0LL;
 
     // Sort blocks.
     sort_blocks(object_file->infos, object_file->block_count);
 
     // Save empty block to file.
-    Block *block = Block_create(object_file, (*ret));
-    rc = save_block(object_file, (*ret), block);
+    Block *block = Block_create(object_file, info);
+    rc = save_block(object_file, info, block);
     check(rc == 0, "Unable to initialize new block");
-    Block_destroy(block);
+
+    // Return the block.
+    *ret = block;
 
     return 0;
     
 error:
+    if(block) Block_destroy(block);
+    *ret = block = NULL;
+
     return -1;
 }
 
@@ -588,8 +595,11 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
         }
         // Otherwise just create a new block.
         else {
-            rc = create_block(object_file, ret);
+            Block *block;
+            rc = create_block(object_file, &block);
             check(rc == 0, "Unable to create block");
+            *ret = block->info;
+            Block_destroy(block);
         }
     }
     
@@ -639,6 +649,105 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block **ret)
 error:
     if(file) fclose(file);
     bdestroy(path);
+    return -1;
+}
+
+// Creates a target block and appends it to a list of blocks.
+//
+// source - The block that is the source of paths/events for the target block.
+// target - The target block that will be returned.
+// blocks - An array of blocks.
+// count  - The number of blocks in the array.
+//
+// Returns 0 if successful, otherwise returns -1.
+int create_target_block(Block *source, Block **target, Block ***blocks, int *count)
+{
+    int rc;
+    
+    // Create new block.
+    rc = create_block(source->object_file, target);
+    check(rc == 0, "Unable to create target block");
+    
+    // Increment block count.
+    (*count)++;
+    *blocks = realloc(*blocks, sizeof(Block*) * (*count));
+    check_mem(*blocks);
+    
+    // Append target block.
+    (*blocks)[*count-1] = *target;
+
+    return 0;
+
+error:
+    if(*target) Block_destroy(*target);
+    *target = NULL;
+
+    return -1;    
+}
+
+// Attempts to split a given block into multiple smaller blocks if the block
+// exceeds the maximum block size allowed for an object file.
+//
+// block           - The block to attempt to split.
+// affected_blocks - An array of blocks. This includes the original block passed
+//                   in as well as any blocks split off the original.
+// affected_block_count - The number of blocks in the affected_blocks array.
+//
+// Returns 0 if successful, otherwise returns -1.
+int split_block(Block *block, Block ***affected_blocks, int *affected_block_count)
+{
+    int rc;
+    Block *target_block;
+    
+    // If block size has not been exceeded then exit this function immediately.
+    uint32_t block_serialized_length = Block_get_serialized_length(block);
+    if(block_serialized_length <= block->object_file->block_size) {
+        return 0;
+    }
+
+    // Create a target block pointing at the block passed in.
+    rc = create_target_block(block, &target_block, affected_blocks, affected_block_count);
+    check(rc == 0, "Unable to create target block for block split");
+    
+    // Calculate target block size if we were to spread paths evenly across blocks.
+    uint32_t max_block_size = block->object_file->block_size - BLOCK_HEADER_LENGTH;
+    uint32_t target_block_count = (uint32_t)ceil((double)block_serialized_length / (double)max_block_size);
+    uint32_t target_block_size = block_serialized_length / target_block_count;
+    
+    // Loop over paths and spread them across blocks.
+    uint32_t i;
+    for(i=0; i<block->path_count; i++) {
+        Path *path = block->paths[block->path_count-1];
+        uint32_t path_serialized_length = Path_get_serialized_length(path);
+        
+        // If path is already spanned or the path is larger than max block size
+        // then spread its events across multiple blocks.
+        if(block->info->spanned || path_serialized_length > max_block_size) {
+            // TODO: Split path into spanned blocks.
+        }
+        // Otherwise add path to the target block.
+        else {
+            block_serialized_length = Block_get_serialized_length(target_block);
+
+            // If target block will be larger than target block size then create
+            // a new block. Only do this if a path exists on the block though.
+            if(target_block->path_count > 0 &&
+               block_serialized_length + path_serialized_length > target_block_size)
+            {
+                rc = create_target_block(block, &target_block, affected_blocks, affected_block_count);
+                check(rc == 0, "Unable to create target block for block split");
+            }
+            
+            // Add path to target block.
+            Block_add_path(target_block, path);
+        }
+    }
+
+error:
+    if(*affected_blocks) free(*affected_blocks);
+    *affected_blocks = NULL;
+    *affected_block_count = 0;
+    
     return -1;
 }
 
@@ -865,10 +974,19 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     BlockInfo *info = NULL;
     Block *block = NULL;
     
+    Block **affected_blocks = NULL;
+    int affected_block_count = 0;
+    
     // Verify arguments.
     check(object_file != NULL, "Object file is required");
     check(event != NULL, "Event is required");
     check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
+    
+    // Make a copy of the event.
+    Event *tmp = NULL;
+    rc = Event_copy(event, &tmp);
+    check(rc == 0, "Unable to copy event before insertion");
+    event = tmp;
     
     // Find the appropriate block to insert into.
     rc = find_insertion_block(object_file, event, &info);
@@ -882,34 +1000,35 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     rc = Block_add_event(block, event);
     check(rc == 0, "Unable to add event to block %d", info->id);
     
-    // TODO: Split block if necessary!
-    
     // Update the block info stats.
-    bool updated = false;
     if(event->object_id < info->min_object_id) {
         info->min_object_id = event->object_id;
-        updated = true;
     }
-    if(event->object_id > info->max_object_id) {
+    else if(event->object_id > info->max_object_id) {
         info->max_object_id = event->object_id;
-        updated = true;
     }
 
+    // Attempt to split block into multiple blocks if necessary.
+    rc = split_block(block, &affected_blocks, &affected_block_count);
+    check(rc == 0, "Unable to split block %d", info->id);
+    
     // Re-sort blocks.
-    if(updated) {
-        sort_blocks(object_file->infos, object_file->block_count);
-    }
+    sort_blocks(object_file->infos, object_file->block_count);
 
-    // Serialize the block back to disk.
-    rc = save_block(object_file, info, block);
-    check(rc == 0, "Unable to save block %d", info->id);
+    // Save all affected blocks.
+    int i;
+    for(i=0; i<affected_block_count; i++) {
+        rc = save_block(object_file, info, affected_blocks[i]);
+        check(rc == 0, "Unable to save block %d", info->id);
+    }
 
     // Clean up.
-    free(block);
+    Block_destroy(block);
     
     return 0;
 
 error:
+    // TODO: Restore state of database if an error occurred.
     Block_destroy(block);
     return -1;
 }

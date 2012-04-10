@@ -94,7 +94,7 @@ Event *Event_create(int64_t timestamp, int64_t object_id, int32_t action_id);
 
 void Event_destroy(Event *event);
 
-// Event *Event_copy(Event *event);
+int Event_copy(Event *source, Event **target);
 
 
 //======================================

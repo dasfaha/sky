@@ -32,7 +32,7 @@ Block *create_test_block0()
     ObjectFile *object_file = ObjectFile_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 
-    Block *block = Block_create(object_file, info);
+    Block *block = Block_create(object_file, &info);
 
     // Path 2 (len=17)
     event = Event_create(946692000000000LL, 11, 0);
@@ -55,18 +55,6 @@ Block *create_test_block0()
 // Test Cases
 //
 //==============================================================================
-
-//--------------------------------------
-// Lifecycle
-//--------------------------------------
-
-int test_Block_create() {
-    Block *block = Block_create();
-    mu_assert(block != NULL, "Unable to allocate block");
-    Block_destroy(block);
-    return 0;
-}
-
 
 //--------------------------------------
 // Event management
@@ -144,7 +132,7 @@ int test_Block_deserialize() {
     object_file->block_size = 0x10000;  // 64K
 
     FILE *file = fopen("tests/fixtures/serialization/block", "r");
-    Block *block = Block_create(object_file, info);
+    Block *block = Block_create(object_file, &info);
     Block_deserialize(block, file);
     fclose(file);
 
@@ -192,7 +180,6 @@ int test_Block_deserialize() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Block_create);
     mu_run_test(test_Block_add_remove_events);
     mu_run_test(test_Block_get_serialized_length);
     mu_run_test(test_Block_serialize);

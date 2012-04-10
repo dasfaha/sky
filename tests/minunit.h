@@ -94,7 +94,7 @@ int tests_run;
         fread(&ch1, 1, 1, file1); \
         if(feof(file2) || feof(file1)) break; \
         if(ch1 != ch2) { \
-            mu_fail("Expected 0x%02x, received 0x%02x at location %ld", ch2, ch1, (ftell(file2)-1)); \
+            mu_fail("Expected 0x%02x (%s), received 0x%02x (%s) at location %ld", ch2, FILENAME2, ch1, FILENAME1, (ftell(file2)-1)); \
         } \
     } \
     if(!feof(file1)) mu_fail("Expected file length longer than expected: %s", FILENAME2); \
