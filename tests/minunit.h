@@ -74,13 +74,13 @@ int tests_run;
 
 // Asserts action data.
 #define mu_assert_action(INDEX, ID, NAME) \
-    mu_assert(object_file->actions[INDEX].id == ID, "Expected action #" #INDEX " id to be: " #ID); \
-    mu_assert(biseqcstr(object_file->actions[INDEX].name, NAME) == 1, "Expected action #" #INDEX " name to be: " #NAME);
+    mu_assert(object_file->actions[INDEX]->id == ID, "Expected action #" #INDEX " id to be: " #ID); \
+    mu_assert(biseqcstr(object_file->actions[INDEX]->name, NAME) == 1, "Expected action #" #INDEX " name to be: " #NAME);
 
 // Asserts property data.
 #define mu_assert_property(INDEX, ID, NAME) \
-    mu_assert(object_file->properties[INDEX].id == ID, "Expected property #" #INDEX " id to be: " #ID); \
-    mu_assert(biseqcstr(object_file->properties[INDEX].name, NAME) == 1, "Expected property #" #INDEX " name to be: " #NAME);
+    mu_assert(object_file->properties[INDEX]->id == ID, "Expected property #" #INDEX " id to be: " #ID); \
+    mu_assert(biseqcstr(object_file->properties[INDEX]->name, NAME) == 1, "Expected property #" #INDEX " name to be: " #NAME);
 
 // Asserts the contents of the temp file.
 #define mu_assert_file(FILENAME1, FILENAME2) do {\

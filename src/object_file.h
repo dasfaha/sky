@@ -124,9 +124,9 @@ typedef struct ObjectFile {
     uint32_t block_size;
     uint32_t block_count;
     BlockInfo **infos;
-    Action *actions;
+    Action **actions;
     uint32_t action_count;
-    Property *properties;
+    Property **properties;
     uint16_t property_count;
 } ObjectFile;
 

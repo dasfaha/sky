@@ -249,7 +249,7 @@ int unload_header(ObjectFile *object_file)
 int load_actions(ObjectFile *object_file)
 {
     FILE *file;
-    Action *actions = NULL;
+    Action **actions = NULL;
     char *buffer;
     uint32_t count = 0;
     
@@ -263,21 +263,27 @@ int load_actions(ObjectFile *object_file)
         
         // Read action count.
         fread(&count, sizeof(count), 1, file);
-        actions = malloc(sizeof(Action) * count);
+        actions = malloc(sizeof(Action*) * count);
+        if(count > 0) check_mem(actions);
         
         // Read actions until end of file.
         uint32_t i;
         uint16_t length;
         for(i=0; i<count && !feof(file); i++) {
+            Action *action = malloc(sizeof(Action)); check_mem(action);
+            
             // Read action id and name length.
-            check(fread(&actions[i].id, sizeof(int32_t), 1, file) == 1, "Corrupt actions file");
+            check(fread(&action->id, sizeof(int32_t), 1, file) == 1, "Corrupt actions file");
             check(fread(&length, sizeof(length), 1, file) == 1, "Corrupt actions file");
 
             // Read action name.
             buffer = calloc(1, length+1); check_mem(buffer);
             check(fread(buffer, length, 1, file) == 1, "Corrupt actions file");
-            actions[i].name = bfromcstr(buffer); check_mem(actions[i].name);
+            action->name = bfromcstr(buffer); check_mem(action->name);
             free(buffer);
+            
+            // Append to array.
+            actions[i] = action;
         }
         
         // Close the file.
@@ -308,15 +314,18 @@ error:
 int unload_actions(ObjectFile *object_file)
 {
     if(object_file) {
-        if(object_file->action_count > 0) {
+        // Release actions.
+        if(object_file->actions) {
             uint32_t i=0;
             for(i=0; i<object_file->action_count; i++) {
-                bdestroy(object_file->actions[i].name);
+                bdestroy(object_file->actions[i]->name);
+                free(object_file->actions[i]);
+                object_file->actions[i] = NULL;
             }
+            free(object_file->actions);
+            object_file->actions = NULL;
         }
         
-        if(object_file->actions) free(object_file->actions);
-        object_file->actions = NULL;
         object_file->action_count = 0;
     }
     
@@ -336,7 +345,7 @@ int unload_actions(ObjectFile *object_file)
 int load_properties(ObjectFile *object_file)
 {
     FILE *file;
-    Property *properties = NULL;
+    Property **properties = NULL;
     char *buffer;
     uint16_t count = 0;
     
@@ -350,21 +359,26 @@ int load_properties(ObjectFile *object_file)
         
         // Read properties count.
         fread(&count, sizeof(count), 1, file);
-        properties = malloc(sizeof(Property) * count);
+        properties = malloc(sizeof(Property*) * count);
         
         // Read properties until end of file.
         uint32_t i;
         uint16_t length;
         for(i=0; i<count && !feof(file); i++) {
+            Property *property = malloc(sizeof(Property)); check_mem(property);
+            
             // Read property id and name length.
-            check(fread(&properties[i].id, sizeof(int16_t), 1, file) == 1, "Corrupt properties file");
+            check(fread(&property->id, sizeof(int16_t), 1, file) == 1, "Corrupt properties file");
             check(fread(&length, sizeof(length), 1, file) == 1, "Corrupt properties file");
 
             // Read property name.
             buffer = calloc(1, length+1); check_mem(buffer);
             check(fread(buffer, length, 1, file) == 1, "Corrupt properties file");
-            properties[i].name = bfromcstr(buffer); check_mem(properties[i].name);
+            property->name = bfromcstr(buffer); check_mem(property->name);
             free(buffer);
+            
+            // Append property to array.
+            properties[i] = property;
         }
         
         // Close the file.
@@ -395,15 +409,18 @@ error:
 int unload_properties(ObjectFile *object_file)
 {
     if(object_file) {
-        if(object_file->property_count > 0) {
-            int i=0;
+        // Release properties.
+        if(object_file->properties) {
+            uint32_t i=0;
             for(i=0; i<object_file->property_count; i++) {
-                bdestroy(object_file->properties[i].name);
+                bdestroy(object_file->properties[i]->name);
+                free(object_file->properties[i]);
+                object_file->properties[i] = NULL;
             }
+            free(object_file->properties);
+            object_file->properties = NULL;
         }
         
-        if(object_file->properties) free(object_file->properties);
-        object_file->properties = NULL;
         object_file->property_count = 0;
     }
     
