@@ -123,7 +123,7 @@ typedef struct ObjectFile {
     uint32_t version;
     uint32_t block_size;
     uint32_t block_count;
-    BlockInfo *infos;
+    BlockInfo **infos;
     Action *actions;
     uint32_t action_count;
     Property *properties;

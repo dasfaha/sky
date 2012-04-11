@@ -149,6 +149,8 @@ int test_ObjectFile_add_event() {
     mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
     Event_destroy(event);
 
+    // TODO: Blocks are not saving. Figure out why.
+
     // Verify database files.
     mu_assert_file("tmp/db/users/data", "tests/fixtures/db/object_file_test0/users/data");
     

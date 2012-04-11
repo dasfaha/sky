@@ -65,12 +65,12 @@ int tests_run;
     
 // Asserts that a block has a specific block id and object id range.
 #define mu_assert_block_info(INDEX, ID, MIN_OBJECT_ID, MAX_OBJECT_ID, MIN_TIMESTAMP, MAX_TIMESTAMP, SPANNED) \
-    mu_assert(object_file->infos[INDEX].id == ID, "Block " #INDEX " id expected to be " #ID); \
-    mu_assert(object_file->infos[INDEX].min_object_id == MIN_OBJECT_ID, "Block " #INDEX " min object id expected to be " #MIN_OBJECT_ID); \
-    mu_assert(object_file->infos[INDEX].max_object_id == MAX_OBJECT_ID, "Block " #INDEX " max object id expected to be " #MAX_OBJECT_ID); \
-    mu_assert(object_file->infos[INDEX].min_timestamp == MIN_TIMESTAMP, "Block " #INDEX " min timestamp expected to be " #MIN_TIMESTAMP); \
-    mu_assert(object_file->infos[INDEX].max_timestamp == MAX_TIMESTAMP, "Block " #INDEX " max timestamp expected to be " #MAX_TIMESTAMP); \
-    mu_assert(object_file->infos[INDEX].spanned == SPANNED, "Block " #INDEX " spanned expected to be " #SPANNED);
+    mu_assert(object_file->infos[INDEX]->id == ID, "Block " #INDEX " id expected to be " #ID); \
+    mu_assert(object_file->infos[INDEX]->min_object_id == MIN_OBJECT_ID, "Block " #INDEX " min object id expected to be " #MIN_OBJECT_ID); \
+    mu_assert(object_file->infos[INDEX]->max_object_id == MAX_OBJECT_ID, "Block " #INDEX " max object id expected to be " #MAX_OBJECT_ID); \
+    mu_assert(object_file->infos[INDEX]->min_timestamp == MIN_TIMESTAMP, "Block " #INDEX " min timestamp expected to be " #MIN_TIMESTAMP); \
+    mu_assert(object_file->infos[INDEX]->max_timestamp == MAX_TIMESTAMP, "Block " #INDEX " max timestamp expected to be " #MAX_TIMESTAMP); \
+    mu_assert(object_file->infos[INDEX]->spanned == SPANNED, "Block " #INDEX " spanned expected to be " #SPANNED);
 
 // Asserts action data.
 #define mu_assert_action(INDEX, ID, NAME) \

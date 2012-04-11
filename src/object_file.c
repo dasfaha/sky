@@ -64,30 +64,30 @@ bool file_exists(bstring path)
 // and then by id.
 int compare_block_info(const void *_a, const void *_b)
 {
-    const BlockInfo *a = (BlockInfo *)_a;
-    const BlockInfo *b = (BlockInfo *)_b;
+    BlockInfo **a = (BlockInfo **)_a;
+    BlockInfo **b = (BlockInfo **)_b;
 
     // Sort by min object id first.
-    if(a->min_object_id > b->min_object_id) {
+    if((*a)->min_object_id > (*b)->min_object_id) {
         return 1;
     }
-    else if(a->min_object_id < b->min_object_id) {
+    else if((*a)->min_object_id < (*b)->min_object_id) {
         return -1;
     }
     else {
         // If min object ids are the same then sort by min timestamp.
-        if(a->min_timestamp > b->min_timestamp) {
+        if((*a)->min_timestamp > (*b)->min_timestamp) {
             return 1;
         }
-        else if(a->min_timestamp < b->min_timestamp) {
+        else if((*a)->min_timestamp < (*b)->min_timestamp) {
             return -1;
         }
         else {
             // If min timestamps are the same then sort by block id.
-            if(a->id > b->id) {
+            if((*a)->id > (*b)->id) {
                 return 1;
             }
-            else if(a->id < b->id) {
+            else if((*a)->id < (*b)->id) {
                 return -1;
             }
             else {
@@ -101,9 +101,9 @@ int compare_block_info(const void *_a, const void *_b)
 //
 // infos - The array of block info objects.
 // count - The number of blocks.
-void sort_blocks(BlockInfo *infos, uint32_t count)
+void sort_blocks(BlockInfo **infos, uint32_t count)
 {
-    qsort(infos, count, sizeof(BlockInfo), compare_block_info);
+    qsort(infos, count, sizeof(BlockInfo*), compare_block_info);
 }
 
 
@@ -120,7 +120,7 @@ void sort_blocks(BlockInfo *infos, uint32_t count)
 int load_header(ObjectFile *object_file)
 {
     FILE *file;
-    BlockInfo *infos = NULL;
+    BlockInfo **infos = NULL;
     uint32_t version = 1;
     uint64_t block_count = 0;
 
@@ -138,22 +138,28 @@ int load_header(ObjectFile *object_file)
 
         // Read block count.
         check(fread(&block_count, sizeof(block_count), 1, file) == 1, "Unable to read block count");
-        infos = malloc(sizeof(BlockInfo) * block_count); check_mem(infos);
+        infos = malloc(sizeof(BlockInfo*) * block_count);
+        if(block_count > 0) check_mem(infos);
 
         // Read block info items until end of file.
         uint32_t i;
         for(i=0; i<block_count && !feof(file); i++) {
+            // Allocate info.
+            BlockInfo *info = malloc(sizeof(BlockInfo));
+            
             // Set index.
-            infos[i].id = i;
-            infos[i].spanned = false;
+            info->id = i;
+            info->spanned = false;
             
             // Read object id range.
-            check(fread(&infos[i].min_object_id, sizeof(infos[i].min_object_id), 1, file) == 1, "Unable to read min object id : blk%d", i);
-            check(fread(&infos[i].max_object_id, sizeof(infos[i].max_object_id), 1, file) == 1, "Unable to read max object id : blk%d", i);
+            check(fread(&info->min_object_id, sizeof(info->min_object_id), 1, file) == 1, "Unable to read min object id : blk%d", i);
+            check(fread(&info->max_object_id, sizeof(info->max_object_id), 1, file) == 1, "Unable to read max object id : blk%d", i);
             
             // Read timestamp range.
-            check(fread(&infos[i].min_timestamp, sizeof(infos[i].min_timestamp), 1, file) == 1, "Unable to read min timestamp : blk%d", i);
-            check(fread(&infos[i].max_timestamp, sizeof(infos[i].max_timestamp), 1, file) == 1, "Unable to read max timestamp : blk%d", i);
+            check(fread(&info->min_timestamp, sizeof(info->min_timestamp), 1, file) == 1, "Unable to read min timestamp : blk%d", i);
+            check(fread(&info->max_timestamp, sizeof(info->max_timestamp), 1, file) == 1, "Unable to read max timestamp : blk%d", i);
+            
+            infos[i] = info;
         }
 
         // Close the file.
@@ -167,16 +173,16 @@ int load_header(ObjectFile *object_file)
         for(i=0; i<block_count; i++) {
             // If this is a single object block then track the object id to
             // possibly mark it as spanned.
-            if(infos[i].min_object_id == infos[i].max_object_id && infos[i].min_object_id > 0) {
+            if(infos[i]->min_object_id == infos[i]->max_object_id && infos[i]->min_object_id > 0) {
                 // If it has spanned since the last block then mark it and the
                 // previous block.
-                if(infos[i].min_object_id == last_object_id) {
-                    infos[i].spanned = true;
-                    infos[i-1].spanned = true;
+                if(infos[i]->min_object_id == last_object_id) {
+                    infos[i]->spanned = true;
+                    infos[i-1]->spanned = true;
                 }
                 // If this is the first block with one object then store the id.
                 else {
-                    last_object_id = infos[i].min_object_id;
+                    last_object_id = infos[i]->min_object_id;
                 }
             }
             // Clear out last object id for multi-object blocks.
@@ -210,8 +216,17 @@ error:
 int unload_header(ObjectFile *object_file)
 {
     if(object_file) {
-        if(object_file->infos) free(object_file->infos);
-        object_file->infos = NULL;
+        // Free block infos.
+        uint32_t i;
+        if(object_file->infos) {
+            for(i=0; i<object_file->block_count; i++) {
+                free(object_file->infos[i]);
+                object_file->infos[i] = NULL;
+            }
+
+            free(object_file->infos);
+            object_file->infos = NULL;
+        }
 
         object_file->version = 0;
         object_file->block_size = DEFAULT_BLOCK_SIZE;
@@ -474,15 +489,15 @@ int create_block(ObjectFile *object_file, Block **ret)
     
     // Increment block count and resize block info memory.
     object_file->block_count++;
-    object_file->infos = realloc(object_file->infos, sizeof(BlockInfo) * object_file->block_count);
-    check_mem(object_file->infos);
+    object_file->infos = realloc(object_file->infos, sizeof(BlockInfo*) * object_file->block_count);
+    if(object_file->block_count > 0) check_mem(object_file->infos);
 
     // Create new block.
-    BlockInfo *info;
-    info = &object_file->infos[object_file->block_count-1];
+    BlockInfo *info = malloc(sizeof(BlockInfo)); check_mem(info);
     info->id = object_file->block_count-1;
     info->min_object_id = 0LL;
     info->max_object_id = 0LL;
+    object_file->infos[object_file->block_count-1] = info;
 
     // Sort blocks.
     sort_blocks(object_file->infos, object_file->block_count);
@@ -544,7 +559,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
     // Loop over sorted blocks to find the appropriate insertion point.
     n = object_file->block_count;
     for(i=0; i<n; i++) {
-        info = &object_file->infos[i];
+        info = object_file->infos[i];
         
         // If block is within range then use the block.
         if(object_id >= info->min_object_id && object_id <= info->max_object_id) {
@@ -552,8 +567,8 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
             // based on timestamp.
             if(info->spanned) {
                 // Find first block where timestamp is before the max.
-                while(i<n && object_file->infos[i].min_object_id == object_id) {
-                    if(timestamp <= object_file->infos[i].max_timestamp) {
+                while(i<n && object_file->infos[i]->min_object_id == object_id) {
+                    if(timestamp <= object_file->infos[i]->max_timestamp) {
                         *ret = info;
                         break;
                     }
@@ -563,7 +578,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
                 // If this event is being appended to the object path then use
                 // the last block.
                 if(*ret == NULL) {
-                    *ret = &object_file->infos[i-1];
+                    *ret = object_file->infos[i-1];
                 }
 
                 break;
@@ -587,7 +602,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
     // that we have no blocks.
     if(*ret == NULL) {
         // Find the last block if one exists.
-        BlockInfo *last_info = (object_file->block_count > 0 ? &object_file->infos[object_file->block_count-1] : NULL);
+        BlockInfo *last_info = (object_file->block_count > 0 ? object_file->infos[object_file->block_count-1] : NULL);
 
         // If the last block available is unspanned then use it.
         if(last_info != NULL && !last_info->spanned) {
@@ -698,16 +713,27 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
 {
     int rc;
     Block *target_block;
-    
+
+    // Add original block to list of affected blocks.
+    *affected_block_count = 1;
+    *affected_blocks = malloc(sizeof(Block*)); check_mem(*affected_blocks);
+    (*affected_blocks)[0] = block;
+
     // If block size has not been exceeded then exit this function immediately.
     uint32_t block_serialized_length = Block_get_serialized_length(block);
     if(block_serialized_length <= block->object_file->block_size) {
         return 0;
     }
-
-    // Create a target block pointing at the block passed in.
-    rc = create_target_block(block, &target_block, affected_blocks, affected_block_count);
-    check(rc == 0, "Unable to create target block for block split");
+    
+    // Extract paths and info from original block.
+    bool spanned = block->info->spanned;
+    Path **paths = block->paths;
+    uint32_t path_count = block->path_count;
+    block->paths = NULL;
+    block->path_count = 0;
+    
+    // Assign original block as first target block.
+    target_block = block;
     
     // Calculate target block size if we were to spread paths evenly across blocks.
     uint32_t max_block_size = block->object_file->block_size - BLOCK_HEADER_LENGTH;
@@ -716,13 +742,13 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
     
     // Loop over paths and spread them across blocks.
     uint32_t i;
-    for(i=0; i<block->path_count; i++) {
-        Path *path = block->paths[block->path_count-1];
+    for(i=0; i<path_count; i++) {
+        Path *path = paths[i];
         uint32_t path_serialized_length = Path_get_serialized_length(path);
         
         // If path is already spanned or the path is larger than max block size
         // then spread its events across multiple blocks.
-        if(block->info->spanned || path_serialized_length > max_block_size) {
+        if(spanned || path_serialized_length > max_block_size) {
             // TODO: Split path into spanned blocks.
         }
         // Otherwise add path to the target block.
@@ -743,10 +769,21 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
         }
     }
 
+    return 0;
+
 error:
+    // Return an empty blockset on error.
     if(*affected_blocks) free(*affected_blocks);
     *affected_blocks = NULL;
     *affected_block_count = 0;
+    
+    // Clean up paths extracted from block.
+    if(paths) {
+        for(i=0; i<path_count; i++) {
+            Path_destroy(paths[i]);
+        }
+        free(paths);
+    }
     
     return -1;
 }
@@ -801,8 +838,6 @@ error:
 void ObjectFile_destroy(ObjectFile *object_file)
 {
     if(object_file) {
-        // TODO: Clean infos, actions, properties.
-        
         bdestroy(object_file->name);
         bdestroy(object_file->path);
         free(object_file);
