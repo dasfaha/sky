@@ -92,6 +92,13 @@ int Block_deserialize(Block *block, FILE *file);
 
 
 //======================================
+// Block Info
+//======================================
+
+int Block_update_info(Block *block);
+
+
+//======================================
 // Event Management
 //======================================
 

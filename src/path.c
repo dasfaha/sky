@@ -48,7 +48,7 @@ int compare_events(const void *_a, const void *_b)
     if((*a)->timestamp > (*b)->timestamp) {
         return 1;
     }
-    else if((*a)->timestamp < (*a)->timestamp) {
+    else if((*a)->timestamp < (*b)->timestamp) {
         return -1;
     }
     else {

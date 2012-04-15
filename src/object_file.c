@@ -97,6 +97,24 @@ int compare_block_info(const void *_a, const void *_b)
     }
 }
 
+// Compares two blocks and sorts them by id. This is used when serializing block
+// info to the header file.
+int compare_block_info_by_id(const void *_a, const void *_b)
+{
+    BlockInfo **a = (BlockInfo **)_a;
+    BlockInfo **b = (BlockInfo **)_b;
+
+    if((*a)->id > (*b)->id) {
+        return 1;
+    }
+    else if((*a)->id < (*b)->id) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
+}
+
 // Sorts blocks by object id and block id.
 //
 // infos - The array of block info objects.
@@ -112,6 +130,78 @@ void sort_blocks(BlockInfo **infos, uint32_t count)
 // Header Management
 //======================================
 
+// Retrieves the file path of an object file's header file.
+//
+// object_file - The object file who owns the header file.
+bstring get_header_file_path(ObjectFile *object_file)
+{
+    return bformat("%s/header", bdata(object_file->path)); 
+}
+
+// Saves header information to file.
+//
+// object_file - The object file containing the header information.
+//
+// Returns 0 if successful, otherwise returns -1.
+int save_header(ObjectFile *object_file)
+{
+    int rc;
+
+    // Copy infos to a new array to re-sort.
+    uint32_t block_count = object_file->block_count;
+    BlockInfo **infos = malloc(sizeof(BlockInfo*) * block_count); check_mem(infos);
+    memcpy(infos, object_file->infos, sizeof(BlockInfo*) * block_count);
+    qsort(infos, block_count, sizeof(BlockInfo*), compare_block_info_by_id);
+
+    // Open the header file.
+    bstring path = get_header_file_path(object_file); check_mem(path);
+    FILE *file = fopen(bdata(path), "w");
+    check(file, "Failed to open header file for writing: %s",  bdata(path));
+    
+    // Write database format version & block size.
+    rc = fwrite(&object_file->version, sizeof(object_file->version), 1, file);
+    check(rc == 1, "Unable to write version");
+    rc = fwrite(&object_file->block_size, sizeof(object_file->block_size), 1, file);
+    check(rc == 1, "Unable to write block size");
+
+    // Write block count.
+    rc = fwrite(&block_count, sizeof(block_count), 1, file);
+    check(rc == 1, "Unable to write block count");
+
+    // Read block info items until end of file.
+    uint32_t i;
+    for(i=0; i<block_count; i++) {
+        BlockInfo *info = infos[i];
+
+        // Write object id range.
+        rc = fwrite(&info->min_object_id, sizeof(info->min_object_id), 1, file);
+        check(rc == 1, "Unable to write min object id : blk%d", i);
+        rc = fwrite(&info->max_object_id, sizeof(info->max_object_id), 1, file);
+        check(rc == 1, "Unable to read max object id : blk%d", i);
+        
+        // Read timestamp range.
+        rc = fwrite(&info->min_timestamp, sizeof(info->min_timestamp), 1, file);
+        check(rc == 1, "Unable to read min timestamp : blk%d", i);
+        rc = fwrite(&info->max_timestamp, sizeof(info->max_timestamp), 1, file);
+        check(rc == 1, "Unable to read max timestamp : blk%d", i);
+    }
+
+    // Close the file.
+    fclose(file);
+
+    // Clean up.
+    bdestroy(path);
+    free(infos);
+
+    return 0;
+    
+error:
+    bdestroy(path);
+    if(file) fclose(file);
+    if(infos) free(infos);
+    return -1;
+}
+
 // Loads header information from file.
 //
 // object_file - The object file where the header is stored.
@@ -125,12 +215,12 @@ int load_header(ObjectFile *object_file)
     uint64_t block_count = 0;
 
     // Retrieve file stats on header file
-    bstring path = bformat("%s/header", bdata(object_file->path)); check_mem(path);
+    bstring path = get_header_file_path(object_file); check_mem(path);
     
     // Read in header file if it exists.
     if(file_exists(path)) {
         file = fopen(bdata(path), "r");
-        check(file, "Failed to open header file: %s",  bdata(path));
+        check(file, "Failed to open header file for reading: %s",  bdata(path));
 
         // Read database format version & block size.
         check(fread(&version, sizeof(version), 1, file) == 1, "Unable to read version");
@@ -235,6 +325,7 @@ int unload_header(ObjectFile *object_file)
     
     return 0;
 }
+
 
 
 //======================================
@@ -456,14 +547,15 @@ off_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
 
 // Serializes a block in memory and writes it to disk.
 // 
-// object_file - The object file that contains the block.
-// info        - A reference to the block position.
 // block       - The in-memory block to write to disk.
 //
 // Returns 0 if successful. Otherwise returns -1.
-int save_block(ObjectFile *object_file, BlockInfo *info, Block *block)
+int save_block(Block *block)
 {
     int rc;
+
+    ObjectFile *object_file = block->object_file;
+    BlockInfo *info = block->info;
 
     // Retrieve data file path.
     bstring path = get_data_file_path(object_file);
@@ -486,6 +578,9 @@ int save_block(ObjectFile *object_file, BlockInfo *info, Block *block)
 
     // Clean up.
     fclose(file);
+
+    // Update block info.
+    Block_update_info(block);
 
     return 0;
 
@@ -516,13 +611,13 @@ int create_block(ObjectFile *object_file, Block **ret)
     info->max_object_id = 0LL;
     object_file->infos[object_file->block_count-1] = info;
 
-    // Sort blocks.
-    sort_blocks(object_file->infos, object_file->block_count);
-
     // Save empty block to file.
     Block *block = Block_create(object_file, info);
-    rc = save_block(object_file, info, block);
+    rc = save_block(block);
     check(rc == 0, "Unable to initialize new block");
+
+    // Sort blocks.
+    sort_blocks(object_file->infos, object_file->block_count);
 
     // Return the block.
     *ret = block;
@@ -1052,27 +1147,22 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     rc = Block_add_event(block, event);
     check(rc == 0, "Unable to add event to block %d", info->id);
     
-    // Update the block info stats.
-    if(event->object_id < info->min_object_id) {
-        info->min_object_id = event->object_id;
-    }
-    else if(event->object_id > info->max_object_id) {
-        info->max_object_id = event->object_id;
-    }
-
     // Attempt to split block into multiple blocks if necessary.
     rc = split_block(block, &affected_blocks, &affected_block_count);
     check(rc == 0, "Unable to split block %d", info->id);
     
-    // Re-sort blocks.
-    sort_blocks(object_file->infos, object_file->block_count);
-
     // Save all affected blocks.
     int i;
     for(i=0; i<affected_block_count; i++) {
-        rc = save_block(object_file, info, affected_blocks[i]);
-        check(rc == 0, "Unable to save block %d", info->id);
+        rc = save_block(affected_blocks[i]);
+        check(rc == 0, "Unable to save block %d", affected_blocks[i]->info->id);
     }
+
+    // Re-sort blocks.
+    sort_blocks(object_file->infos, object_file->block_count);
+
+    // Save header.
+    save_header(object_file);
 
     // Clean up.
     Block_destroy(block);

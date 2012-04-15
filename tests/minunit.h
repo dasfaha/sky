@@ -17,19 +17,19 @@
 } while (0)
 
 #define mu_run_test(TEST) do {\
+    fprintf(stderr, "%s\n", #TEST);\
     int rc = TEST();\
     tests_run++; \
     if (rc) {\
+        fprintf(stderr, "\n  Test Failure: %s()\n", #TEST);\
         return rc;\
     }\
 } while (0)
 
 #define RUN_TESTS() int main() {\
+   fprintf(stderr, "== %s ==\n", __FILE__);\
    int rc = all_tests();\
-   if(rc == 0) {\
-       printf("ALL TESTS PASSED\n");\
-   }\
-   printf("Tests run: %d\n", tests_run);\
+   fprintf(stderr, "\n");\
    return rc;\
 }
 

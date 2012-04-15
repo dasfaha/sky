@@ -10,11 +10,9 @@ do
         # Log execution to file.
         if ./$test_file 2>&1 > /tmp/sky-test.log
         then
-            echo "[PASS] $test_file"
             rm -f /tmp/sky-test.log
         else
             # If error occurred then print off log.
-            echo "[ERR]  $test_file"
             cat /tmp/sky-test.log
             exit 1
         fi

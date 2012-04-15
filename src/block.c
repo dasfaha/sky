@@ -47,7 +47,7 @@ int compare_paths(const void *_a, const void *_b)
     if((*a)->object_id > (*b)->object_id) {
         return 1;
     }
-    else if((*a)->object_id < (*a)->object_id) {
+    else if((*a)->object_id < (*b)->object_id) {
         return -1;
     }
     else {
@@ -164,7 +164,7 @@ int Block_serialize(Block *block, FILE *file)
     // Validate.
     check(block != NULL, "Block required");
     check(file != NULL, "File descriptor required");
-    
+
     // Retrieve initial position.
     long startpos = ftell(file);
     
@@ -229,6 +229,73 @@ error:
     return -1;
 }
 
+
+//======================================
+// Block Info
+//======================================
+
+// Iterates over the paths and events in a block to find the min/max timestamp
+// and object id and then updates the block info accordingly.
+//
+// block - The block to update.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Block_update_info(Block *block)
+{
+    int64_t min_object_id = 0;
+    int64_t max_object_id = 0;
+    int64_t min_timestamp = INT64_MIN;
+    int64_t max_timestamp = INT64_MIN;
+    
+    // Validation.
+    check(block != NULL, "Block required");
+
+    // If there are no paths then clear ranges.
+    if(block->path_count == 0) {
+        min_object_id = max_object_id = 0;
+        min_timestamp = max_timestamp = 0;
+    }
+    // Otherwise iterate over paths.
+    else {
+        uint32_t i, j;
+        for(i=0; i<block->path_count; i++) {
+            Path *path = block->paths[i];
+        
+            // Find object id range.
+            if(min_object_id == 0 || path->object_id < min_object_id) {
+                min_object_id = path->object_id;
+            }
+            if(max_object_id == 0 || path->object_id > max_object_id) {
+                max_object_id = path->object_id;
+            }
+        
+            // Iterate over events and find timstamp range.
+            for(j=0; j<path->event_count; j++) {
+                Event *event = path->events[j];
+            
+                // Find timestamp range.
+                if(min_timestamp == INT64_MIN || event->timestamp < min_timestamp) {
+                    min_timestamp = event->timestamp;
+                }
+                if(max_timestamp == INT64_MIN || event->timestamp > max_timestamp) {
+                    max_timestamp = event->timestamp;
+                }
+            }
+        }
+    }
+    
+    // Update block info.
+    BlockInfo *info = block->info;
+    info->min_object_id = min_object_id;
+    info->max_object_id = max_object_id;
+    info->min_timestamp = min_timestamp;
+    info->max_timestamp = max_timestamp;
+    
+    return 0;
+    
+error:
+    return -1;
+}
 
 
 //======================================
