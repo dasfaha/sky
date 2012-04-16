@@ -825,6 +825,8 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
 {
     int rc;
     Block *target_block;
+    Event **events;
+    uint32_t event_count;
 
     // Add original block to list of affected blocks.
     *affected_block_count = 1;
@@ -853,7 +855,7 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
     uint32_t target_block_size = block_serialized_length / target_block_count;
     
     // Loop over paths and spread them across blocks.
-    uint32_t i;
+    uint32_t i, j;
     for(i=0; i<path_count; i++) {
         Path *path = paths[i];
         uint32_t path_serialized_length = Path_get_serialized_length(path);
@@ -861,7 +863,61 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
         // If path is already spanned or the path is larger than max block size
         // then spread its events across multiple blocks.
         if(spanned || path_serialized_length > max_block_size) {
-            // TODO: Split path into spanned blocks.
+            // Extract events from path.
+            events = path->events;
+            event_count = path->event_count;
+            path->events = NULL;
+            path->event_count = 0;
+
+            // Mark target block as spanned.
+            target_block->info->spanned = true;
+
+            // Split path into spanned blocks.
+            Path *target_path = NULL;
+            for(j=0; j<event_count; j++) {
+                Event *event = events[j];
+                uint32_t event_serialized_length = Event_get_serialized_length(event);
+                
+                // Create new target path if adding event will make path exceed block size.
+                if(target_path != NULL) {
+                    if(Path_get_serialized_length(target_path) + event_serialized_length > max_block_size) {
+                        rc = Block_add_path(target_block, target_path);
+                        check(rc == 0, "Unable to add path to block[1]: %d", target_block->info->id);
+                        target_path = NULL;
+
+                        rc = create_target_block(block, &target_block, affected_blocks, affected_block_count);
+                        check(rc == 0, "Unable to create target block for block split[1]");
+
+                        // Mark new block as spanned.
+                        target_block->info->spanned = true;
+                    }
+                }
+                
+                // Create a path if we don't have one available.
+                if(target_path == NULL) {
+                    target_path = Path_create(event->object_id);
+                    check_mem(target_path);
+                }
+                
+                // Add event to new target path.
+                rc = Path_add_event(target_path, event);
+                check(rc == 0, "Unable to add event to new target path");
+                
+                // Add target path to new block if we're at the end.
+                if(j == event_count-1) {
+                    rc = Block_add_path(target_block, target_path);
+                    check(rc == 0, "Unable to add path to block[2]: %d", target_block->info->id);
+                    target_path = NULL;
+                }
+            }
+            
+            // Remove path since it's now been split into smaller subpaths.
+            Path_destroy(path);
+            
+            // Clean up event list.
+            free(events);
+            events = NULL;
+            event_count = 0;
         }
         // Otherwise add path to the target block.
         else {
@@ -873,11 +929,12 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
                block_serialized_length + path_serialized_length > target_block_size)
             {
                 rc = create_target_block(block, &target_block, affected_blocks, affected_block_count);
-                check(rc == 0, "Unable to create target block for block split");
+                check(rc == 0, "Unable to create target block for block split[2]");
             }
             
             // Add path to target block.
-            Block_add_path(target_block, path);
+            rc = Block_add_path(target_block, path);
+            check(rc == 0, "Unable to add path to block[3]: %d", target_block->info->id);
         }
     }
 
@@ -895,6 +952,14 @@ error:
             Path_destroy(paths[i]);
         }
         free(paths);
+    }
+    
+    // Clean up events if an error occurred during a path split.
+    if(events) {
+        for(i=0; i<event_count; i++) {
+            Event_destroy(events[i]);
+        }
+        free(events);
     }
     
     return -1;

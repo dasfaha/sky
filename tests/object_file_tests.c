@@ -10,6 +10,36 @@
 
 #include "minunit.h"
 
+
+//==============================================================================
+//
+// Macros
+//
+//==============================================================================
+
+#define ADD_EVENT(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID) do {\
+    Event *event = Event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
+    mu_assert(ObjectFile_add_event(OBJECT_FILE, event) == 0, "");\
+    Event_destroy(event);\
+} while(0)
+
+#define ADD_EVENT_WITH_DATA1(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID, KEY, VALUE) do {\
+    Event *event = Event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
+    Event_set_data(event, KEY, VALUE);\
+    mu_assert(ObjectFile_add_event(OBJECT_FILE, event) == 0, "");\
+    Event_destroy(event);\
+} while(0)
+
+#define ADD_EVENT_WITH_DATA2(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID, KEY1, VALUE1, KEY2, VALUE2) do {\
+    Event *event = Event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
+    Event_set_data(event, KEY1, VALUE1);\
+    Event_set_data(event, KEY2, VALUE2);\
+    mu_assert(ObjectFile_add_event(OBJECT_FILE, event) == 0, "");\
+    Event_destroy(event);\
+} while(0)
+
+
+
 //==============================================================================
 //
 // Constants
@@ -23,6 +53,11 @@ struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
 struct tagbstring google = bsStatic("http://www.google.com/this is a test yay!!!");
+struct tagbstring data10 = bsStatic("0123456789");
+struct tagbstring data20 = bsStatic("01234567890123456789");
+struct tagbstring data30 = bsStatic("012345678901234567890123456789");
+struct tagbstring data40 = bsStatic("0123456789012345678901234567890123456789");
+struct tagbstring data50 = bsStatic("01234567890123456789012345678901234567890123456789");
 
 
 //==============================================================================
@@ -110,8 +145,6 @@ int test_ObjectFile_open() {
 //--------------------------------------
 
 int test_ObjectFile_add_event() {
-    Event *event;
-    
     cleandb();
     
     Database *database = Database_create(&ROOT);
@@ -121,37 +154,56 @@ int test_ObjectFile_add_event() {
     mu_assert(ObjectFile_open(object_file) == 0, "");
     mu_assert(ObjectFile_lock(object_file) == 0, "");
 
-    // Action-only event.
-    event = Event_create(946684800000000LL, 10, 20);
-    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
-    Event_destroy(event);
-
-    // Data-only event.
-    event = Event_create(946684800000000LL, 11, 0);
-    Event_set_data(event, 1, &foo);
-    Event_set_data(event, 2, &bar);
-    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
-    Event_destroy(event);
-
-    // Action+data event.
-    event = Event_create(946688400000000LL, 11, 20);
-    Event_set_data(event, 1, &foo);
-    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
-    Event_destroy(event);
-    
-    // More events added to test block splits.
-    event = Event_create(946688400000000LL, 10, 21);
-    Event_set_data(event, 1, &google);
-    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
-    Event_destroy(event);
-
-    event = Event_create(946692000000000LL, 10, 22);
-    mu_assert(ObjectFile_add_event(object_file, event) == 0, "");
-    Event_destroy(event);
+    ADD_EVENT(object_file, 946684800000000LL, 10, 20);
+    ADD_EVENT_WITH_DATA2(object_file, 946684800000000LL, 11, 0, 1, &foo, 2, &bar);
+    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 11, 20, 1, &foo);
+    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 10, 21, 1, &google);
+    ADD_EVENT(object_file, 946692000000000LL, 10, 22);
 
     // Verify database files.
     mu_assert_file("tmp/db/users/data", "tests/fixtures/db/object_file_test0/users/data");
     mu_assert_file("tmp/db/users/header", "tests/fixtures/db/object_file_test0/users/header");
+    
+    mu_assert(ObjectFile_unlock(object_file) == 0, "");
+    mu_assert(ObjectFile_close(object_file) == 0, "");
+
+    ObjectFile_destroy(object_file);
+    Database_destroy(database);
+    
+    return 0;
+}
+
+
+//--------------------------------------
+// Block Split
+//--------------------------------------
+
+int test_ObjectFile_spanned_block_split() {
+    cleandb();
+    
+    Database *database = Database_create(&ROOT);
+    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
+    object_file->block_size = 128;
+
+    mu_assert(ObjectFile_open(object_file) == 0, "");
+    mu_assert(ObjectFile_lock(object_file) == 0, "");
+
+    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 10, 20, 5, &data50);
+    ADD_EVENT_WITH_DATA1(object_file, 946684800000000LL, 12, 20, 1, &data30);
+    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 11, 20, 1, &data10);
+    ADD_EVENT_WITH_DATA1(object_file, 946692000000000LL, 10, 0, 1, &data50);
+    ADD_EVENT_WITH_DATA1(object_file, 946684800000000LL, 11, 20, 1, &data10);
+    ADD_EVENT_WITH_DATA1(object_file, 946684800000000LL, 10, 0, 2, &data10);
+
+    // Verify block info.
+    mu_assert_block_info(0, 0, 10, 10, 946684800000000LL, 946688400000000LL, true);
+    mu_assert_block_info(1, 2, 10, 10, 946692000000000LL, 946692000000000LL, true);
+    mu_assert_block_info(2, 1, 11, 11, 946684800000000LL, 946688400000000LL, false);
+    mu_assert_block_info(3, 3, 12, 12, 946684800000000LL, 946684800000000LL, false);
+
+    // Verify database files.
+    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/object_file_test1/users/data");
+    mu_assert_file("tmp/db/users/header", "tests/fixtures/db/object_file_test1/users/header");
     
     mu_assert(ObjectFile_unlock(object_file) == 0, "");
     mu_assert(ObjectFile_close(object_file) == 0, "");
@@ -172,6 +224,7 @@ int test_ObjectFile_add_event() {
 int all_tests() {
     mu_run_test(test_ObjectFile_open);
     mu_run_test(test_ObjectFile_add_event);
+    mu_run_test(test_ObjectFile_spanned_block_split);
     return 0;
 }
 
