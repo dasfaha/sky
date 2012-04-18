@@ -162,7 +162,7 @@ uint32_t Path_get_serialized_length(Path *path)
 
 // Serializes a path at a given memory location.
 //
-// path - The path to serialize.
+// path   - The path to serialize.
 // addr   - The pointer to the current location.
 // length - The number of bytes written.
 //
@@ -206,7 +206,7 @@ error:
 
 // Deserializes a path to a memory location.
 //
-// path - The path to serialize.
+// path   - The path to serialize.
 // addr   - The pointer to the current location.
 // length - The number of bytes written.
 //

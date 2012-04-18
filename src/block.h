@@ -23,6 +23,7 @@
 #ifndef _block_h
 #define _block_h
 
+#include <stddef.h>
 #include <inttypes.h>
 
 #include "object_file.h"
@@ -86,9 +87,9 @@ void Block_destroy(Block *block);
 
 uint32_t Block_get_serialized_length(Block *block);
 
-int Block_serialize(Block *block, FILE *file);
+int Block_serialize(Block *block, void *addr, ptrdiff_t *length);
 
-int Block_deserialize(Block *block, FILE *file);
+int Block_deserialize(Block *block, void *addr, ptrdiff_t *length);
 
 
 //======================================

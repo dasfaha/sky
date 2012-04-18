@@ -26,6 +26,7 @@
 
 #include "dbg.h"
 #include "block.h"
+#include "mem.h"
 
 //==============================================================================
 //
@@ -151,63 +152,68 @@ uint32_t Block_get_serialized_length(Block *block)
     return length;
 }
 
-// Serializes a block to a given file at the file's current offset.
+// Serializes a block at a given memory location.
 //
-// block - The block to serialize.
-// file    - The file descriptor.
+// block  - The block to serialize.
+// addr   - The pointer to the current location.
+// length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_serialize(Block *block, FILE *file)
+int Block_serialize(Block *block, void *addr, ptrdiff_t *length)
 {
     int rc;
+    void *start = addr;
 
     // Validate.
     check(block != NULL, "Block required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
 
-    // Retrieve initial position.
-    long startpos = ftell(file);
-    
     // Write path count.
-    rc = fwrite(&block->path_count, sizeof(block->path_count), 1, file);
-    check(rc == 1, "Unable to serialize block path count: %d", block->path_count);
+    memwrite(addr, &block->path_count, sizeof(block->path_count), "block path count");
     
     // Loop over paths and delegate serialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
-        rc = Path_serialize(block->paths[i], file);
+        ptrdiff_t ptrdiff;
+        rc = Path_serialize(block->paths[i], addr, &ptrdiff);
         check(rc == 0, "Unable to serialize block path: %d", i);
+        addr += ptrdiff;
     }
     
     // Null fill the rest of the block.
-    int fillcount = block->object_file->block_size - (ftell(file)-startpos);
-    char *null = calloc(fillcount, 1); check_mem(null);
-    rc = fwrite(null, 1, fillcount, file);
-    check(rc == fillcount, "Unable to null fill end of block");
+    int fillcount = block->object_file->block_size - (addr-start);
+    check(memset(addr, 0, fillcount) != NULL, "Unable to null fill end of block");
+    
+    // Store number of bytes written.
+    if(length != NULL) {
+        *length = (addr-start);
+    }
     
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }
 
-// Deserializes a block from a given file at the file's current offset.
+// Deserializes a block from a given memory location.
 //
 // block - The block to serialize.
-// fd    - The file descriptor.
+// addr   - The pointer to the current location.
+// length - The number of bytes read.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_deserialize(Block *block, FILE *file)
+int Block_deserialize(Block *block, void *addr, ptrdiff_t *length)
 {
     int rc;
+    void *start = addr;
 
     // Validate.
     check(block != NULL, "Block required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
 
     // Read path count.
-    rc = fread(&block->path_count, sizeof(block->path_count), 1, file);
-    check(rc == 1, "Unable to deserialize block path count");
+    memread(addr, &block->path_count, sizeof(block->path_count), "block path count");
 
     // Allocate paths.
     block->paths = realloc(block->paths, sizeof(Path*) * block->path_count);
@@ -216,16 +222,24 @@ int Block_deserialize(Block *block, FILE *file)
     // Loop over paths and delegate deserialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
+        ptrdiff_t ptrdiff;
         Path *path = Path_create(0); check_mem(path);
         block->paths[i] = path;
         
-        rc = Path_deserialize(path, file);
+        rc = Path_deserialize(path, addr, &ptrdiff);
         check(rc == 0, "Unable to deserialize block path: %d", i);
+        addr += ptrdiff;
+    }
+
+    // Store number of bytes read.
+    if(length != NULL) {
+        *length = (addr-start);
     }
 
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }
 
