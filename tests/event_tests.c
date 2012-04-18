@@ -4,6 +4,7 @@
 #include <errno.h>
 
 #include <event.h>
+#include <mem.h>
 
 #include "minunit.h"
 
@@ -16,6 +17,27 @@
 struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
+
+int ACTION_EVENT_DATA_LENGTH = 13;
+char ACTION_EVENT_DATA[] = {
+    0x01, 0x00, 0xD0, 0x90, 0x96, 0x34, 0x01, 0x00,
+    0x00, 0x14, 0x00, 0x00, 0x00
+};
+
+int DATA_EVENT_DATA_LENGTH = 23;
+char DATA_EVENT_DATA[] = {
+    0x02, 0x00, 0xD0, 0x90, 0x96, 0x34, 0x01, 0x00,
+    0x00, 0x0C, 0x00, 0x01, 0x00, 0x03, 0x66, 0x6F,
+    0x6F, 0x02, 0x00, 0x03, 0x62, 0x61, 0x72
+};
+
+int ACTION_DATA_EVENT_DATA_LENGTH = 27;
+char ACTION_DATA_EVENT_DATA[] = {
+    0x03, 0x00, 0xD0, 0x90, 0x96, 0x34, 0x01, 0x00,
+    0x00, 0x14, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x01,
+    0x00, 0x03, 0x66, 0x6F, 0x6F, 0x02, 0x00, 0x03,
+    0x62, 0x61, 0x72
+};
 
 
 //==============================================================================
@@ -127,38 +149,44 @@ int test_Event_action_data_event_get_serialized_length() {
 
 // Action event.
 int test_Event_action_event_serialize() {
-    FILE *file = fopen(TEMPFILE, "w");
+    ptrdiff_t ptrdiff;
+    void *addr = calloc(ACTION_EVENT_DATA_LENGTH, 1);
     Event *event = Event_create(1325376000000LL, 0, 20);
-    Event_serialize(event, file);
+    Event_serialize(event, addr, &ptrdiff);
     Event_destroy(event);
-    fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/action_event");
+    mu_assert(ptrdiff == ACTION_EVENT_DATA_LENGTH, "");
+    mu_assert(memcmp(addr, &ACTION_EVENT_DATA, ACTION_EVENT_DATA_LENGTH) == 0, "");
+    free(addr);
     return 0;
 }
 
 // Data event.
 int test_Event_data_event_serialize() {
-    FILE *file = fopen(TEMPFILE, "w");
+    ptrdiff_t ptrdiff;
+    void *addr = calloc(DATA_EVENT_DATA_LENGTH, 1);
     Event *event = Event_create(1325376000000LL, 0, 0);
     Event_set_data(event, 1, &foo);
     Event_set_data(event, 2, &bar);
-    Event_serialize(event, file);
+    Event_serialize(event, addr, &ptrdiff);
     Event_destroy(event);
-    fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/data_event");
+    mu_assert(ptrdiff == DATA_EVENT_DATA_LENGTH, "");
+    mu_assert(memcmp(addr, &DATA_EVENT_DATA, DATA_EVENT_DATA_LENGTH) == 0, "");
+    free(addr);
     return 0;
 }
 
 // Action+Data event.
 int test_Event_action_data_event_serialize() {
-    FILE *file = fopen(TEMPFILE, "w");
+    ptrdiff_t ptrdiff;
+    void *addr = calloc(ACTION_DATA_EVENT_DATA_LENGTH, 1);
     Event *event = Event_create(1325376000000LL, 0, 20);
     Event_set_data(event, 1, &foo);
     Event_set_data(event, 2, &bar);
-    Event_serialize(event, file);
+    Event_serialize(event, addr, &ptrdiff);
     Event_destroy(event);
-    fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/action_data_event");
+    mu_assert(ptrdiff == ACTION_DATA_EVENT_DATA_LENGTH, "");
+    mu_assert(memcmp(addr, &ACTION_DATA_EVENT_DATA, ACTION_DATA_EVENT_DATA_LENGTH) == 0, "");
+    free(addr);
     return 0;
 }
 
@@ -168,11 +196,11 @@ int test_Event_action_data_event_serialize() {
 
 // Action event.
 int test_Event_action_event_deserialize() {
-    FILE *file = fopen("tests/fixtures/serialization/action_event", "r");
+    ptrdiff_t ptrdiff;
     Event *event = Event_create(0, 0, 0);
-    Event_deserialize(event, file);
-    fclose(file);
+    Event_deserialize(event, &ACTION_EVENT_DATA, &ptrdiff);
 
+    mu_assert(ptrdiff == ACTION_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
     mu_assert(event->action_id == 20, "Expected action id to equal 20");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
@@ -186,11 +214,11 @@ int test_Event_action_event_deserialize() {
 
 // Data event.
 int test_Event_data_event_deserialize() {
-    FILE *file = fopen("tests/fixtures/serialization/data_event", "r");
+    ptrdiff_t ptrdiff;
     Event *event = Event_create(0, 0, 0);
-    Event_deserialize(event, file);
-    fclose(file);
+    Event_deserialize(event, &DATA_EVENT_DATA, &ptrdiff);
 
+    mu_assert(ptrdiff == DATA_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
     mu_assert(event->action_id == 0, "Expected action id to equal 0");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
@@ -210,11 +238,11 @@ int test_Event_data_event_deserialize() {
 
 // Action+Data event.
 int test_Event_action_data_event_deserialize() {
-    FILE *file = fopen("tests/fixtures/serialization/action_data_event", "r");
+    ptrdiff_t ptrdiff;
     Event *event = Event_create(0, 0, 0);
-    Event_deserialize(event, file);
-    fclose(file);
+    Event_deserialize(event, &ACTION_DATA_EVENT_DATA, &ptrdiff);
 
+    mu_assert(ptrdiff == ACTION_DATA_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
     mu_assert(event->action_id == 20, "Expected action id to equal 20");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");

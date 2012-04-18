@@ -23,6 +23,7 @@
 #ifndef _event_h
 #define _event_h
 
+#include <stddef.h>
 #include <inttypes.h>
 
 #include "bstring.h"
@@ -103,9 +104,9 @@ int Event_copy(Event *source, Event **target);
 
 uint32_t Event_get_serialized_length(Event *event);
 
-int Event_serialize(Event *event, FILE *file);
+int Event_serialize(Event *event, void *addr, ptrdiff_t *length);
 
-int Event_deserialize(Event *event, FILE *file);
+int Event_deserialize(Event *event, void *addr, ptrdiff_t *length);
 
 
 //======================================

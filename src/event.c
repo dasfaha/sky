@@ -27,6 +27,7 @@
 #include "dbg.h"
 #include "bstring.h"
 #include "event.h"
+#include "mem.h"
 
 //==============================================================================
 //
@@ -270,83 +271,88 @@ uint32_t Event_get_serialized_length(Event *event)
     return length;
 }
 
-// Serializes an event to a given file at the file's current offset.
+// Serializes an event to memory at a given pointer location.
 //
-// event - The event to serialize.
-// file  - The file descriptor.
+// event  - The event to serialize.
+// addr   - The pointer to the current location.
+// length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_serialize(Event *event, FILE *file)
+int Event_serialize(Event *event, void *addr, ptrdiff_t *length)
 {
     int rc;
+    void *start = addr;
     
     // Validate.
     check(event != NULL, "Event required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
     
     // Write event flag.
     uint8_t flag = get_event_flag(event);
-    rc = fwrite(&flag, sizeof(flag), 1, file);
-    check(rc == 1, "Unable to serialize event flag: %x", (int)flag);
+    memwrite(addr, &flag, sizeof(flag), "event flag");
     
     // Write timestamp.
-    rc = fwrite(&event->timestamp, sizeof(event->timestamp), 1, file);
-    check(rc == 1, "Unable to serialize event timestamp: %lld", event->timestamp);
+    memwrite(addr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
     
     // Write action if set.
     if(has_action(event)) {
-        rc = fwrite(&event->action_id, sizeof(event->action_id), 1, file);
-        check(rc == 1, "Unable to serialize event action: %d", event->action_id);
+        memwrite(addr, &event->action_id, sizeof(event->action_id), "event action");
     }
 
     // Write data if set.
     if(has_data(event)) {
         // Write data length.
         uint16_t data_length = get_data_length(event);
-        rc = fwrite(&data_length, sizeof(data_length), 1, file);
-        check(rc == 1, "Unable to serialize event data length: %d", data_length);
+        memwrite(addr, &data_length, sizeof(data_length), "event data length");
         
         // Serialize data.
         int i;
         for(i=0; i<event->data_count; i++) {
-            rc = EventData_serialize(event->data[i], file);
+            ptrdiff_t ptrdiff;
+            rc = EventData_serialize(event->data[i], addr, &ptrdiff);
             check(rc == 0, "Unable to serialize event data: %d", i);
+            addr += ptrdiff;
         }
+    }
+    
+    // Store number of bytes written.
+    if(length != NULL) {
+        *length = (addr-start);
     }
     
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }
 
 // Deserializes an event from a given file at the file's current offset.
 //
-// event - The event to serialize.
-// file  - The file descriptor.
+// event  - The event to serialize.
+// addr   - The pointer to the current location.
+// length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_deserialize(Event *event, FILE *file)
+int Event_deserialize(Event *event, void *addr, ptrdiff_t *length)
 {
     int rc;
+    void *start = addr;
 
     // Validate.
     check(event != NULL, "Event required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
 
     // Read event flag.
     uint8_t flag;
-    rc = fread(&flag, sizeof(flag), 1, file);
-    check(rc == 1, "Unable to deserialize event flag");
+    memread(addr, &flag, sizeof(flag), "event flag");
 
     // Read timestamp.
-    rc = fread(&event->timestamp, sizeof(event->timestamp), 1, file);
-    check(rc == 1, "Unable to deserialize event timestamp");
+    memread(addr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
 
     // Read action if one exists.
     if(flag & EVENT_FLAG_ACTION) {
-        rc = fread(&event->action_id, sizeof(event->action_id), 1, file);
-        check(rc == 1, "Unable to deserialize event action");
+        memread(addr, &event->action_id, sizeof(event->action_id), "event action");
     }
 
     // Clear existing data.
@@ -356,24 +362,34 @@ int Event_deserialize(Event *event, FILE *file)
     if(flag & EVENT_FLAG_DATA) {
         // Read data length.
         uint16_t data_length;
-        rc = fread(&data_length, sizeof(data_length), 1, file);
-        check(rc == 1, "Unable to deserialize event data length");
+        memread(addr, &data_length, sizeof(data_length), "event data length");
 
         // Deserialize data.
         int index = 0;
-        long endpos = ftell(file) + data_length;
-        while(!feof(file) && ftell(file) < endpos) {
+        void *endptr = addr + data_length;
+        while(addr < endptr) {
+            ptrdiff_t ptrdiff;
+
             check(allocate_data(event) == 0, "Unable to append event data");
             event->data[index] = EventData_create(0, NULL);
-            rc = EventData_deserialize(event->data[index], file);
+
+            rc = EventData_deserialize(event->data[index], addr, &ptrdiff);
             check(rc == 0, "Unable to deserialize event data: %d", index);
+            addr += ptrdiff;
+
             index++;
         }
+    }
+
+    // Store number of bytes read.
+    if(length != NULL) {
+        *length = (addr-start);
     }
 
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }
 

@@ -126,12 +126,15 @@ uint32_t EventData_get_serialized_length(EventData *data)
 
 // Serializes event data to memory at a given pointer.
 //
-// data - The event data to serialize.
-// addr - A pointer to the current location to write to.
+// data   - The event data to serialize.
+// addr   - The pointer to the current location.
+// length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_serialize(EventData *data, void *addr)
+int EventData_serialize(EventData *data, void *addr, ptrdiff_t *length)
 {
+    void *start = addr;
+
     // Validate.
     check(data != NULL, "Event data required");
     check(addr != NULL, "Address required");
@@ -148,6 +151,11 @@ int EventData_serialize(EventData *data, void *addr)
 
     // Write value.
     memwrite_bstr(addr, data->value, value_length, "event data value");
+
+    // Store number of bytes written.
+    if(length != NULL) {
+        *length = (addr-start);
+    }
     
     return 0;
 
@@ -157,12 +165,15 @@ error:
 
 // Deserializes event data from memory at the current pointer.
 //
-// data - The event data to deserialize into.
-// addr - A pointer to the current memory location to read from.
+// data   - The event data to deserialize into.
+// addr   - The pointer to the current location.
+// length - The number of bytes read.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_deserialize(EventData *data, void *addr)
+int EventData_deserialize(EventData *data, void *addr, ptrdiff_t *length)
 {
+    void *start = addr;
+    
     // Validate.
     check(data != NULL, "Event data required");
     check(addr != NULL, "Address required");
@@ -177,8 +188,14 @@ int EventData_deserialize(EventData *data, void *addr)
     // Read value.
     memread_bstr(addr, data->value, value_length, "event data value");
     
+    // Store number of bytes read.
+    if(length != NULL) {
+        *length = (addr-start);
+    }
+    
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }

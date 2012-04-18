@@ -61,11 +61,13 @@ int test_EventData_get_serialized_length() {
 int test_EventData_serialize() {
     struct tagbstring value = bsStatic("foo");
     void *addr = calloc(DATA_LENGTH, 1);
-
+    ptrdiff_t length;
+    
     EventData *data = EventData_create(10, &value);
-    EventData_serialize(data, addr);
+    EventData_serialize(data, addr, &length);
     EventData_destroy(data);
     
+    mu_assert(length == DATA_LENGTH, "");
     mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
 
     free(addr);
@@ -74,9 +76,12 @@ int test_EventData_serialize() {
 }
 
 int test_EventData_deserialize() {
-    EventData *data = EventData_create(0, NULL);
-    EventData_deserialize(data, &DATA);
+    ptrdiff_t length;
 
+    EventData *data = EventData_create(0, NULL);
+    EventData_deserialize(data, &DATA, &length);
+
+    mu_assert(length == DATA_LENGTH, "");
     mu_assert(data->key == 10, "");
     mu_assert(biseqcstr(data->value, "foo"), "");
 
