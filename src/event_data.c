@@ -27,6 +27,7 @@
 #include "dbg.h"
 #include "bstring.h"
 #include "event.h"
+#include "mem.h"
 
 //==============================================================================
 //
@@ -123,35 +124,30 @@ uint32_t EventData_get_serialized_length(EventData *data)
     return length;
 }
 
-// Serializes event data to a given file at the file's current offset.
+// Serializes event data to memory at a given pointer.
 //
 // data - The event data to serialize.
-// file - The file descriptor.
+// addr - A pointer to the current location to write to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_serialize(EventData *data, FILE *file)
+int EventData_serialize(EventData *data, void *addr)
 {
-    int rc;
-    
     // Validate.
     check(data != NULL, "Event data required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
     
     // Clean data structure.
     clean(data);
 
     // Write key.
-    rc = fwrite(&data->key, sizeof(data->key), 1, file);
-    check(rc == 1, "Unable to serialize event data key: %d", data->key);
+    memwrite(addr, &data->key, sizeof(data->key), "event data key");
     
     // Write value length.
     uint8_t value_length = blength(data->value);
-    rc = fwrite(&value_length, sizeof(value_length), 1, file);
-    check(rc == 1, "Unable to serialize event data value length: %d", value_length);
+    memwrite(addr, &value_length, sizeof(value_length), "event data value length");
 
     // Write value.
-    rc = fwrite(bdata(data->value), value_length, 1, file);
-    check(rc == 1, "Unable to serialize event data value: %s", bdata(data->value));
+    memwrite_bstr(addr, data->value, value_length, "event data value");
     
     return 0;
 
@@ -159,47 +155,30 @@ error:
     return -1;
 }
 
-// Deserializes event data from a given file at the file's current offset.
+// Deserializes event data from memory at the current pointer.
 //
 // data - The event data to deserialize into.
-// file - The file descriptor.
+// addr - A pointer to the current memory location to read from.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_deserialize(EventData *data, FILE *file)
+int EventData_deserialize(EventData *data, void *addr)
 {
-    int rc;
-    char *str;
-
     // Validate.
     check(data != NULL, "Event data required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
 
     // Read key.
-    rc = fread(&data->key, sizeof(data->key), 1, file);
-    check(rc == 1, "Unable to deserialize event data key: %d", data->key);
-
+    memread(addr, &data->key, sizeof(data->key), "event data key");
+    
     // Read value length.
     uint8_t value_length;
-    rc = fread(&value_length, sizeof(value_length), 1, file);
-    check(rc == 1, "Unable to deserialize event data value length: %d", value_length);
+    memread(addr, &value_length, sizeof(value_length), "event data value length");
 
-    // Clear existing value if set.
-    if(data->value != NULL) {
-        bdestroy(data->value);
-        data->value = NULL;
-    }
-    
     // Read value.
-    str = calloc(1, value_length+1); check_mem(str);
-    rc = fread(str, value_length, 1, file);
-    check(rc == 1, "Unable to deserialize event data value: %s", bdata(data->value));
-    data->value = bfromcstr(str);
-    check_mem(data->value);
-    free(str);
+    memread_bstr(addr, data->value, value_length, "event data value");
     
     return 0;
 
 error:
-    if(str) free(str);
     return -1;
 }

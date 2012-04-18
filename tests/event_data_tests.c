@@ -14,6 +14,16 @@
 //
 //==============================================================================
 
+char DATA[] = {0x0A, 0x00, 0x03, 0x66, 0x6F, 0x6F};
+int DATA_LENGTH = 6;
+
+
+//==============================================================================
+//
+// Test Cases
+//
+//==============================================================================
+
 //--------------------------------------
 // Lifecycle
 //--------------------------------------
@@ -50,26 +60,25 @@ int test_EventData_get_serialized_length() {
 
 int test_EventData_serialize() {
     struct tagbstring value = bsStatic("foo");
+    void *addr = calloc(DATA_LENGTH, 1);
 
-    FILE *file = fopen(TEMPFILE, "w");
     EventData *data = EventData_create(10, &value);
-    EventData_serialize(data, file);
+    EventData_serialize(data, addr);
     EventData_destroy(data);
-    fclose(file);
+    
+    mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
 
-    mu_assert_tempfile("tests/fixtures/serialization/event_data");
-
+    free(addr);
+    
     return 0;
 }
 
 int test_EventData_deserialize() {
-    FILE *file = fopen("tests/fixtures/serialization/event_data", "r");
     EventData *data = EventData_create(0, NULL);
-    EventData_deserialize(data, file);
-    fclose(file);
+    EventData_deserialize(data, &DATA);
 
-    mu_assert(data->key == 10, "Expected data key to equal 10");
-    mu_assert(biseqcstr(data->value, "foo"), "Expected data value to equal 'foo'");
+    mu_assert(data->key == 10, "");
+    mu_assert(biseqcstr(data->value, "foo"), "");
 
     EventData_destroy(data);
 
