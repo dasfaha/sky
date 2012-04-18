@@ -1,7 +1,6 @@
 - Object file
-  - Add event
-    - Split blocks (*)
-  - Find object path
+  - Convert to mmap().
+  - Cursors
 
 - Standalone client
   - Add event

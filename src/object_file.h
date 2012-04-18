@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 
 #include "bstring.h"
 #include "database.h"
@@ -128,6 +129,9 @@ typedef struct ObjectFile {
     uint32_t action_count;
     Property **properties;
     uint16_t property_count;
+    int data_fd;
+    void *data;
+    size_t data_length;
 } ObjectFile;
 
 

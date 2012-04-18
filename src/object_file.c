@@ -1002,6 +1002,9 @@ ObjectFile *ObjectFile_create(Database *database, bstring name)
     object_file->properties = NULL;
     object_file->property_count = 0;
 
+    object_file->data = NULL;
+    object_file->data_length = 0;
+
     return object_file;
     
 error:
@@ -1049,13 +1052,39 @@ int ObjectFile_open(ObjectFile *object_file)
     check(load_header(object_file) == 0, "Unable to load header data");
     check(load_actions(object_file) == 0, "Unable to load action data");
     check(load_properties(object_file) == 0, "Unable to load property data");
+
+    // Open the data file.
+    bstring path = get_data_file_path(object_file); check_mem(path);
+    object_file->data_fd = open(bdata(path), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    check(object_file->data_fd != -1, "Failed to open data file descriptor: %s",  bdata(path));
     
+    // Find the file size.
+    struct stat buffer;
+    rc = fstat(object_file->data_fd, &buffer);
+    check(rc == 0, "Unable to stat data file descriptor");
+    
+    // If the file is blank then default to one block large.
+    if(buffer.st_size == 0) {
+        object_file->data_length = object_file->block_size;
+    }
+    else {
+        object_file->data_length = buffer.st_size;
+    }
+
+    // Memory map the data file.
+    object_file->data = mmap(0, object_file->data_length, PROT_READ | PROT_WRITE, MAP_SHARED, object_file->data_fd, 0);
+    check(object_file->data != MAP_FAILED, "Unable to memory map data file");
+
     // Flag the object file as locked.
     object_file->state = OBJECT_FILE_STATE_OPEN;
 
+    bdestroy(path);
+    
     return 0;
 
 error:
+    if(path) bdestroy(path);
+
     return -1;
 }
 
@@ -1074,6 +1103,19 @@ int ObjectFile_close(ObjectFile *object_file)
     check(unload_header(object_file) == 0, "Unable to unload header data");
     check(unload_actions(object_file) == 0, "Unable to unload action data");
     check(unload_properties(object_file) == 0, "Unable to unload property data");
+
+    // Close data file.
+    if(object_file->data_fd) {
+        close(object_file->data_fd);
+        object_file->data_fd = 0;
+    }
+    
+    // Unmap data file.
+    if(object_file->data) {
+        munmap(object_file->data, object_file->data_length);
+        object_file->data = NULL;
+    }
+    object_file->data_length = 0;
 
     // Update state.
     object_file->state = OBJECT_FILE_STATE_CLOSED;
