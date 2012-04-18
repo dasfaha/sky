@@ -18,6 +18,19 @@ struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
 
+int DATA_LENGTH = 69;
+char DATA[] = {
+    0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x39, 0x00, 0x00, 0x00, 0x01, 0x00, 0xE0, 0x37,
+    0x3B, 0x01, 0x5D, 0x03, 0x00, 0x06, 0x00, 0x00,
+    0x00, 0x03, 0x00, 0x84, 0xCB, 0x11, 0x02, 0x5D,
+    0x03, 0x00, 0x07, 0x00, 0x00, 0x00, 0x0C, 0x00,
+    0x01, 0x00, 0x03, 0x66, 0x6F, 0x6F, 0x02, 0x00,
+    0x03, 0x62, 0x61, 0x72, 0x02, 0x00, 0x28, 0x5F,
+    0xE8, 0x02, 0x5D, 0x03, 0x00, 0x06, 0x00, 0x01,
+    0x00, 0x03, 0x66, 0x6F, 0x6F
+};
+
 
 // Creates a path containing action-only, data-only and action+data events.
 Path *create_test_path0()
@@ -111,12 +124,14 @@ int test_Path_get_serialized_length() {
 //--------------------------------------
 
 int test_Path_serialize() {
-    FILE *file = fopen(TEMPFILE, "w");
+    ptrdiff_t ptrdiff;
+    void *addr = calloc(DATA_LENGTH, 1);
     Path *path = create_test_path0();
-    Path_serialize(path, file);
+    Path_serialize(path, addr, &ptrdiff);
     Path_destroy(path);
-    fclose(file);
-    mu_assert_tempfile("tests/fixtures/serialization/path");
+    mu_assert(ptrdiff == DATA_LENGTH, "");
+    mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
+    free(addr);
     return 0;
 }
 
@@ -126,11 +141,13 @@ int test_Path_serialize() {
 //--------------------------------------
 
 int test_Path_deserialize() {
+    ptrdiff_t ptrdiff;
+
     EventData *data;
-    FILE *file = fopen("tests/fixtures/serialization/path", "r");
     Path *path = Path_create(0);
-    Path_deserialize(path, file);
-    fclose(file);
+    Path_deserialize(path, &DATA, &ptrdiff);
+
+    mu_assert(ptrdiff == DATA_LENGTH, "");
 
     mu_assert(path->object_id == 10, "");
     mu_assert(path->events != NULL, "");

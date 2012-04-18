@@ -23,6 +23,7 @@
 #ifndef _path_h
 #define _path_h
 
+#include <stddef.h>
 #include <inttypes.h>
 
 #include "event.h"
@@ -86,9 +87,9 @@ void Path_destroy(Path *path);
 
 uint32_t Path_get_serialized_length(Path *path);
 
-int Path_serialize(Path *path, FILE *file);
+int Path_serialize(Path *path, void *addr, ptrdiff_t *length);
 
-int Path_deserialize(Path *path, FILE *file);
+int Path_deserialize(Path *path, void *addr, ptrdiff_t *length);
 
 
 //======================================

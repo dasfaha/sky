@@ -26,6 +26,7 @@
 
 #include "dbg.h"
 #include "path.h"
+#include "mem.h"
 
 //==============================================================================
 //
@@ -159,82 +160,100 @@ uint32_t Path_get_serialized_length(Path *path)
     return length;
 }
 
-// Serializes a path to a given file at the file's current offset.
+// Serializes a path at a given memory location.
 //
 // path - The path to serialize.
-// fd   - The file descriptor.
+// addr   - The pointer to the current location.
+// length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_serialize(Path *path, FILE *file)
+int Path_serialize(Path *path, void *addr, ptrdiff_t *length)
 {
     uint32_t i;
     int rc;
+    void *start = addr;
     
     // Validate.
     check(path != NULL, "Path required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
 
     // Write object id.
-    rc = fwrite(&path->object_id, sizeof(path->object_id), 1, file);
-    check(rc == 1, "Unable to serialize path object id: %lld", path->object_id);
+    memwrite(addr, &path->object_id, sizeof(path->object_id), "path object id");
     
     // Write events length.
     uint32_t events_length = get_events_length(path);
-    rc = fwrite(&events_length, sizeof(events_length), 1, file);
-    check(rc == 1, "Unable to serialize path events length: %d", events_length);
+    memwrite(addr, &events_length, sizeof(events_length), "path events length");
 
     // Serialize events.
     for(i=0; i<path->event_count; i++) {
-        rc = Event_serialize(path->events[i], file);
+        ptrdiff_t ptrdiff;
+        rc = Event_serialize(path->events[i], addr, &ptrdiff);
         check(rc == 0, "Unable to serialize path event: %d", i);
+        addr += ptrdiff;
+    }
+
+    // Store number of bytes written.
+    if(length != NULL) {
+        *length = (addr-start);
     }
 
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }
 
-// Deserializes a path from a given file at the file's current offset.
+// Deserializes a path to a memory location.
 //
 // path - The path to serialize.
-// fd   - The file descriptor.
+// addr   - The pointer to the current location.
+// length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_deserialize(Path *path, FILE *file)
+int Path_deserialize(Path *path, void *addr, ptrdiff_t *length)
 {
     int rc;
+    void *start = addr;
 
     // Validate.
     check(path != NULL, "Path required");
-    check(file != NULL, "File descriptor required");
+    check(addr != NULL, "Address required");
 
     // Read object id.
-    rc = fread(&path->object_id, sizeof(path->object_id), 1, file);
-    check(rc == 1, "Unable to deserialize path object id");
+    memread(addr, &path->object_id, sizeof(path->object_id), "path object id");
 
     // Read events length.
     uint32_t events_length;
-    rc = fread(&events_length, sizeof(events_length), 1, file);
-    check(rc == 1, "Unable to deserialize path events length: %d", events_length);
+    memread(addr, &events_length, sizeof(events_length), "path events length");
 
     // Deserialize events.
     int index = 0;
-    long endpos = ftell(file) + events_length;
-    while(!feof(file) && ftell(file) < endpos) {
+    void *endptr = addr + events_length;
+    while(addr < endptr) {
+        ptrdiff_t ptrdiff;
+        
         path->event_count++;
         path->events = realloc(path->events, sizeof(Event*) * path->event_count);
         check_mem(path->events);
 
         path->events[index] = Event_create(0, path->object_id, 0);
-        rc = Event_deserialize(path->events[index], file);
+        rc = Event_deserialize(path->events[index], addr, &ptrdiff);
         check(rc == 0, "Unable to deserialize event: %d", index);
+        addr += ptrdiff;
+        
         index++;
+    }
+
+    // Store number of bytes read.
+    if(length != NULL) {
+        *length = (addr-start);
     }
 
     return 0;
 
 error:
+    *length = 0;
     return -1;
 }
 
