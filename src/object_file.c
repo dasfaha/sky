@@ -25,9 +25,11 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <math.h>
 
 #include "dbg.h"
+#include "mem.h"
 #include "bstring.h"
 #include "database.h"
 #include "block.h"
@@ -540,9 +542,97 @@ bstring get_data_file_path(ObjectFile *object_file)
 //
 // Returns the number of bytes from the start of the data file where the block
 // begins.
-off_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
+ptrdiff_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
 {
     return (object_file->block_size * info->id);
+}
+
+// Unmaps a data file for an object.
+//
+// object_file - The object file that owns the data file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int unmap_data_file(ObjectFile *object_file)
+{
+    // Unmap file.
+    if(object_file->data != NULL) {
+        munmap(object_file->data, object_file->data_length);
+        object_file->data = NULL;
+    }
+    
+    // Close file descriptor.
+    if(object_file->data_fd != 0) {
+        close(object_file->data_fd);
+        object_file->data_fd = 0;
+    }
+    
+    object_file->data_length = 0;
+    
+    return 0;
+}
+
+// Maps the data file for an object file. If the data file is already mapped
+// then it is remapped.
+//
+// object_file - The object file that owns the data file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int map_data_file(ObjectFile *object_file)
+{
+    int rc;
+    void *ptr;
+    
+    // Calculate the data length.
+    size_t data_length;
+    if(object_file->block_count == 0) {
+        data_length = object_file->block_size;
+    }
+    else {
+        data_length = object_file->block_count * object_file->block_size;
+    }
+    
+    // Close mapping if remapping isn't supported.
+    if(!MREMAP_AVAILABLE) {
+        unmap_data_file(object_file);
+    }
+    
+    // Find the path to the data file.
+    bstring path = get_data_file_path(object_file); check_mem(path);
+
+    // Open the data file and map it if it is not currently open.
+    if(object_file->data_fd == 0) {
+        object_file->data_fd = open(bdata(path), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        check(object_file->data_fd != -1, "Failed to open data file descriptor: %s",  bdata(path));
+
+        // Truncate the file to the appropriate size (larger or smaller).
+        rc = ftruncate(object_file->data_fd, data_length);
+        check(rc == 0, "Unable to truncate data file");
+        
+        // Memory map the data file.
+        ptr = mmap(0, data_length, PROT_READ | PROT_WRITE, MAP_SHARED, object_file->data_fd, 0);
+        check(ptr != MAP_FAILED, "Unable to memory map data file");
+    }
+    // If we already have the data mapped then simply remap it to the
+    // appropriate size.
+    else {
+#if MREMAP_AVAILABLE
+        ptr = mremap(object_file->data, object_file->data_length, data_length, MREMAP_MAYMOVE);
+        check(ptr != MAP_FAILED, "Unable to remap data file");
+#endif
+    }
+
+    // Update the object file.
+    object_file->data = ptr;
+    object_file->data_length = data_length;
+
+    bdestroy(path);
+    
+    return 0;
+
+error:
+    object_file->data = NULL;
+    bdestroy(path);
+    return -1;
 }
 
 // Serializes a block in memory and writes it to disk.
@@ -557,27 +647,14 @@ int save_block(Block *block)
     ObjectFile *object_file = block->object_file;
     BlockInfo *info = block->info;
 
-    // Retrieve data file path.
-    bstring path = get_data_file_path(object_file);
-    check_mem(path);
-
-    // Open data file.
-    int fd = open(bdata(path), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
-    check(fd != -1, "Failed to open data file descriptor for writing: %s",  bdata(path));
-    FILE *file = fdopen(fd, "w");
-    check(file != NULL, "Failed to open data file for writing: %s",  bdata(path));
-
-    // Seek to starting position of block.
-    off_t offset = get_block_offset(object_file, info);
-    rc = fseek(file, offset, SEEK_SET);
-    check(rc != -1, "Failed to seek to write block: %s#%d",  bdata(path), info->id);
+    // Move pointer to starting position of block.
+    ptrdiff_t offset = get_block_offset(object_file, info);
+    void *addr = object_file->data + offset;
 
     // Serialize block.
-    rc = Block_serialize(block, file);
-    check(rc == 0, "Failed to serialize block: %s#%d",  bdata(path), info->id);
-
-    // Clean up.
-    fclose(file);
+    ptrdiff_t ptrdiff;
+    rc = Block_serialize(block, addr, &ptrdiff);
+    check(rc == 0, "Failed to serialize block: %d", info->id);
 
     // Update block info.
     Block_update_info(block);
@@ -585,7 +662,6 @@ int save_block(Block *block)
     return 0;
 
 error:
-    if(file) fclose(file);
     return -1;
 }
 
@@ -610,6 +686,10 @@ int create_block(ObjectFile *object_file, Block **ret)
     info->min_object_id = 0LL;
     info->max_object_id = 0LL;
     object_file->infos[object_file->block_count-1] = info;
+
+    // Remap data file.
+    rc = map_data_file(object_file);
+    check(rc == 0, "Unable to remap data file");
 
     // Save empty block to file.
     Block *block = Block_create(object_file, info);
@@ -747,26 +827,15 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block **ret)
 {
     int rc;
     
-    // Retrieve data file path.
-    bstring path = get_data_file_path(object_file);
-    check_mem(path);
-
-    // Open data file.
-    FILE *file = fopen(bdata(path), "r");
-    check(file != NULL, "Failed to open data file for reading: %s",  bdata(path));
-
-    // Seek to starting position of block.
-    off_t offset = get_block_offset(object_file, info);
-    rc = fseek(file, offset, SEEK_SET);
-    check(rc != -1, "Failed to seek to read block: %s#%d",  bdata(path), info->id);
+    // Create pointer at starting position of block.
+    ptrdiff_t offset = get_block_offset(object_file, info);
+    void *addr = object_file->data + offset;
 
     // Deserialize block.
+    ptrdiff_t ptrdiff;
     Block *block = Block_create(object_file, info);
-    rc = Block_deserialize(block, file);
-    check(rc == 0, "Failed to deserialize block: %s#%d",  bdata(path), info->id);
-    
-    // Clean up.
-    fclose(file);
+    rc = Block_deserialize(block, addr, &ptrdiff);
+    check(rc == 0, "Failed to deserialize block: %d", info->id);
     
     // Assign block to return value.
     *ret = block;
@@ -774,8 +843,6 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block **ret)
     return 0;
 
 error:
-    if(file) fclose(file);
-    bdestroy(path);
     return -1;
 }
 
@@ -1053,38 +1120,17 @@ int ObjectFile_open(ObjectFile *object_file)
     check(load_actions(object_file) == 0, "Unable to load action data");
     check(load_properties(object_file) == 0, "Unable to load property data");
 
-    // Open the data file.
-    bstring path = get_data_file_path(object_file); check_mem(path);
-    object_file->data_fd = open(bdata(path), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    check(object_file->data_fd != -1, "Failed to open data file descriptor: %s",  bdata(path));
+    // Map the data file.
+    rc = map_data_file(object_file);
+    check(rc == 0, "Unable to map data file");
     
-    // Find the file size.
-    struct stat buffer;
-    rc = fstat(object_file->data_fd, &buffer);
-    check(rc == 0, "Unable to stat data file descriptor");
-    
-    // If the file is blank then default to one block large.
-    if(buffer.st_size == 0) {
-        object_file->data_length = object_file->block_size;
-    }
-    else {
-        object_file->data_length = buffer.st_size;
-    }
-
-    // Memory map the data file.
-    object_file->data = mmap(0, object_file->data_length, PROT_READ | PROT_WRITE, MAP_SHARED, object_file->data_fd, 0);
-    check(object_file->data != MAP_FAILED, "Unable to memory map data file");
-
     // Flag the object file as locked.
     object_file->state = OBJECT_FILE_STATE_OPEN;
 
-    bdestroy(path);
-    
     return 0;
 
 error:
-    if(path) bdestroy(path);
-
+    ObjectFile_close(object_file);
     return -1;
 }
 
@@ -1097,25 +1143,14 @@ int ObjectFile_close(ObjectFile *object_file)
 {
     // Validate arguments.
     check(object_file != NULL, "Object file required to close");
-    check(object_file->state == OBJECT_FILE_STATE_OPEN, "Object file must be open to close")
 
     // Unload header, action and properties data.
     check(unload_header(object_file) == 0, "Unable to unload header data");
     check(unload_actions(object_file) == 0, "Unable to unload action data");
     check(unload_properties(object_file) == 0, "Unable to unload property data");
 
-    // Close data file.
-    if(object_file->data_fd) {
-        close(object_file->data_fd);
-        object_file->data_fd = 0;
-    }
-    
     // Unmap data file.
-    if(object_file->data) {
-        munmap(object_file->data, object_file->data_length);
-        object_file->data = NULL;
-    }
-    object_file->data_length = 0;
+    unmap_data_file(object_file);
 
     // Update state.
     object_file->state = OBJECT_FILE_STATE_CLOSED;
@@ -1257,7 +1292,7 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     // Attempt to split block into multiple blocks if necessary.
     rc = split_block(block, &affected_blocks, &affected_block_count);
     check(rc == 0, "Unable to split block %d", info->id);
-    
+
     // Save all affected blocks.
     int i;
     for(i=0; i<affected_block_count; i++) {
