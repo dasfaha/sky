@@ -160,6 +160,20 @@ uint32_t Path_get_serialized_length(Path *path)
     return length;
 }
 
+// Calculates the full length of a path at a given pointer address.
+// 
+// ptr - A pointer to raw, serialized path data.
+//
+// Returns the length of the path.
+uint32_t Path_get_length(const void *ptr)
+{
+    // Read events length from raw data.
+    uint32_t events_length;
+    memcpy(&events_length, ptr+sizeof(int64_t), sizeof(events_length));
+    
+    return PATH_HEADER_LENGTH + events_length;
+}
+
 // Serializes a path at a given memory location.
 //
 // path   - The path to serialize.

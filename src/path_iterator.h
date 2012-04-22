@@ -20,15 +20,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _block_h
-#define _block_h
+#ifndef _path_iterator_h
+#define _path_iterator_h
 
-#include <stddef.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
+#include "bstring.h"
 #include "object_file.h"
-#include "path.h"
-#include "event.h"
+#include "cursor.h"
 
 
 //==============================================================================
@@ -37,18 +37,23 @@
 //
 //==============================================================================
 
-// A block represents a contiguous area of storage for paths. A block can store
-// multiple paths or paths can span across multiple blocks (block spanning).
-
-
-//==============================================================================
+// The path iterator is used to sequentially loop over a set of paths in a set
+// of blocks. The next path can be requested from the iterator by calling the
+// `PathIterator_next()` function. When calling the `next()` function, a cursor
+// is returned instead of a reference to a deserialized path. The cursor can be
+// used to iterate over the raw path data.
 //
-// Constants
+// To perform the relational database equivalent of a full table scan, the
+// `ObjectFile_create_iterator()` function can be used to create a path
+// iterator. That contains all the paths in the object file.
 //
-//==============================================================================
-
-// The length of non-path data in the block.
-#define BLOCK_HEADER_LENGTH sizeof(uint32_t)
+// The path iterator operates as a forward-only iterator. Jumping to the
+// previous path or jumping to a path by index is not allowed.
+//
+// The path iterator does not currently support full consistency if events are
+// added or removed after the iterator has been created and before the iteration
+// is complete. The biggest issue is that a block split can cause paths to not
+// be counted. This will be fixed in a future version.
 
 
 //==============================================================================
@@ -57,13 +62,12 @@
 //
 //==============================================================================
 
-// The block stores an array of paths.
-typedef struct Block {
+typedef struct PathIterator {
     ObjectFile *object_file;
-    BlockInfo *info;
-    uint32_t path_count;
-    Path **paths;
-} Block;
+    uint32_t block_index;
+    uint32_t byte_index;
+    bool eof;
+} PathIterator;
 
 
 //==============================================================================
@@ -76,44 +80,18 @@ typedef struct Block {
 // Lifecycle
 //======================================
 
-Block *Block_create(ObjectFile *object_file, BlockInfo *info);
+PathIterator *PathIterator_create(ObjectFile *object_file);
 
-void Block_destroy(Block *block);
-
-
-//======================================
-// Serialization
-//======================================
-
-uint32_t Block_get_serialized_length(Block *block);
-
-int Block_serialize(Block *block, void *addr, ptrdiff_t *length);
-
-int Block_deserialize(Block *block, void *addr, ptrdiff_t *length);
+void PathIterator_destroy(PathIterator *iterator);
 
 
 //======================================
-// Block Info
+// Iteration
 //======================================
 
-int Block_update_info(Block *block);
+int PathIterator_next(PathIterator *iterator, Cursor *cursor);
 
+int PathIterator_eof(PathIterator *iterator);
 
-//======================================
-// Event Management
-//======================================
-
-int Block_add_event(Block *block, Event *event);
-
-int Block_remove_event(Block *block, Event *event);
-
-
-//======================================
-// Path Management
-//======================================
-
-int Block_add_path(Block *block, Path *path);
-
-int Block_remove_path(Block *block, Path *path);
 
 #endif

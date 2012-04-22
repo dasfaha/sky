@@ -87,6 +87,8 @@ void Path_destroy(Path *path);
 
 uint32_t Path_get_serialized_length(Path *path);
 
+uint32_t Path_get_length(const void *ptr);
+
 int Path_serialize(Path *path, void *addr, ptrdiff_t *length);
 
 int Path_deserialize(Path *path, void *addr, ptrdiff_t *length);

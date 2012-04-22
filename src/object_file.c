@@ -214,7 +214,7 @@ int load_header(ObjectFile *object_file)
     FILE *file;
     BlockInfo **infos = NULL;
     uint32_t version = 1;
-    uint64_t block_count = 0;
+    uint32_t block_count = 0;
 
     // Retrieve file stats on header file
     bstring path = get_header_file_path(object_file); check_mem(path);
@@ -244,12 +244,12 @@ int load_header(ObjectFile *object_file)
             info->spanned = false;
             
             // Read object id range.
-            check(fread(&info->min_object_id, sizeof(info->min_object_id), 1, file) == 1, "Unable to read min object id : blk%d", i);
-            check(fread(&info->max_object_id, sizeof(info->max_object_id), 1, file) == 1, "Unable to read max object id : blk%d", i);
+            check(fread(&info->min_object_id, sizeof(info->min_object_id), 1, file) == 1, "Unable to read min object id : block #%d", i);
+            check(fread(&info->max_object_id, sizeof(info->max_object_id), 1, file) == 1, "Unable to read max object id : block #%d", i);
             
             // Read timestamp range.
-            check(fread(&info->min_timestamp, sizeof(info->min_timestamp), 1, file) == 1, "Unable to read min timestamp : blk%d", i);
-            check(fread(&info->max_timestamp, sizeof(info->max_timestamp), 1, file) == 1, "Unable to read max timestamp : blk%d", i);
+            check(fread(&info->min_timestamp, sizeof(info->min_timestamp), 1, file) == 1, "Unable to read min timestamp : block #%d", i);
+            check(fread(&info->max_timestamp, sizeof(info->max_timestamp), 1, file) == 1, "Unable to read max timestamp : block #%d", i);
             
             infos[i] = info;
         }

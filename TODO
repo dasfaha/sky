@@ -1,6 +1,5 @@
 - Object file
-  - Convert to mmap().
-  - Cursors
+  - Path Iterators & Cursors
 
 - Standalone client
   - Add event
