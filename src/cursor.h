@@ -54,7 +54,13 @@
 
 typedef struct Cursor {
     void **paths;
-    int path_count;
+    uint32_t path_count;
+    uint32_t path_index;
+    uint32_t event_index;
+    uint32_t path_length;
+    void *ptr;
+    void *endptr;
+    bool eof;
 } Cursor;
 
 
@@ -86,9 +92,7 @@ int Cursor_set_paths(Cursor *cursor, void **ptrs, int count);
 // Iteration
 //======================================
 
-// int Cursor_next_event(Cursor *cursor);
-
-// int Cursor_eof(Cursor *cursor);
+int Cursor_next_event(Cursor *cursor);
 
 
 #endif

@@ -65,6 +65,9 @@
 #define EVENT_FLAG_ACTION  1
 #define EVENT_FLAG_DATA    2
 
+// The minimum number of bytes to store an event (flag + timestamp).
+#define EVENT_HEADER_LENGTH sizeof(char) + sizeof(int64_t)
+
 
 //==============================================================================
 //
