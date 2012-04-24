@@ -169,6 +169,13 @@ int ObjectFile_unlock(ObjectFile *object_file);
 
 
 //======================================
+// Block Management
+//======================================
+
+int ObjectFile_get_block_span_count(ObjectFile *object_file, uint32_t block_index, uint32_t *span_count);
+
+
+//======================================
 // Event Management
 //======================================
 

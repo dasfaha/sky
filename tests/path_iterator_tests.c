@@ -50,16 +50,29 @@ int test_PathIterator_next() {
     Cursor *cursor = Cursor_create();
     PathIterator *iterator = PathIterator_create(object_file);
     
-    // Validate order of paths.
-    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
-    mu_assert_int64(cursor->ptr, 10);
-    
-    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
-    mu_assert_int64(cursor->ptr, 11);
+    void *data = object_file->data;
 
+    // First path should span across the first and third blocks.
     mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(cursor->path_count == 2, "");
+    mu_assert(cursor->paths[0] - data == 4, "");
+    mu_assert(cursor->paths[1] - data == 260, "");
+    
+    // Second path should be in the second block.
+    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(cursor->path_count == 1, "");
+    mu_assert(cursor->paths[0] - data == 132, "");
+
+    // Third path should be in the fourth block.
+    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(cursor->path_count == 1, "");
+    mu_assert(cursor->paths[0] - data == 388, "");
+
+    // No more paths so iterator should be EOF.
+    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(cursor->path_count == 0, "");
+    mu_assert(cursor->paths == NULL, "");
     mu_assert(iterator->eof == true, "");
-    mu_assert(cursor->ptr == NULL, "");
     
     // Clean up.
     PathIterator_destroy(iterator);

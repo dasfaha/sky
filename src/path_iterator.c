@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "path_iterator.h"
+#include "object_file.h"
 #include "block.h"
 #include "path.h"
 #include "mem.h"
@@ -34,6 +35,22 @@
 // Functions
 //
 //==============================================================================
+
+//======================================
+// Utility
+//======================================
+
+// Calculates the pointer address for a path that the iterator is currently
+// pointing to.
+//
+// iterator - The iterator to calculate the address from.
+//
+// Returns a pointer to the address of the current path.
+void *get_data_address(PathIterator *iterator)
+{
+    BlockInfo *info = iterator->object_file->infos[iterator->block_index];
+    return iterator->object_file->data + (info->id * iterator->object_file->block_size) + iterator->byte_index;
+}
 
 //======================================
 // Lifecycle
@@ -86,6 +103,7 @@ void PathIterator_destroy(PathIterator *iterator)
 // Returns 0 if successful, otherwise returns -1.
 int PathIterator_next(PathIterator *iterator, Cursor *cursor)
 {
+    int rc;
     int64_t zero = 0;
     
     check(iterator != NULL, "Iterator required");
@@ -100,7 +118,8 @@ int PathIterator_next(PathIterator *iterator, Cursor *cursor)
     void *ptr = NULL;
     while(true) {
         // Determine address of current location.
-        ptr = iterator->object_file->data + (iterator->block_index * block_size) + iterator->byte_index;
+        BlockInfo *info = iterator->object_file->infos[iterator->block_index];
+        ptr = get_data_address(iterator);
 
         // If byte index is too close to the end-of-block or if there is no more
         // data in the block then go to the next block.
@@ -113,27 +132,44 @@ int PathIterator_next(PathIterator *iterator, Cursor *cursor)
 
             // If we have reached the end of the data file then NULL out
             // the pointer and change the iterator state to EOF.
-            if(iterator->block_index > block_count) {
+            if(iterator->block_index >= block_count) {
                 iterator->block_index = 0;
-                iterator->byte_index  = 0;
                 iterator->eof = true;
-                ptr = NULL;
+                rc = Cursor_set_path(cursor, NULL);
+                check(rc == 0, "Unable to clear cursor path");
                 break;
             }
         }
         // If a path is found then exit the loop and update iterator state to
         // the next path.
         else {
-            // Move byte index to the end of the path before exiting.
-            iterator->byte_index += Path_get_length(ptr);
+            // If this is a spanned block then move to the next block after the
+            // span.
+            if(info->spanned) {
+                uint32_t i, span_count;
+
+                rc = ObjectFile_get_block_span_count(iterator->object_file, iterator->block_index, &span_count);
+                check(rc == 0, "Unable to calculate span count");
+                iterator->byte_index = BLOCK_HEADER_LENGTH;
+
+                // Collect all paths across spanned blocks.
+                void **paths = malloc(sizeof(void*) * span_count); check_mem(paths);
+                for(i=0; i<span_count; i++) {
+                    paths[i] = get_data_address(iterator);
+                    iterator->block_index++;
+                }
+                rc = Cursor_set_paths(cursor, paths, span_count);
+                check(rc == 0, "Unable to set paths on multi-block cursor");
+            }
+            // Otherwise move the byte index ahead to the next path.
+            else {
+                rc = Cursor_set_path(cursor, ptr);
+                check(rc == 0, "Unable to set path on cursor");
+                iterator->byte_index += Path_get_length(ptr);
+            }
             break;
         }
     }
-    
-    // Point the cursor at the current location.
-    cursor->ptr = ptr;
-    
-    // TODO: Change cursor to support multiple paths for spanned blocks.
     
     return 0;
     

@@ -1254,6 +1254,50 @@ error:
     
 
 //======================================
+// Block Management
+//======================================
+
+// Determines the number of blocks that a given block spans. This function only
+// works on the starting block of a span of blocks.
+//
+// object_file - The object file containing the blocks.
+// block_index - The index of the block inside the object file's block list.
+// span_count  - A pointer to where the return value should be stored.
+//
+// Returns 0 if successful, otherwise returns -1.
+int ObjectFile_get_block_span_count(ObjectFile *object_file, uint32_t block_index, uint32_t *span_count)
+{
+    check(object_file != NULL, "Object file required");
+    check(block_index < object_file->block_count, "Block index out of range");
+    check(span_count != NULL, "Span count address required");
+    
+    // Loop until the ending block of the span is found.
+    uint32_t index = block_index;
+    int64_t object_id = object_file->infos[index]->min_object_id;
+    while(true) {
+        index++;
+
+        // If we've reached the end of the blocks or if the object id no longer
+        // matches the starting object id then break out of the loop.
+        if(index > object_file->block_count-1 ||
+           object_id != object_file->infos[index]->min_object_id)
+        {
+            break;
+        }
+    }
+
+    // Assign count back to caller's provided address.
+    *span_count = (index - block_index);
+    
+    return 0;
+
+error:
+    *span_count = 0;
+    return -1;
+}
+
+
+//======================================
 // Event Management
 //======================================
 

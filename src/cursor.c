@@ -44,7 +44,8 @@ Cursor *Cursor_create()
     Cursor *cursor;
     
     cursor = malloc(sizeof(Cursor)); check_mem(cursor);
-    cursor->ptr = NULL;
+    cursor->paths = NULL;
+    cursor->path_count = 0;
 
     return cursor;
     
@@ -59,7 +60,67 @@ error:
 void Cursor_destroy(Cursor *cursor)
 {
     if(cursor) {
+        if(cursor->paths) free(cursor->paths);
         free(cursor);
     }
 }
 
+
+//======================================
+// Path Management
+//======================================
+
+// Assigns a single path to the cursor.
+// 
+// cursor - The cursor.
+// ptr    - A pointer to the raw data where the path starts.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Cursor_set_path(Cursor *cursor, void *ptr)
+{
+    int rc;
+    
+    check(cursor != NULL, "Cursor required");
+
+    // If data is not null then create an array of one pointer.
+    if(ptr != NULL) {
+        void **ptrs = malloc(sizeof(void*));
+        ptrs[0] = ptr;
+        rc = Cursor_set_paths(cursor, ptrs, 1);
+        check(rc == 0, "Unable to set path data to cursor");
+    }
+    else {
+        rc = Cursor_set_paths(cursor, NULL, 0);
+        check(rc == 0, "Unable to remove path data");
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
+// Assigns a list of paths to the cursor.
+// 
+// cursor - The cursor.
+// ptrs   - An array to pointers of raw paths.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Cursor_set_paths(Cursor *cursor, void **ptrs, int count)
+{
+    check(cursor != NULL, "Cursor required");
+    
+    // Free old path list.
+    if(cursor->paths != NULL) {
+        free(cursor->paths);
+    }
+
+    // Assign path data list.
+    cursor->paths = ptrs;
+    cursor->path_count = count;
+    
+    return 0;
+
+error:
+    return -1;
+}

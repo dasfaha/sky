@@ -53,7 +53,8 @@
 //==============================================================================
 
 typedef struct Cursor {
-    void *ptr;
+    void **paths;
+    int path_count;
 } Cursor;
 
 
@@ -70,6 +71,15 @@ typedef struct Cursor {
 Cursor *Cursor_create();
 
 void Cursor_destroy(Cursor *cursor);
+
+
+//======================================
+// Path Management
+//======================================
+
+int Cursor_set_path(Cursor *cursor, void *ptr);
+
+int Cursor_set_paths(Cursor *cursor, void **ptrs, int count);
 
 
 //======================================
