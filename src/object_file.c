@@ -685,6 +685,7 @@ int create_block(ObjectFile *object_file, Block **ret)
     info->id = object_file->block_count-1;
     info->min_object_id = 0LL;
     info->max_object_id = 0LL;
+    info->spanned = false;
     object_file->infos[object_file->block_count-1] = info;
 
     // Remap data file.
@@ -795,7 +796,7 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
     if(*ret == NULL) {
         // Find the last block if one exists.
         BlockInfo *last_info = (object_file->block_count > 0 ? object_file->infos[object_file->block_count-1] : NULL);
-
+        
         // If the last block available is unspanned then use it.
         if(last_info != NULL && !last_info->spanned) {
             *ret = last_info;
