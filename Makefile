@@ -16,7 +16,7 @@ TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 # Default Target
 ################################################################################
 
-all: build/libsky.a build/sky-gen test
+all: build/libsky.a build/sky-* test
 
 
 ################################################################################
