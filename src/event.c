@@ -113,7 +113,7 @@ error:
 
 // Creates a reference to an event.
 //
-// timestamp - When the event occurred (in milliseconds since midnight Jan 1,
+// timestamp - When the event occurred (in microseconds since midnight Jan 1,
 //             1970 UTC).
 // object_id - The identifier for the object that the event is related to.
 // action    - The name of the action that was performed.

@@ -9,7 +9,7 @@ The basic unit in Sky is the Event. An Event consists of two types of data: an
 action & a state change. Both are optional but an event needs at least one to
 exist. An action defines something that has occurred such as a `purchase` or a
 `sign up`. A state change defines a change in one or more properties on the
-object such as `name` or `favorite color`. An Event also includes a millisecond
+object such as `name` or `favorite color`. An Event also includes a microsecond
 resolution timestamp that shows when it occurred.
 
 Events for an object are grouped together into a Path. An object only has one
