@@ -38,7 +38,7 @@ where it is headed. The following is what is coming up:
 
 1. Standalone Server - A simple server to store and retrieve events and
    paths for an object.
-1. PQL Query Engine - Parsing, lexing and execution of a PQL query.
+1. EQL Query Engine - Parsing, lexing and execution of an EQL query.
 1. Multi-Threaded Server - Daemon server for production use.
 1. Write Ahead Log - Periodically write events to the database to improve write
    performance.
@@ -80,13 +80,13 @@ This should not be used in a production environment. It is only used for
 testing and learning about the database without having to run the server.
 
 
-## Path Query Language (PQL)
+## Event Query Language (EQL)
 
 The SQL language was built to query or alter the current state of an object in a
 relational database. Sky, on the other hand, is meant to query the state and
 actions of objects across time. Because of this a new query language is needed.
 
-The Path Query Language (PQL) is designed with these specific aims:
+The Event Query Language (EQL) is designed with these specific aims:
 
 1. Encapsulated - Only a single path is queried at a time.
 1. High-Level - The language only works with high level objects - events & paths.
