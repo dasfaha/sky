@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "bstring.h"
 #include "dbg.h"
 #include "database.h"
 #include "object_file.h"
+#include "cursor.h"
+#include "path_iterator.h"
 #include "version.h"
 
 
@@ -16,9 +18,9 @@
 //
 //==============================================================================
 
-// The sky-gen application is used for generating random datasets for
-// performance testing. It allows a user to set options such as the number of
-// paths to generate and the average number of events to generate per path.
+// The sky-bench application is used for benchmarking databases in different
+// ways. The tool currently only supports basic iteration through the entire
+// database.
 
 
 //==============================================================================
@@ -30,10 +32,7 @@
 typedef struct Options {
     bstring path;
     bstring object_type;
-    int32_t path_count;
-    int32_t avg_event_count;
-    int32_t action_count;
-    int32_t seed;
+    int32_t iterations;
 } Options;
 
 
@@ -51,17 +50,14 @@ Options *parseopts(int argc, char **argv)
     // Command line options.
     struct option long_options[] = {
         {"object-type", required_argument, 0, 'o'},
-        {"path-count", required_argument, 0, 'p'},
-        {"avg-event-count", required_argument, 0, 'e'},
-        {"action-count", required_argument, 0, 'a'},
-        {"seed", optional_argument, 0, 's'},
+        {"iterations", required_argument, 0, 'i'},
         {0, 0, 0, 0}
     };
 
     // Parse command line options.
     while(1) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "o:p:e:s:a:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "o:i:", long_options, &option_index);
         
         // Check for end of options.
         if(c == -1) {
@@ -76,23 +72,8 @@ Options *parseopts(int argc, char **argv)
                 break;
             }
             
-            case 'p': {
-                options->path_count = atoi(optarg);
-                break;
-            }
-
-            case 'e': {
-                options->avg_event_count = atoi(optarg);
-                break;
-            }
-
-            case 'a': {
-                options->action_count = atoi(optarg);
-                break;
-            }
-
-            case 's': {
-                options->seed = atoi(optarg);
+            case 'i': {
+                options->iterations = atoi(optarg);
                 break;
             }
         }
@@ -115,20 +96,8 @@ Options *parseopts(int argc, char **argv)
     }
 
     // Default input.
-    if(options->path_count <= 0) {
-        options->path_count = 100;
-    }
-    if(options->avg_event_count <= 0) {
-        options->avg_event_count = 10;
-    }
-    if(options->action_count <= 0) {
-        options->action_count = 100;
-    }
-    
-    // Randomize seed if not provided.
-    if(options->seed == 0) {
-        options->seed = time(NULL);
-        fprintf(stderr, "Generating random seed: %d\n", options->seed);
+    if(options->iterations <= 0) {
+        options->iterations = 1;
     }
 
     return options;
@@ -140,6 +109,7 @@ error:
 void Options_destroy(Options *options)
 {
     if(options) {
+        bdestroy(options->path);
         bdestroy(options->object_type);
         options->object_type = NULL;
         free(options);
@@ -155,32 +125,31 @@ void Options_destroy(Options *options)
 
 void print_version()
 {
-    printf("sky-gen " SKY_VERSION "\n");
+    printf("sky-bench " SKY_VERSION "\n");
     exit(0);
 }
 
 void usage()
 {
-    fprintf(stderr, "usage: sky-gen [OPTIONS] [PATH]\n\n");
+    fprintf(stderr, "usage: sky-bench [OPTIONS] [PATH]\n\n");
     exit(0);
 }
 
+
 //==============================================================================
 //
-// Event Management
+// Benchmark
 //
 //==============================================================================
 
-// Generates a database with random data at a given path.
+// Executes the benchmark over the database.
 //
-// options - A list of options to use while generating the database.
-void generate(Options *options)
+// options - A list of options to use.
+void benchmark(Options *options)
 {
     int rc;
     Event *event = NULL;
-    
-    // Seed the randomizer.
-    srandom(options->seed);
+    uint32_t event_count = 0;
     
     // Create database.
     Database *database = Database_create(options->path);
@@ -193,21 +162,33 @@ void generate(Options *options)
     check(ObjectFile_open(object_file) == 0, "Unable to open object file");
     check(ObjectFile_lock(object_file) == 0, "Unable to lock object file");
 
-    // Loop over paths and create events.
-    int i, j;
-    for(i=0; i<options->path_count; i++) {
-        int64_t object_id = (int64_t)(i+1);
-        int32_t event_count = (random() % ((options->avg_event_count*2) - 1)) + 1;
-        
-        // Create a bunch of events.
-        for(j=0; j<event_count; j++) {
-            int64_t timestamp = random() % INT64_MAX;
-            int32_t action_id = (random() % options->action_count) + 1;
-            event = Event_create(timestamp, object_id, action_id);
-            rc = ObjectFile_add_event(object_file, event);
-            check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%d", event->timestamp, event->object_id, event->action_id);
-            Event_destroy(event);
+    // Loop for desired number of iterations.
+    int i;
+    for(i=0; i<options->iterations; i++) {
+        // Create a path iterator for the object file.
+        Cursor *cursor = Cursor_create();
+        PathIterator *iterator = PathIterator_create(object_file);
+        PathIterator_next(iterator, cursor);
+    
+        // Iterate over each path.
+        while(!iterator->eof) {
+            // Loop over each event in the path.
+            while(!cursor->eof) {
+                // Increment total event count.
+                event_count++;
+
+                // Find next event.
+                rc = Cursor_next_event(cursor);
+                check(rc == 0, "Unable to find next event");
+            }
+            
+            rc = PathIterator_next(iterator, cursor);
+            check(rc == 0, "Unable to find next path");
         }
+        
+        // Clean up.
+        Cursor_destroy(cursor);
+        PathIterator_destroy(iterator);
     }
     
     // Close object file
@@ -217,6 +198,9 @@ void generate(Options *options)
     // Clean up
     Database_destroy(database);
     ObjectFile_destroy(object_file);
+
+    // Show stats.
+    printf("Total events processed: %d\n", event_count);
     
     return;
     
@@ -237,17 +221,24 @@ error:
 
 int main(int argc, char **argv)
 {
+    struct timeval tv;
+
     // Parse command line options.
     Options *options = parseopts(argc, argv);
 
     // Start time.
-    time_t t0 = time(NULL);
+    gettimeofday(&tv, NULL);
+    int64_t t0 = (tv.tv_sec*1000) + (tv.tv_usec/1000);
 
     // Generate database.
-    generate(options);
+    benchmark(options);
+
+    // End time.
+    gettimeofday(&tv, NULL);
+    int64_t t1 = (tv.tv_sec*1000) + (tv.tv_usec/1000);
 
     // Show wall clock time.
-    printf("Elapsed Time: %ld seconds\n", (time(NULL)-t0));
+    printf("Elapsed Time: %.3f seconds\n", ((float)(t1-t0))/1000);
 
     // Clean up.
     Options_destroy(options);
