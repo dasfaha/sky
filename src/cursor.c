@@ -77,6 +77,40 @@ void Cursor_destroy(Cursor *cursor)
 
 
 //======================================
+// Event Management
+//======================================
+
+// Retrieves the action identifier of the current event. If no action is found
+// then the action id is set to zero.
+//
+// cursor    - The cursor to retrieve the action from.
+// action_id - A pointer to where the return value should be set.
+//
+// Returns 0 if successful, otherwise returns -1.
+int Cursor_get_action(Cursor *cursor, int32_t *action_id)
+{
+    check(cursor != NULL, "Cursor required");
+    check(!cursor->eof, "No more events are available");
+
+    // Check if the event contains an action.
+    char event_flag = *((char*)cursor->ptr);
+    if(event_flag & EVENT_FLAG_ACTION) {
+        *action_id = *((int32_t*)(cursor->ptr + EVENT_HEADER_LENGTH));
+    }
+    // Otherwise return a null action id.
+    else {
+        *action_id = 0;
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
+
+
+//======================================
 // Path Management
 //======================================
 

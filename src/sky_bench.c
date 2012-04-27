@@ -36,6 +36,11 @@ typedef struct Options {
 } Options;
 
 
+// A data structure used for aggregation information between events in the path.
+typedef struct Step {
+    int32_t count;
+} Step;
+
 //==============================================================================
 //
 // Command Line Arguments
@@ -142,14 +147,16 @@ void usage()
 //
 //==============================================================================
 
-// Executes the benchmark over the database.
+// Executes the benchmark over the database to compute step counts in order to
+// generate a directed acyclic graph (DAG).
 //
 // options - A list of options to use.
-void benchmark(Options *options)
+void benchmark_dag(Options *options)
 {
     int rc;
     Event *event = NULL;
     uint32_t event_count = 0;
+    int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
     
     // Create database.
     Database *database = Database_create(options->path);
@@ -169,13 +176,40 @@ void benchmark(Options *options)
         Cursor *cursor = Cursor_create();
         PathIterator *iterator = PathIterator_create(object_file);
         PathIterator_next(iterator, cursor);
+        
+        // Create a square matrix of structs.
+        Step *steps = calloc(action_count*action_count, sizeof(Step));
     
         // Iterate over each path.
         while(!iterator->eof) {
+            int32_t action_id, prev_action_id;
+
+            // Increment total event count.
+            event_count++;
+            
+            // Initialize the previous action.
+            rc = Cursor_get_action(cursor, &prev_action_id);
+            check(rc == 0, "Unable to retrieve first action");
+
+            // Find first event.
+            rc = Cursor_next_event(cursor);
+            check(rc == 0, "Unable to find next event");
+
             // Loop over each event in the path.
             while(!cursor->eof) {
                 // Increment total event count.
                 event_count++;
+
+                // Retrieve action.
+                rc = Cursor_get_action(cursor, &action_id);
+                check(rc == 0, "Unable to retrieve first action");
+
+                // Aggregate step information.
+                int32_t index = ((prev_action_id-1)*action_count) + (action_id-1);
+                steps[index].count++;
+
+                // Assign current action as previous action.
+                prev_action_id = action_id;
 
                 // Find next event.
                 rc = Cursor_next_event(cursor);
@@ -189,6 +223,15 @@ void benchmark(Options *options)
         // Clean up.
         Cursor_destroy(cursor);
         PathIterator_destroy(iterator);
+
+        // Show DAG data.
+        //int x;
+        //int total=0;
+        //for(x=0; x<action_count*action_count; x++) {
+        //    printf("%06d %d\n", x, steps[x].count);
+        //    total += steps[x].count;
+        //}
+        //printf("total: %d\n", total);
     }
     
     // Close object file
@@ -230,8 +273,8 @@ int main(int argc, char **argv)
     gettimeofday(&tv, NULL);
     int64_t t0 = (tv.tv_sec*1000) + (tv.tv_usec/1000);
 
-    // Generate database.
-    benchmark(options);
+    // Benchmark computation of a DAG.
+    benchmark_dag(options);
 
     // End time.
     gettimeofday(&tv, NULL);

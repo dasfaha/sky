@@ -58,6 +58,13 @@ void Cursor_destroy(Cursor *cursor);
 
 
 //======================================
+// Event Management
+//======================================
+
+int Cursor_get_action(Cursor *cursor, int32_t *action_id);
+
+
+//======================================
 // Path Management
 //======================================
 
