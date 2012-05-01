@@ -79,7 +79,7 @@ void PathIterator_destroy(PathIterator *iterator)
 // cursor   - A reference to an existing cursor to use.
 //
 // Returns 0 if successful, otherwise returns -1.
-int PathIterator_next(PathIterator *iterator, Cursor *cursor)
+int PathIterator_next(PathIterator *iterator, sky_cursor *cursor)
 {
     int rc;
     int64_t zero = 0;
@@ -113,7 +113,7 @@ int PathIterator_next(PathIterator *iterator, Cursor *cursor)
             if(iterator->block_index >= block_count) {
                 iterator->block_index = 0;
                 iterator->eof = true;
-                rc = Cursor_set_path(cursor, NULL);
+                rc = sky_cursor_set_path(cursor, NULL);
                 check(rc == 0, "Unable to clear cursor path");
                 break;
             }
@@ -136,12 +136,12 @@ int PathIterator_next(PathIterator *iterator, Cursor *cursor)
                     paths[i] = get_data_address(iterator);
                     iterator->block_index++;
                 }
-                rc = Cursor_set_paths(cursor, paths, span_count);
+                rc = sky_cursor_set_paths(cursor, paths, span_count);
                 check(rc == 0, "Unable to set paths on multi-block cursor");
             }
             // Otherwise move the byte index ahead to the next path.
             else {
-                rc = Cursor_set_path(cursor, ptr);
+                rc = sky_cursor_set_path(cursor, ptr);
                 check(rc == 0, "Unable to set path on cursor");
                 iterator->byte_index += Path_get_length(ptr);
             }

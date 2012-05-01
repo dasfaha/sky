@@ -47,7 +47,7 @@ int test_PathIterator_next() {
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     ObjectFile_open(object_file);
 
-    Cursor *cursor = Cursor_create();
+    sky_cursor *cursor = sky_cursor_create();
     PathIterator *iterator = PathIterator_create(object_file);
     
     void *data = object_file->data;
@@ -76,7 +76,7 @@ int test_PathIterator_next() {
     
     // Clean up.
     PathIterator_destroy(iterator);
-    Cursor_destroy(cursor);
+    sky_cursor_free(cursor);
 
     ObjectFile_close(object_file);
     ObjectFile_destroy(object_file);

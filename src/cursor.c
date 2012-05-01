@@ -45,11 +45,11 @@ uint32_t get_event_length(void *ptr)
 // 
 // Returns a reference to the new cursor if successful. Otherwise returns
 // null.
-Cursor *Cursor_create()
+sky_cursor *sky_cursor_create()
 {
-    Cursor *cursor;
+    sky_cursor *cursor;
     
-    cursor = malloc(sizeof(Cursor)); check_mem(cursor);
+    cursor = malloc(sizeof(sky_cursor)); check_mem(cursor);
     cursor->paths = NULL;
     cursor->path_count = 0;
     cursor->path_index = 0;
@@ -60,14 +60,14 @@ Cursor *Cursor_create()
     return cursor;
     
 error:
-    Cursor_destroy(cursor);
+    sky_cursor_free(cursor);
     return NULL;
 }
 
 // Removes a cursor reference from memory.
 //
 // cursor - The cursor to free.
-void Cursor_destroy(Cursor *cursor)
+void sky_cursor_free(sky_cursor *cursor)
 {
     if(cursor) {
         if(cursor->paths) free(cursor->paths);
@@ -87,7 +87,7 @@ void Cursor_destroy(Cursor *cursor)
 // action_id - A pointer to where the return value should be set.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Cursor_get_action(Cursor *cursor, int32_t *action_id)
+int sky_cursor_get_action(sky_cursor *cursor, int32_t *action_id)
 {
     check(cursor != NULL, "Cursor required");
     check(!cursor->eof, "No more events are available");
@@ -118,7 +118,7 @@ error:
 //
 // cursor - The cursor to update.
 // index  - The index of the path.
-void set_current_path(Cursor *cursor, uint32_t index)
+void set_current_path(sky_cursor *cursor, uint32_t index)
 {
     // Calculate path length
     uint32_t events_length;
@@ -138,7 +138,7 @@ void set_current_path(Cursor *cursor, uint32_t index)
 // ptr    - A pointer to the raw data where the path starts.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Cursor_set_path(Cursor *cursor, void *ptr)
+int sky_cursor_set_path(sky_cursor *cursor, void *ptr)
 {
     int rc;
     
@@ -148,11 +148,11 @@ int Cursor_set_path(Cursor *cursor, void *ptr)
     if(ptr != NULL) {
         void **ptrs = malloc(sizeof(void*));
         ptrs[0] = ptr;
-        rc = Cursor_set_paths(cursor, ptrs, 1);
+        rc = sky_cursor_set_paths(cursor, ptrs, 1);
         check(rc == 0, "Unable to set path data to cursor");
     }
     else {
-        rc = Cursor_set_paths(cursor, NULL, 0);
+        rc = sky_cursor_set_paths(cursor, NULL, 0);
         check(rc == 0, "Unable to remove path data");
     }
 
@@ -168,7 +168,7 @@ error:
 // ptrs   - An array to pointers of raw paths.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Cursor_set_paths(Cursor *cursor, void **ptrs, int count)
+int sky_cursor_set_paths(sky_cursor *cursor, void **ptrs, int count)
 {
     check(cursor != NULL, "Cursor required");
     
@@ -205,7 +205,7 @@ error:
 // Iteration
 //======================================
 
-int Cursor_next_event(Cursor *cursor)
+int sky_cursor_next_event(sky_cursor *cursor)
 {
     check(cursor != NULL, "Cursor required");
     check(!cursor->eof, "No more events are available");

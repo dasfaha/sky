@@ -28,7 +28,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 // Iteration
 //--------------------------------------
 
-int test_Cursor_next() {
+int test_sky_cursor_next() {
     copydb("cursor0");
 
     // Open object file and create iterator.
@@ -36,7 +36,7 @@ int test_Cursor_next() {
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     ObjectFile_open(object_file);
 
-    Cursor *cursor = Cursor_create();
+    sky_cursor *cursor = sky_cursor_create();
     PathIterator *iterator = PathIterator_create(object_file);
     
     void *data = object_file->data;
@@ -44,27 +44,27 @@ int test_Cursor_next() {
     // First path (OID#10).
     PathIterator_next(iterator, cursor);
     mu_assert(cursor->ptr-data == 16, "");
-    mu_assert(Cursor_next_event(cursor) == 0, "");
+    mu_assert(sky_cursor_next_event(cursor) == 0, "");
     mu_assert(cursor->ptr-data == 40, "");
-    mu_assert(Cursor_next_event(cursor) == 0, "");
+    mu_assert(sky_cursor_next_event(cursor) == 0, "");
     mu_assert(cursor->ptr-data == 272, "");
-    mu_assert(Cursor_next_event(cursor) == 0, "");
+    mu_assert(sky_cursor_next_event(cursor) == 0, "");
     mu_assert(cursor->ptr == NULL, "");
     mu_assert(cursor->eof, "");
     
     // Second path (OID#11)
     PathIterator_next(iterator, cursor);
     mu_assert(cursor->ptr-data == 144, "");
-    mu_assert(Cursor_next_event(cursor) == 0, "");
+    mu_assert(sky_cursor_next_event(cursor) == 0, "");
     mu_assert(cursor->ptr-data == 172, "");
-    mu_assert(Cursor_next_event(cursor) == 0, "");
+    mu_assert(sky_cursor_next_event(cursor) == 0, "");
     mu_assert(cursor->ptr == NULL, "");
     mu_assert(cursor->eof, "");
 
     // Third path (OID#12)
     PathIterator_next(iterator, cursor);
     mu_assert(cursor->ptr-data == 400, "");
-    mu_assert(Cursor_next_event(cursor) == 0, "");
+    mu_assert(sky_cursor_next_event(cursor) == 0, "");
     mu_assert(cursor->ptr == NULL, "");
     mu_assert(cursor->eof, "");
 
@@ -76,7 +76,7 @@ int test_Cursor_next() {
     
     // Clean up.
     PathIterator_destroy(iterator);
-    Cursor_destroy(cursor);
+    sky_cursor_free(cursor);
 
     ObjectFile_close(object_file);
     ObjectFile_destroy(object_file);
@@ -93,7 +93,7 @@ int test_Cursor_next() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Cursor_next);
+    mu_run_test(test_sky_cursor_next);
     return 0;
 }
 

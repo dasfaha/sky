@@ -67,7 +67,7 @@ void PathIterator_destroy(PathIterator *iterator);
 // Iteration
 //======================================
 
-int PathIterator_next(PathIterator *iterator, Cursor *cursor);
+int PathIterator_next(PathIterator *iterator, sky_cursor *cursor);
 
 int PathIterator_eof(PathIterator *iterator);
 

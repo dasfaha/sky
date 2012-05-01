@@ -173,7 +173,7 @@ void benchmark_dag(Options *options)
     int i;
     for(i=0; i<options->iterations; i++) {
         // Create a path iterator for the object file.
-        Cursor *cursor = Cursor_create();
+        sky_cursor *cursor = sky_cursor_create();
         PathIterator *iterator = PathIterator_create(object_file);
         PathIterator_next(iterator, cursor);
         
@@ -188,11 +188,11 @@ void benchmark_dag(Options *options)
             event_count++;
             
             // Initialize the previous action.
-            rc = Cursor_get_action(cursor, &prev_action_id);
+            rc = sky_cursor_get_action(cursor, &prev_action_id);
             check(rc == 0, "Unable to retrieve first action");
 
             // Find first event.
-            rc = Cursor_next_event(cursor);
+            rc = sky_cursor_next_event(cursor);
             check(rc == 0, "Unable to find next event");
 
             // Loop over each event in the path.
@@ -201,7 +201,7 @@ void benchmark_dag(Options *options)
                 event_count++;
 
                 // Retrieve action.
-                rc = Cursor_get_action(cursor, &action_id);
+                rc = sky_cursor_get_action(cursor, &action_id);
                 check(rc == 0, "Unable to retrieve first action");
 
                 // Aggregate step information.
@@ -212,7 +212,7 @@ void benchmark_dag(Options *options)
                 prev_action_id = action_id;
 
                 // Find next event.
-                rc = Cursor_next_event(cursor);
+                rc = sky_cursor_next_event(cursor);
                 check(rc == 0, "Unable to find next event");
             }
             
@@ -221,7 +221,7 @@ void benchmark_dag(Options *options)
         }
         
         // Clean up.
-        Cursor_destroy(cursor);
+        sky_cursor_free(cursor);
         PathIterator_destroy(iterator);
 
         // Show DAG data.

@@ -30,7 +30,7 @@
 //
 //==============================================================================
 
-typedef struct Cursor {
+typedef struct sky_cursor {
     void **paths;
     uint32_t path_count;
     uint32_t path_index;
@@ -39,7 +39,7 @@ typedef struct Cursor {
     void *ptr;
     void *endptr;
     bool eof;
-} Cursor;
+} sky_cursor;
 
 
 //==============================================================================
@@ -52,32 +52,32 @@ typedef struct Cursor {
 // Lifecycle
 //======================================
 
-Cursor *Cursor_create();
+sky_cursor *sky_cursor_create();
 
-void Cursor_destroy(Cursor *cursor);
+void sky_cursor_free(sky_cursor *cursor);
 
 
 //======================================
 // Event Management
 //======================================
 
-int Cursor_get_action(Cursor *cursor, int32_t *action_id);
+int sky_cursor_get_action(sky_cursor *cursor, int32_t *action_id);
 
 
 //======================================
 // Path Management
 //======================================
 
-int Cursor_set_path(Cursor *cursor, void *ptr);
+int sky_cursor_set_path(sky_cursor *cursor, void *ptr);
 
-int Cursor_set_paths(Cursor *cursor, void **ptrs, int count);
+int sky_cursor_set_paths(sky_cursor *cursor, void **ptrs, int count);
 
 
 //======================================
 // Iteration
 //======================================
 
-int Cursor_next_event(Cursor *cursor);
+int sky_cursor_next_event(sky_cursor *cursor);
 
 
 #endif
