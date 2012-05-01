@@ -83,9 +83,9 @@ int sky_block_update_info(sky_block *block);
 // Event Management
 //======================================
 
-int sky_block_add_event(sky_block *block, Event *event);
+int sky_block_add_event(sky_block *block, sky_event *event);
 
-int sky_block_remove_event(sky_block *block, Event *event);
+int sky_block_remove_event(sky_block *block, sky_event *event);
 
 
 //======================================

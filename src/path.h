@@ -40,7 +40,7 @@
 typedef struct Path {
     int64_t object_id;
     uint32_t event_count;
-    Event **events;
+    sky_event **events;
 } Path;
 
 
@@ -76,8 +76,8 @@ int Path_deserialize(Path *path, void *addr, ptrdiff_t *length);
 // Event Management
 //======================================
 
-int Path_add_event(Path *path, Event *event);
+int Path_add_event(Path *path, sky_event *event);
 
-int Path_remove_event(Path *path, Event *event);
+int Path_remove_event(Path *path, sky_event *event);
 
 #endif

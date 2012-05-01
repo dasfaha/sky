@@ -714,7 +714,7 @@ error:
 // ret         - A reference to the correct block info returned to the caller.
 //
 // Returns 0 if successfully finds a block. Otherwise returns -1.
-int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
+int find_insertion_block(ObjectFile *object_file, sky_event *event, BlockInfo **ret)
 {
     int i, n, rc;
     BlockInfo *info = NULL;
@@ -871,7 +871,7 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
 {
     int rc;
     sky_block *target_block;
-    Event **events;
+    sky_event **events;
     uint32_t event_count;
 
     // Add original block to list of affected blocks.
@@ -921,8 +921,8 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
             // Split path into spanned blocks.
             Path *target_path = NULL;
             for(j=0; j<event_count; j++) {
-                Event *event = events[j];
-                uint32_t event_serialized_length = Event_get_serialized_length(event);
+                sky_event *event = events[j];
+                uint32_t event_serialized_length = sky_event_get_serialized_length(event);
                 
                 // Create new target path if adding event will make path exceed block size.
                 if(target_path != NULL) {
@@ -1003,7 +1003,7 @@ error:
     // Clean up events if an error occurred during a path split.
     if(events) {
         for(i=0; i<event_count; i++) {
-            Event_destroy(events[i]);
+            sky_event_free(events[i]);
         }
         free(events);
     }
@@ -1280,7 +1280,7 @@ error:
 // Event Management
 //======================================
 
-int ObjectFile_add_event(ObjectFile *object_file, Event *event)
+int ObjectFile_add_event(ObjectFile *object_file, sky_event *event)
 {
     int rc = 0;
     BlockInfo *info = NULL;
@@ -1295,8 +1295,8 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
     
     // Make a copy of the event.
-    Event *tmp = NULL;
-    rc = Event_copy(event, &tmp);
+    sky_event *tmp = NULL;
+    rc = sky_event_copy(event, &tmp);
     check(rc == 0, "Unable to copy event before insertion");
     event = tmp;
     

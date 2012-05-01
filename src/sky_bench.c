@@ -154,7 +154,7 @@ void usage()
 void benchmark_dag(Options *options)
 {
     int rc;
-    Event *event = NULL;
+    sky_event *event = NULL;
     uint32_t event_count = 0;
     int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
     
@@ -248,7 +248,7 @@ void benchmark_dag(Options *options)
     return;
     
 error:
-    Event_destroy(event);
+    sky_event_free(event);
     ObjectFile_close(object_file);
 
     sky_database_free(database);

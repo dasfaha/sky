@@ -40,12 +40,16 @@
 //
 //==============================================================================
 
-#define EVENT_FLAG_ACTION  1
-#define EVENT_FLAG_DATA    2
+#define sky_event_flag_t char
+#define sky_timestamp_t int64_t
+#define sky_object_id_t int64_t
+#define sky_action_id_t int32_t
+#define sky_event_data_count_t uint16_t
 
-#define EVENT_FLAG_LENGTH sizeof(char)
-#define EVENT_TIMESTAMP_LENGTH sizeof(int64_t)
-#define EVENT_HEADER_LENGTH EVENT_FLAG_LENGTH + EVENT_TIMESTAMP_LENGTH
+#define SKY_EVENT_FLAG_ACTION  1
+#define SKY_EVENT_FLAG_DATA    2
+
+#define SKY_EVENT_HEADER_LENGTH sizeof(sky_event_flag_t) + sizeof(sky_timestamp_t)
 
 
 //==============================================================================
@@ -54,13 +58,13 @@
 //
 //==============================================================================
 
-typedef struct Event {
-    int64_t timestamp;
-    int64_t object_id;
-    int32_t action_id;
-    uint16_t data_count;
+typedef struct sky_event {
+    sky_timestamp_t timestamp;
+    sky_object_id_t object_id;
+    sky_action_id_t action_id;
+    sky_event_data_count_t data_count;
     EventData **data;
-} Event;
+} sky_event;
 
 
 //==============================================================================
@@ -73,33 +77,35 @@ typedef struct Event {
 // Create/Destroy
 //======================================
 
-Event *Event_create(int64_t timestamp, int64_t object_id, int32_t action_id);
+sky_event *sky_event_create(sky_timestamp_t timestamp,
+                            sky_object_id_t object_id,
+                            sky_action_id_t action_id);
 
-void Event_destroy(Event *event);
+void sky_event_free(sky_event *event);
 
-int Event_copy(Event *source, Event **target);
+int sky_event_copy(sky_event *source, sky_event **target);
 
 
 //======================================
 // Serialization
 //======================================
 
-uint32_t Event_get_serialized_length(Event *event);
+uint32_t sky_event_get_serialized_length(sky_event *event);
 
-int Event_serialize(Event *event, void *addr, ptrdiff_t *length);
+int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length);
 
-int Event_deserialize(Event *event, void *addr, ptrdiff_t *length);
+int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length);
 
 
 //======================================
 // Data Management
 //======================================
 
-int Event_get_data(Event *event, int16_t key, EventData **data);
+int sky_event_get_data(sky_event *event, int16_t key, EventData **data);
 
-int Event_set_data(Event *event, int16_t key, bstring value);
+int sky_event_set_data(sky_event *event, int16_t key, bstring value);
 
-int Event_unset_data(Event *event, int16_t key);
+int sky_event_unset_data(sky_event *event, int16_t key);
 
 
 #endif

@@ -157,6 +157,6 @@ int ObjectFile_get_block_span_count(ObjectFile *object_file, uint32_t block_inde
 // Event Management
 //======================================
 
-int ObjectFile_add_event(ObjectFile *object_file, Event *event);
+int ObjectFile_add_event(ObjectFile *object_file, sky_event *event);
 
 #endif

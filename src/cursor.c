@@ -18,16 +18,16 @@
 // Returns the length of the raw event data.
 uint32_t get_event_length(void *ptr)
 {
-    uint32_t length = EVENT_HEADER_LENGTH;
+    uint32_t length = SKY_EVENT_HEADER_LENGTH;
     char event_flag = *((char*)ptr);
     
     // Add action length.
-    if(event_flag & EVENT_FLAG_ACTION) {
+    if(event_flag & SKY_EVENT_FLAG_ACTION) {
         length += sizeof(int32_t);
     }
 
     // Add data length.
-    if(event_flag & EVENT_FLAG_DATA) {
+    if(event_flag & SKY_EVENT_FLAG_DATA) {
         void *data_length_ptr = ptr + length;
         uint16_t data_length = *((uint16_t*)data_length_ptr);
         length += sizeof(int16_t) + data_length;
@@ -94,8 +94,8 @@ int sky_cursor_get_action(sky_cursor *cursor, int32_t *action_id)
 
     // Check if the event contains an action.
     char event_flag = *((char*)cursor->ptr);
-    if(event_flag & EVENT_FLAG_ACTION) {
-        *action_id = *((int32_t*)(cursor->ptr + EVENT_HEADER_LENGTH));
+    if(event_flag & SKY_EVENT_FLAG_ACTION) {
+        *action_id = *((int32_t*)(cursor->ptr + SKY_EVENT_HEADER_LENGTH));
     }
     // Otherwise return a null action id.
     else {

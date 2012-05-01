@@ -18,24 +18,24 @@
 //==============================================================================
 
 #define ADD_EVENT(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID) do {\
-    Event *event = Event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
+    sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
     mu_assert(ObjectFile_add_event(OBJECT_FILE, event) == 0, "");\
-    Event_destroy(event);\
+    sky_event_free(event);\
 } while(0)
 
 #define ADD_EVENT_WITH_DATA1(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID, KEY, VALUE) do {\
-    Event *event = Event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
-    Event_set_data(event, KEY, VALUE);\
+    sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
+    sky_event_set_data(event, KEY, VALUE);\
     mu_assert(ObjectFile_add_event(OBJECT_FILE, event) == 0, "");\
-    Event_destroy(event);\
+    sky_event_free(event);\
 } while(0)
 
 #define ADD_EVENT_WITH_DATA2(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID, KEY1, VALUE1, KEY2, VALUE2) do {\
-    Event *event = Event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
-    Event_set_data(event, KEY1, VALUE1);\
-    Event_set_data(event, KEY2, VALUE2);\
+    sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
+    sky_event_set_data(event, KEY1, VALUE1);\
+    sky_event_set_data(event, KEY2, VALUE2);\
     mu_assert(ObjectFile_add_event(OBJECT_FILE, event) == 0, "");\
-    Event_destroy(event);\
+    sky_event_free(event);\
 } while(0)
 
 

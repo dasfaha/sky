@@ -263,7 +263,7 @@ int sky_block_update_info(sky_block *block)
         
             // Iterate over events and find timstamp range.
             for(j=0; j<path->event_count; j++) {
-                Event *event = path->events[j];
+                sky_event *event = path->events[j];
             
                 // Find timestamp range.
                 if(min_timestamp == INT64_MIN || event->timestamp < min_timestamp) {
@@ -302,7 +302,7 @@ error:
 // event - The event that is to be inserted.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_block_add_event(sky_block *block, Event *event)
+int sky_block_add_event(sky_block *block, sky_event *event)
 {
     uint32_t i;
     int rc;
@@ -345,7 +345,7 @@ error:
 // event - The event that will be removed.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_block_remove_event(sky_block *block, Event *event)
+int sky_block_remove_event(sky_block *block, sky_event *event)
 {
     uint32_t i, j, index;
     int rc;
@@ -413,7 +413,7 @@ int sky_block_add_path(sky_block *block, Path *path)
 
     // Allocate space for path.
     block->path_count++;
-    block->paths = realloc(block->paths, sizeof(Event*) * block->path_count);
+    block->paths = realloc(block->paths, sizeof(sky_event*) * block->path_count);
     check_mem(block->paths);
 
     // Create and append path.

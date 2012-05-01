@@ -177,7 +177,7 @@ void usage()
 void generate(Options *options)
 {
     int rc;
-    Event *event = NULL;
+    sky_event *event = NULL;
     
     // Seed the randomizer.
     srandom(options->seed);
@@ -203,10 +203,10 @@ void generate(Options *options)
         for(j=0; j<event_count; j++) {
             int64_t timestamp = random() % INT64_MAX;
             int32_t action_id = (random() % options->action_count) + 1;
-            event = Event_create(timestamp, object_id, action_id);
+            event = sky_event_create(timestamp, object_id, action_id);
             rc = ObjectFile_add_event(object_file, event);
             check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%d", event->timestamp, event->object_id, event->action_id);
-            Event_destroy(event);
+            sky_event_free(event);
         }
     }
     
@@ -221,7 +221,7 @@ void generate(Options *options)
     return;
     
 error:
-    Event_destroy(event);
+    sky_event_free(event);
     ObjectFile_close(object_file);
 
     sky_database_free(database);

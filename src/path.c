@@ -20,8 +20,8 @@
 // before action events.
 int compare_events(const void *_a, const void *_b)
 {
-    Event **a = (Event**)_a;
-    Event **b = (Event**)_b;
+    sky_event **a = (sky_event**)_a;
+    sky_event **b = (sky_event**)_b;
 
     // Sort by timestamp first.
     if((*a)->timestamp > (*b)->timestamp) {
@@ -52,7 +52,7 @@ int compare_events(const void *_a, const void *_b)
 // path - The path containing the events.
 void sort_events(Path *path)
 {
-    qsort(path->events, path->event_count, sizeof(Event*), compare_events);
+    qsort(path->events, path->event_count, sizeof(sky_event*), compare_events);
 }
 
 
@@ -90,7 +90,7 @@ void Path_destroy(Path *path)
         // Destroy events.
         uint32_t i=0;
         for(i=0; i<path->event_count; i++) {
-            Event_destroy(path->events[i]);
+            sky_event_free(path->events[i]);
         }
         
         if(path->events) free(path->events);
@@ -115,7 +115,7 @@ uint32_t get_events_length(Path *path)
     
     // Add size for each event.
     for(i=0; i<path->event_count; i++) {
-        length += Event_get_serialized_length(path->events[i]);
+        length += sky_event_get_serialized_length(path->events[i]);
     }
     
     return length;
@@ -179,7 +179,7 @@ int Path_serialize(Path *path, void *addr, ptrdiff_t *length)
     // Serialize events.
     for(i=0; i<path->event_count; i++) {
         ptrdiff_t ptrdiff;
-        rc = Event_serialize(path->events[i], addr, &ptrdiff);
+        rc = sky_event_serialize(path->events[i], addr, &ptrdiff);
         check(rc == 0, "Unable to serialize path event: %d", i);
         addr += ptrdiff;
     }
@@ -226,11 +226,11 @@ int Path_deserialize(Path *path, void *addr, ptrdiff_t *length)
         ptrdiff_t ptrdiff;
         
         path->event_count++;
-        path->events = realloc(path->events, sizeof(Event*) * path->event_count);
+        path->events = realloc(path->events, sizeof(sky_event*) * path->event_count);
         check_mem(path->events);
 
-        path->events[index] = Event_create(0, path->object_id, 0);
-        rc = Event_deserialize(path->events[index], addr, &ptrdiff);
+        path->events[index] = sky_event_create(0, path->object_id, 0);
+        rc = sky_event_deserialize(path->events[index], addr, &ptrdiff);
         check(rc == 0, "Unable to deserialize event: %d", index);
         addr += ptrdiff;
         
@@ -261,7 +261,7 @@ error:
 // event - The event to add to the path.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_add_event(Path *path, Event *event)
+int Path_add_event(Path *path, sky_event *event)
 {
     // Validation.
     check(path != NULL, "Path required");
@@ -279,7 +279,7 @@ int Path_add_event(Path *path, Event *event)
 
     // Allocate space for event.
     path->event_count++;
-    path->events = realloc(path->events, sizeof(Event*) * path->event_count);
+    path->events = realloc(path->events, sizeof(sky_event*) * path->event_count);
     check_mem(path->events);
 
     // Append event to the end.
@@ -300,7 +300,7 @@ error:
 // event - The event to remove.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_remove_event(Path *path, Event *event)
+int Path_remove_event(Path *path, sky_event *event)
 {
     // Validation.
     check(path != NULL, "Path required");
@@ -317,7 +317,7 @@ int Path_remove_event(Path *path, Event *event)
             
             // Reallocate memory.
             path->event_count--;
-            path->events = realloc(path->events, sizeof(Event*) * path->event_count);
+            path->events = realloc(path->events, sizeof(sky_event*) * path->event_count);
             check_mem(path->events);
             
             break;

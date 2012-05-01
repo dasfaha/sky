@@ -50,8 +50,8 @@ char ACTION_DATA_EVENT_DATA[] = {
 // Lifecycle
 //--------------------------------------
 
-int test_Event_create() {
-    Event *event = Event_create(1325376000000LL, 10, 200);
+int test_sky_event_create() {
+    sky_event *event = sky_event_create(1325376000000LL, 10, 200);
     mu_assert(event != NULL, "Unable to allocate event");
     mu_assert(event->timestamp == 1325376000000LL, "Event timestamp not assigned");
     mu_assert(event->object_id == 10, "Event object id not assigned");
@@ -59,7 +59,7 @@ int test_Event_create() {
     mu_assert(event->data == NULL, "Event data non-null");
     mu_assert(event->data_count == 0, "Event data count not initialized");
 
-    Event_destroy(event);
+    sky_event_free(event);
 
     return 0;
 }
@@ -69,43 +69,43 @@ int test_Event_create() {
 // Event data
 //--------------------------------------
 
-int test_Event_set_data() {
+int test_sky_event_set_data() {
     EventData *data = NULL;
 
-    Event *event = Event_create(0, 0, 0);
-    Event_set_data(event, 10, &foo);
-    Event_set_data(event, 20, &bar);
-    Event_set_data(event, 10, &baz);
+    sky_event *event = sky_event_create(0, 0, 0);
+    sky_event_set_data(event, 10, &foo);
+    sky_event_set_data(event, 20, &bar);
+    sky_event_set_data(event, 10, &baz);
     mu_assert(event->data_count == 2, "Expected data count to be 2");
 
-    Event_get_data(event, 10, &data);
+    sky_event_get_data(event, 10, &data);
     mu_assert(biseqcstr(data->value, "baz"), "Expected data 10 to equal 'baz'");
-    Event_get_data(event, 20, &data);
+    sky_event_get_data(event, 20, &data);
     mu_assert(biseqcstr(data->value, "bar"), "Expected data 20 to equal 'bar'");
-    Event_get_data(event, 30, &data);
+    sky_event_get_data(event, 30, &data);
     mu_assert(data == NULL, "Expected data 30 be NULL");
 
-    Event_destroy(event);
+    sky_event_free(event);
 
     return 0;
 }
 
-int test_Event_unset_data() {
+int test_sky_event_unset_data() {
     EventData *data = NULL;
 
-    Event *event = Event_create(0, 0, 0);
-    Event_set_data(event, 10, &foo);
-    Event_set_data(event, 20, &bar);
+    sky_event *event = sky_event_create(0, 0, 0);
+    sky_event_set_data(event, 10, &foo);
+    sky_event_set_data(event, 20, &bar);
     mu_assert(event->data_count == 2, "Expected data count to be 2");
-    Event_unset_data(event, 10);
+    sky_event_unset_data(event, 10);
     mu_assert(event->data_count == 1, "Expected data count to be 1");
 
-    Event_get_data(event, 10, &data);
+    sky_event_get_data(event, 10, &data);
     mu_assert(data == NULL, "Expected data 10 be NULL");
-    Event_get_data(event, 20, &data);
+    sky_event_get_data(event, 20, &data);
     mu_assert(biseqcstr(data->value, "bar"), "Expected data 20 to equal 'bar'");
 
-    Event_destroy(event);
+    sky_event_free(event);
 
     return 0;
 }
@@ -116,30 +116,30 @@ int test_Event_unset_data() {
 //--------------------------------------
 
 // Action-only event.
-int test_Event_action_event_get_serialized_length() {
-    Event *event = Event_create(1325376000000LL, 0, 20);
-    mu_assert(Event_get_serialized_length(event) == 13, "Unexpected length for action-only event.");
-    Event_destroy(event);
+int test_sky_event_action_event_get_serialized_length() {
+    sky_event *event = sky_event_create(1325376000000LL, 0, 20);
+    mu_assert(sky_event_get_serialized_length(event) == 13, "Unexpected length for action-only event.");
+    sky_event_free(event);
     return 0;
 }
 
 // Data-only event.
-int test_Event_data_event_get_serialized_length() {
-    Event *event = Event_create(1325376000000LL, 0, 0);
-    Event_set_data(event, 1, &foo);
-    Event_set_data(event, 2, &bar);
-    mu_assert(Event_get_serialized_length(event) == 23, "Unexpected length for data-only event.");
-    Event_destroy(event);
+int test_sky_event_data_event_get_serialized_length() {
+    sky_event *event = sky_event_create(1325376000000LL, 0, 0);
+    sky_event_set_data(event, 1, &foo);
+    sky_event_set_data(event, 2, &bar);
+    mu_assert(sky_event_get_serialized_length(event) == 23, "Unexpected length for data-only event.");
+    sky_event_free(event);
     return 0;
 }
 
 // Action + data event.
-int test_Event_action_data_event_get_serialized_length() {
-    Event *event = Event_create(1325376000000LL, 0, 100);
-    Event_set_data(event, 1, &foo);
-    Event_set_data(event, 2, &bar);
-    mu_assert(Event_get_serialized_length(event) == 27, "Unexpected length for action+data event.");
-    Event_destroy(event);
+int test_sky_event_action_data_event_get_serialized_length() {
+    sky_event *event = sky_event_create(1325376000000LL, 0, 100);
+    sky_event_set_data(event, 1, &foo);
+    sky_event_set_data(event, 2, &bar);
+    mu_assert(sky_event_get_serialized_length(event) == 27, "Unexpected length for action+data event.");
+    sky_event_free(event);
     return 0;
 }
 
@@ -148,12 +148,12 @@ int test_Event_action_data_event_get_serialized_length() {
 //--------------------------------------
 
 // Action event.
-int test_Event_action_event_serialize() {
+int test_sky_event_action_event_serialize() {
     ptrdiff_t ptrdiff;
     void *addr = calloc(ACTION_EVENT_DATA_LENGTH, 1);
-    Event *event = Event_create(1325376000000LL, 0, 20);
-    Event_serialize(event, addr, &ptrdiff);
-    Event_destroy(event);
+    sky_event *event = sky_event_create(1325376000000LL, 0, 20);
+    sky_event_serialize(event, addr, &ptrdiff);
+    sky_event_free(event);
     mu_assert(ptrdiff == ACTION_EVENT_DATA_LENGTH, "");
     mu_assert(memcmp(addr, &ACTION_EVENT_DATA, ACTION_EVENT_DATA_LENGTH) == 0, "");
     free(addr);
@@ -161,14 +161,14 @@ int test_Event_action_event_serialize() {
 }
 
 // Data event.
-int test_Event_data_event_serialize() {
+int test_sky_event_data_event_serialize() {
     ptrdiff_t ptrdiff;
     void *addr = calloc(DATA_EVENT_DATA_LENGTH, 1);
-    Event *event = Event_create(1325376000000LL, 0, 0);
-    Event_set_data(event, 1, &foo);
-    Event_set_data(event, 2, &bar);
-    Event_serialize(event, addr, &ptrdiff);
-    Event_destroy(event);
+    sky_event *event = sky_event_create(1325376000000LL, 0, 0);
+    sky_event_set_data(event, 1, &foo);
+    sky_event_set_data(event, 2, &bar);
+    sky_event_serialize(event, addr, &ptrdiff);
+    sky_event_free(event);
     mu_assert(ptrdiff == DATA_EVENT_DATA_LENGTH, "");
     mu_assert(memcmp(addr, &DATA_EVENT_DATA, DATA_EVENT_DATA_LENGTH) == 0, "");
     free(addr);
@@ -176,14 +176,14 @@ int test_Event_data_event_serialize() {
 }
 
 // Action+Data event.
-int test_Event_action_data_event_serialize() {
+int test_sky_event_action_data_event_serialize() {
     ptrdiff_t ptrdiff;
     void *addr = calloc(ACTION_DATA_EVENT_DATA_LENGTH, 1);
-    Event *event = Event_create(1325376000000LL, 0, 20);
-    Event_set_data(event, 1, &foo);
-    Event_set_data(event, 2, &bar);
-    Event_serialize(event, addr, &ptrdiff);
-    Event_destroy(event);
+    sky_event *event = sky_event_create(1325376000000LL, 0, 20);
+    sky_event_set_data(event, 1, &foo);
+    sky_event_set_data(event, 2, &bar);
+    sky_event_serialize(event, addr, &ptrdiff);
+    sky_event_free(event);
     mu_assert(ptrdiff == ACTION_DATA_EVENT_DATA_LENGTH, "");
     mu_assert(memcmp(addr, &ACTION_DATA_EVENT_DATA, ACTION_DATA_EVENT_DATA_LENGTH) == 0, "");
     free(addr);
@@ -195,10 +195,10 @@ int test_Event_action_data_event_serialize() {
 //--------------------------------------
 
 // Action event.
-int test_Event_action_event_deserialize() {
+int test_sky_event_action_event_deserialize() {
     ptrdiff_t ptrdiff;
-    Event *event = Event_create(0, 0, 0);
-    Event_deserialize(event, &ACTION_EVENT_DATA, &ptrdiff);
+    sky_event *event = sky_event_create(0, 0, 0);
+    sky_event_deserialize(event, &ACTION_EVENT_DATA, &ptrdiff);
 
     mu_assert(ptrdiff == ACTION_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
@@ -207,16 +207,16 @@ int test_Event_action_event_deserialize() {
     mu_assert(event->data == NULL, "Expected data to be NULL");
     mu_assert(event->data_count == 0, "Expected data count to be 0");
 
-    Event_destroy(event);
+    sky_event_free(event);
     
     return 0;
 }
 
 // Data event.
-int test_Event_data_event_deserialize() {
+int test_sky_event_data_event_deserialize() {
     ptrdiff_t ptrdiff;
-    Event *event = Event_create(0, 0, 0);
-    Event_deserialize(event, &DATA_EVENT_DATA, &ptrdiff);
+    sky_event *event = sky_event_create(0, 0, 0);
+    sky_event_deserialize(event, &DATA_EVENT_DATA, &ptrdiff);
 
     mu_assert(ptrdiff == DATA_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
@@ -226,21 +226,21 @@ int test_Event_data_event_deserialize() {
     mu_assert(event->data_count == 2, "Expected data count to be 2");
 
     EventData *data = NULL;
-    Event_get_data(event, 1, &data);
+    sky_event_get_data(event, 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
-    Event_get_data(event, 2, &data);
+    sky_event_get_data(event, 2, &data);
     mu_assert(biseqcstr(data->value, "bar"), "Expected data 1 to equal 'bar'");
 
-    Event_destroy(event);
+    sky_event_free(event);
     
     return 0;
 }
 
 // Action+Data event.
-int test_Event_action_data_event_deserialize() {
+int test_sky_event_action_data_event_deserialize() {
     ptrdiff_t ptrdiff;
-    Event *event = Event_create(0, 0, 0);
-    Event_deserialize(event, &ACTION_DATA_EVENT_DATA, &ptrdiff);
+    sky_event *event = sky_event_create(0, 0, 0);
+    sky_event_deserialize(event, &ACTION_DATA_EVENT_DATA, &ptrdiff);
 
     mu_assert(ptrdiff == ACTION_DATA_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
@@ -250,12 +250,12 @@ int test_Event_action_data_event_deserialize() {
     mu_assert(event->data_count == 2, "Expected data count to be 2");
 
     EventData *data = NULL;
-    Event_get_data(event, 1, &data);
+    sky_event_get_data(event, 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
-    Event_get_data(event, 2, &data);
+    sky_event_get_data(event, 2, &data);
     mu_assert(biseqcstr(data->value, "bar"), "Expected data 1 to equal 'bar'");
 
-    Event_destroy(event);
+    sky_event_free(event);
     
     return 0;
 }
@@ -269,22 +269,22 @@ int test_Event_action_data_event_deserialize() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Event_create);
+    mu_run_test(test_sky_event_create);
 
-    mu_run_test(test_Event_set_data);
-    mu_run_test(test_Event_unset_data);
+    mu_run_test(test_sky_event_set_data);
+    mu_run_test(test_sky_event_unset_data);
     
-    mu_run_test(test_Event_action_event_get_serialized_length);
-    mu_run_test(test_Event_data_event_get_serialized_length);
-    mu_run_test(test_Event_action_data_event_get_serialized_length);
+    mu_run_test(test_sky_event_action_event_get_serialized_length);
+    mu_run_test(test_sky_event_data_event_get_serialized_length);
+    mu_run_test(test_sky_event_action_data_event_get_serialized_length);
     
-    mu_run_test(test_Event_action_event_serialize);
-    mu_run_test(test_Event_data_event_serialize);
-    mu_run_test(test_Event_action_data_event_serialize);
+    mu_run_test(test_sky_event_action_event_serialize);
+    mu_run_test(test_sky_event_data_event_serialize);
+    mu_run_test(test_sky_event_action_data_event_serialize);
 
-    mu_run_test(test_Event_action_event_deserialize);
-    mu_run_test(test_Event_data_event_deserialize);
-    mu_run_test(test_Event_action_data_event_deserialize);
+    mu_run_test(test_sky_event_action_event_deserialize);
+    mu_run_test(test_sky_event_data_event_deserialize);
+    mu_run_test(test_sky_event_action_data_event_deserialize);
 
     return 0;
 }

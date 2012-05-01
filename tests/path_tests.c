@@ -35,22 +35,22 @@ char DATA[] = {
 // Creates a path containing action-only, data-only and action+data events.
 Path *create_test_path0()
 {
-    Event *event;
+    sky_event *event;
     Path *path = Path_create(10);
 
     // Action-only event
-    event = Event_create(946684800000000LL, 10, 6);
+    event = sky_event_create(946684800000000LL, 10, 6);
     Path_add_event(path, event);
 
     // Action+data event
-    event = Event_create(946688400000000LL, 10, 7);
-    Event_set_data(event, 1, &foo);
-    Event_set_data(event, 2, &bar);
+    event = sky_event_create(946688400000000LL, 10, 7);
+    sky_event_set_data(event, 1, &foo);
+    sky_event_set_data(event, 2, &bar);
     Path_add_event(path, event);
 
     // Data-only event
-    event = Event_create(946692000000000LL, 10, 0);
-    Event_set_data(event, 1, &foo);
+    event = sky_event_create(946692000000000LL, 10, 0);
+    sky_event_set_data(event, 1, &foo);
     Path_add_event(path, event);
 
     return path;
@@ -84,9 +84,9 @@ int test_Path_create() {
 int test_Path_add_remove_event() {
     Path *path = Path_create(10);
 
-    Event *event0 = Event_create(1325377000000LL, 10, 200);
+    sky_event *event0 = sky_event_create(1325377000000LL, 10, 200);
     Path_add_event(path, event0);
-    Event *event1 = Event_create(1325376000000LL, 10, 200);
+    sky_event *event1 = sky_event_create(1325376000000LL, 10, 200);
     Path_add_event(path, event1);
     
     // Check order of events (e1 should be after e0 based on timestamp).
@@ -100,7 +100,7 @@ int test_Path_add_remove_event() {
     mu_assert(path->events[0] == event0, "");
     
     // Clean up.
-    Event_destroy(event1);
+    sky_event_free(event1);
     Path_destroy(path);
 
     return 0;
@@ -161,16 +161,16 @@ int test_Path_deserialize() {
     mu_assert(path->events[1]->object_id == 10, "");
     mu_assert(path->events[1]->action_id == 7, "");
 
-    Event_get_data(path->events[1], 1, &data);
+    sky_event_get_data(path->events[1], 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "");
-    Event_get_data(path->events[1], 2, &data);
+    sky_event_get_data(path->events[1], 2, &data);
     mu_assert(biseqcstr(data->value, "bar"), "");
 
     mu_assert(path->events[2]->timestamp == 946692000000000LL, "");
     mu_assert(path->events[2]->object_id == 10, "");
     mu_assert(path->events[2]->action_id == 0, "");
 
-    Event_get_data(path->events[2], 1, &data);
+    sky_event_get_data(path->events[2], 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "");
 
     Path_destroy(path);

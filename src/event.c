@@ -18,28 +18,28 @@
 //======================================
 
 // Determines whether the event has an action set on it.
-bool has_action(Event *event)
+bool has_action(sky_event *event)
 {
     return (event->action_id != 0);
 }
 
 // Determines whether the event has a data set on it.
-bool has_data(Event *event)
+bool has_data(sky_event *event)
 {
     return (event->data_count > 0);
 }
 
 // Calculates the flag byte for the event based on whether the event has an
 // action and whether the event has data.
-uint8_t get_event_flag(Event *event)
+uint8_t get_event_flag(sky_event *event)
 {
     uint8_t flag = 0;
 
     if(has_action(event)) {
-        flag |= EVENT_FLAG_ACTION;
+        flag |= SKY_EVENT_FLAG_ACTION;
     }
     if(has_data(event)) {
-        flag |= EVENT_FLAG_DATA;
+        flag |= SKY_EVENT_FLAG_DATA;
     }
 
     return flag;
@@ -55,7 +55,7 @@ uint8_t get_event_flag(Event *event)
 // event - The event to clear data for.
 //
 // Return 0 if successful, otherwise returns -1.
-void clear_data(Event *event)
+void clear_data(sky_event *event)
 {
     event->data_count = 0;
     if(event->data) free(event->data);
@@ -67,7 +67,7 @@ void clear_data(Event *event)
 // event - The event to allocate data for.
 //
 // Return 0 if successful, otherwise returns -1.
-int allocate_data(Event *event)
+int allocate_data(sky_event *event)
 {
     event->data_count++;
     event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
@@ -83,7 +83,7 @@ error:
 // event - The event to deallocate data for.
 //
 // Return 0 if successful, otherwise returns -1.
-int deallocate_data(Event *event)
+int deallocate_data(sky_event *event)
 {
     // Raise error if no data left.
     if(event->data_count == 0) {
@@ -117,11 +117,15 @@ error:
 //             1970 UTC).
 // object_id - The identifier for the object that the event is related to.
 // action    - The name of the action that was performed.
-Event *Event_create(int64_t timestamp, int64_t object_id, int32_t action_id)
+//
+// Returns a reference to the new event.
+sky_event *sky_event_create(sky_timestamp_t timestamp,
+                            sky_object_id_t object_id,
+                            sky_action_id_t action_id)
 {
-    Event *event;
+    sky_event *event;
     
-    event = malloc(sizeof(Event)); check_mem(event);
+    event = malloc(sizeof(sky_event)); check_mem(event);
     
     event->timestamp = timestamp;
     event->object_id = object_id;
@@ -133,12 +137,14 @@ Event *Event_create(int64_t timestamp, int64_t object_id, int32_t action_id)
     return event;
     
 error:
-    Event_destroy(event);
+    sky_event_free(event);
     return NULL;
 }
 
 // Removes an event reference from memory.
-void Event_destroy(Event *event)
+//
+// event - The event to free.
+void sky_event_free(sky_event *event)
 {
     if(event) {
         // Destroy data.
@@ -161,7 +167,7 @@ void Event_destroy(Event *event)
 // target - A reference to the new event object returned to the caller.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_copy(Event *source, Event **target)
+int sky_event_copy(sky_event *source, sky_event **target)
 {
     int rc;
     EventData *data;
@@ -169,7 +175,7 @@ int Event_copy(Event *source, Event **target)
     check(source != NULL, "Source event is required for copy");
 
     // Copy basic properties.
-    Event *event = Event_create(source->timestamp, source->object_id, source->action_id);
+    sky_event *event = sky_event_create(source->timestamp, source->object_id, source->action_id);
     
     // Copy event data.
     if(source->data_count > 0) {
@@ -193,7 +199,7 @@ int Event_copy(Event *source, Event **target)
     return 0;
     
 error:
-    if(event) Event_destroy(event);
+    if(event) sky_event_free(event);
     *target = NULL;
 
     return -1;
@@ -207,7 +213,7 @@ error:
 
 // Calculates the total number of bytes needed to store just the data section
 // of the event.
-uint16_t get_data_length(Event *event)
+uint16_t get_data_length(sky_event *event)
 {
     uint16_t i;
     uint16_t length = 0;
@@ -223,7 +229,7 @@ uint16_t get_data_length(Event *event)
 // Calculates the total number of bytes needed to store an event.
 //
 // event - The event.
-uint32_t Event_get_serialized_length(Event *event)
+uint32_t sky_event_get_serialized_length(sky_event *event)
 {
     uint32_t length = 0;
     
@@ -256,7 +262,7 @@ uint32_t Event_get_serialized_length(Event *event)
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_serialize(Event *event, void *addr, ptrdiff_t *length)
+int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length)
 {
     int rc;
     void *start = addr;
@@ -312,7 +318,7 @@ error:
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_deserialize(Event *event, void *addr, ptrdiff_t *length)
+int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length)
 {
     int rc;
     void *start = addr;
@@ -329,7 +335,7 @@ int Event_deserialize(Event *event, void *addr, ptrdiff_t *length)
     memread(addr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
 
     // Read action if one exists.
-    if(flag & EVENT_FLAG_ACTION) {
+    if(flag & SKY_EVENT_FLAG_ACTION) {
         memread(addr, &event->action_id, sizeof(event->action_id), "event action");
     }
 
@@ -337,7 +343,7 @@ int Event_deserialize(Event *event, void *addr, ptrdiff_t *length)
     clear_data(event);
     
     // Read data if set.
-    if(flag & EVENT_FLAG_DATA) {
+    if(flag & SKY_EVENT_FLAG_DATA) {
         // Read data length.
         uint16_t data_length;
         memread(addr, &data_length, sizeof(data_length), "event data length");
@@ -385,7 +391,7 @@ error:
 //         NULL.
 //
 // Returns 0 if successful, otherwise -1.
-int Event_get_data(Event *event, int16_t key, EventData **data)
+int sky_event_get_data(sky_event *event, int16_t key, EventData **data)
 {
     int i;
     bool found = false;
@@ -419,7 +425,7 @@ error:
 // value - The value to set on the data.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_set_data(Event *event, int16_t key, bstring value)
+int sky_event_set_data(sky_event *event, int16_t key, bstring value)
 {
     int rc;
     EventData *data = NULL;
@@ -428,7 +434,7 @@ int Event_set_data(Event *event, int16_t key, bstring value)
     check(event != NULL, "Event required");
     
     // Find data with existing key.
-    rc = Event_get_data(event, key, &data);
+    rc = sky_event_get_data(event, key, &data);
     check(rc == 0, "Unable to find event data")
     
     // If existing key is found then update value.
@@ -459,7 +465,7 @@ error:
 // key   - The key to unset.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Event_unset_data(Event *event, int16_t key)
+int sky_event_unset_data(sky_event *event, int16_t key)
 {
     int i, j;
     
