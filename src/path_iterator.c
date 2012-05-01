@@ -24,7 +24,7 @@
 // iterator - The iterator to calculate the address from.
 //
 // Returns a pointer to the address of the current path.
-void *get_data_address(PathIterator *iterator)
+void *get_data_address(sky_path_iterator *iterator)
 {
     sky_block_info *info = iterator->object_file->infos[iterator->block_index];
     return iterator->object_file->data + (info->id * iterator->object_file->block_size) + iterator->byte_index;
@@ -40,11 +40,11 @@ void *get_data_address(PathIterator *iterator)
 //
 // Returns a reference to the new path iterator if successful. Otherwise returns
 // null.
-PathIterator *PathIterator_create(sky_object_file *object_file)
+sky_path_iterator *sky_path_iterator_create(sky_object_file *object_file)
 {
-    PathIterator *iterator;
+    sky_path_iterator *iterator;
     
-    iterator = malloc(sizeof(PathIterator)); check_mem(iterator);
+    iterator = malloc(sizeof(sky_path_iterator)); check_mem(iterator);
     iterator->object_file = object_file;
     iterator->block_index = 0;
     iterator->byte_index = BLOCK_HEADER_LENGTH;
@@ -53,14 +53,14 @@ PathIterator *PathIterator_create(sky_object_file *object_file)
     return iterator;
     
 error:
-    PathIterator_destroy(iterator);
+    sky_path_iterator_free(iterator);
     return NULL;
 }
 
 // Removes a path iterator reference from memory.
 //
 // iterator - The path iterator to free.
-void PathIterator_destroy(PathIterator *iterator)
+void sky_path_iterator_free(sky_path_iterator *iterator)
 {
     if(iterator) {
         iterator->object_file = NULL;
@@ -79,7 +79,7 @@ void PathIterator_destroy(PathIterator *iterator)
 // cursor   - A reference to an existing cursor to use.
 //
 // Returns 0 if successful, otherwise returns -1.
-int PathIterator_next(PathIterator *iterator, sky_cursor *cursor)
+int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
 {
     int rc;
     int64_t zero = 0;

@@ -174,8 +174,8 @@ void benchmark_dag(Options *options)
     for(i=0; i<options->iterations; i++) {
         // Create a path iterator for the object file.
         sky_cursor *cursor = sky_cursor_create();
-        PathIterator *iterator = PathIterator_create(object_file);
-        PathIterator_next(iterator, cursor);
+        sky_path_iterator *iterator = sky_path_iterator_create(object_file);
+        sky_path_iterator_next(iterator, cursor);
         
         // Create a square matrix of structs.
         Step *steps = calloc(action_count*action_count, sizeof(Step));
@@ -216,13 +216,13 @@ void benchmark_dag(Options *options)
                 check(rc == 0, "Unable to find next event");
             }
             
-            rc = PathIterator_next(iterator, cursor);
+            rc = sky_path_iterator_next(iterator, cursor);
             check(rc == 0, "Unable to find next path");
         }
         
         // Clean up.
         sky_cursor_free(cursor);
-        PathIterator_destroy(iterator);
+        sky_path_iterator_free(iterator);
 
         // Show DAG data.
         //int x;

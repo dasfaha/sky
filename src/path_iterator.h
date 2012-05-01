@@ -17,7 +17,7 @@
 
 // The path iterator is used to sequentially loop over a set of paths in a set
 // of blocks. The next path can be requested from the iterator by calling the
-// `PathIterator_next()` function. When calling the `next()` function, a cursor
+// `sky_path_iterator_next()` function. When calling the `next()` function, a cursor
 // is returned instead of a reference to a deserialized path. The cursor can be
 // used to iterate over the raw path data.
 //
@@ -40,12 +40,12 @@
 //
 //==============================================================================
 
-typedef struct PathIterator {
+typedef struct sky_path_iterator {
     sky_object_file *object_file;
     uint32_t block_index;
     uint32_t byte_index;
     bool eof;
-} PathIterator;
+} sky_path_iterator;
 
 
 //==============================================================================
@@ -58,18 +58,18 @@ typedef struct PathIterator {
 // Lifecycle
 //======================================
 
-PathIterator *PathIterator_create(sky_object_file *object_file);
+sky_path_iterator *sky_path_iterator_create(sky_object_file *object_file);
 
-void PathIterator_destroy(PathIterator *iterator);
+void sky_path_iterator_free(sky_path_iterator *iterator);
 
 
 //======================================
 // Iteration
 //======================================
 
-int PathIterator_next(PathIterator *iterator, sky_cursor *cursor);
+int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor);
 
-int PathIterator_eof(PathIterator *iterator);
+int sky_path_iterator_eof(sky_path_iterator *iterator);
 
 
 #endif

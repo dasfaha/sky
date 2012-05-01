@@ -39,7 +39,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 // Iteration
 //--------------------------------------
 
-int test_PathIterator_next() {
+int test_sky_path_iterator_next() {
     copydb("path_iterator0");
 
     // Open object file and create iterator.
@@ -48,34 +48,34 @@ int test_PathIterator_next() {
     sky_object_file_open(object_file);
 
     sky_cursor *cursor = sky_cursor_create();
-    PathIterator *iterator = PathIterator_create(object_file);
+    sky_path_iterator *iterator = sky_path_iterator_create(object_file);
     
     void *data = object_file->data;
 
     // First path should span across the first and third blocks.
-    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
     mu_assert(cursor->path_count == 2, "");
     mu_assert(cursor->paths[0] - data == 4, "");
     mu_assert(cursor->paths[1] - data == 260, "");
     
     // Second path should be in the second block.
-    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
     mu_assert(cursor->path_count == 1, "");
     mu_assert(cursor->paths[0] - data == 132, "");
 
     // Third path should be in the fourth block.
-    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
     mu_assert(cursor->path_count == 1, "");
     mu_assert(cursor->paths[0] - data == 388, "");
 
     // No more paths so iterator should be EOF.
-    mu_assert(PathIterator_next(iterator, cursor) == 0, "");
+    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
     mu_assert(cursor->path_count == 0, "");
     mu_assert(cursor->paths == NULL, "");
     mu_assert(iterator->eof == true, "");
     
     // Clean up.
-    PathIterator_destroy(iterator);
+    sky_path_iterator_free(iterator);
     sky_cursor_free(cursor);
 
     sky_object_file_close(object_file);
@@ -93,7 +93,7 @@ int test_PathIterator_next() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_PathIterator_next);
+    mu_run_test(test_sky_path_iterator_next);
     return 0;
 }
 
