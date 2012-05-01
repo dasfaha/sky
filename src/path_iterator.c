@@ -82,7 +82,7 @@ void sky_path_iterator_free(sky_path_iterator *iterator)
 int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
 {
     int rc;
-    int64_t zero = 0;
+    sky_object_id_t zero = 0;
     
     check(iterator != NULL, "Iterator required");
     check(!iterator->eof, "Iterator is at end-of-file");

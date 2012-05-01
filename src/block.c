@@ -234,10 +234,10 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_block_update_info(sky_block *block)
 {
-    int64_t min_object_id = 0;
-    int64_t max_object_id = 0;
-    int64_t min_timestamp = INT64_MIN;
-    int64_t max_timestamp = INT64_MIN;
+    sky_object_id_t min_object_id = 0;
+    sky_object_id_t max_object_id = 0;
+    sky_timestamp_t min_timestamp = INT64_MIN;
+    sky_timestamp_t max_timestamp = INT64_MIN;
     
     // Validation.
     check(block != NULL, "Block required");

@@ -196,13 +196,13 @@ void generate(Options *options)
     // Loop over paths and create events.
     int i, j;
     for(i=0; i<options->path_count; i++) {
-        int64_t object_id = (int64_t)(i+1);
+        sky_object_id_t object_id = (sky_timestamp_t)(i+1);
         int32_t event_count = (random() % ((options->avg_event_count*2) - 1)) + 1;
         
         // Create a bunch of events.
         for(j=0; j<event_count; j++) {
-            int64_t timestamp = random() % INT64_MAX;
-            int32_t action_id = (random() % options->action_count) + 1;
+            sky_timestamp_t timestamp = random() % INT64_MAX;
+            sky_action_id_t action_id = (random() % options->action_count) + 1;
             event = sky_event_create(timestamp, object_id, action_id);
             rc = sky_object_file_add_event(object_file, event);
             check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%d", event->timestamp, event->object_id, event->action_id);

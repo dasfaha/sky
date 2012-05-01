@@ -239,7 +239,7 @@ int load_header(sky_object_file *object_file)
         sort_blocks(infos, block_count);
         
         // Determine spanned blocks.
-        int64_t last_object_id = -1;
+        sky_object_id_t last_object_id = -1;
         for(i=0; i<block_count; i++) {
             // If this is a single object block then track the object id to
             // possibly mark it as spanned.
@@ -724,8 +724,8 @@ int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_blo
     *ret = NULL;
     
     // Extract object id and timestamp from event.
-    int64_t object_id = event->object_id;
-    int64_t timestamp = event->timestamp;
+    sky_object_id_t object_id = event->object_id;
+    sky_timestamp_t timestamp = event->timestamp;
 
     // Loop over sorted blocks to find the appropriate insertion point.
     n = object_file->block_count;
@@ -1252,7 +1252,7 @@ int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t 
     
     // Loop until the ending block of the span is found.
     uint32_t index = block_index;
-    int64_t object_id = object_file->infos[index]->min_object_id;
+    sky_object_id_t object_id = object_file->infos[index]->min_object_id;
     while(true) {
         index++;
 

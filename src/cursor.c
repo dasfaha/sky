@@ -123,7 +123,7 @@ void set_current_path(sky_cursor *cursor, uint32_t index)
     // Calculate path length
     uint32_t events_length;
     void *ptr = cursor->paths[index];
-    memcpy(&events_length, ptr+sizeof(int64_t), sizeof(events_length));
+    memcpy(&events_length, ptr+sizeof(sky_object_id_t), sizeof(events_length));
     cursor->path_length = SKY_PATH_HEADER_LENGTH + events_length;
 
     // Store position of first event and store position of end of path.

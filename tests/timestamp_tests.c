@@ -27,7 +27,7 @@ bdestroy(str);
 
 int test_sky_timestamp_parse()
 {
-    int64_t timestamp = 0;
+    sky_timestamp_t timestamp = 0;
     int rc;
     bstring str;
 
@@ -57,7 +57,7 @@ int test_sky_timestamp_parse()
 
 int test_sky_timestamp_parse_invalid()
 {
-    int64_t timestamp = 0;
+    sky_timestamp_t timestamp = 0;
     int rc;
 
     // Parse invalid date.
