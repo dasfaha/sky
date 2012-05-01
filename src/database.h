@@ -21,9 +21,9 @@
 //
 //==============================================================================
 
-typedef struct Database {
+typedef struct sky_database {
     bstring path;
-} Database;
+} sky_database;
 
 
 //==============================================================================
@@ -32,9 +32,9 @@ typedef struct Database {
 //
 //==============================================================================
 
-Database *Database_create(bstring path);
+sky_database *sky_database_create(bstring path);
 
-void Database_destroy(Database *database);
+void sky_database_free(sky_database *database);
 
 
 #endif

@@ -1025,7 +1025,7 @@ error:
 //
 // Returns a reference to the new object file if successful. Otherwise returns
 // null.
-ObjectFile *ObjectFile_create(Database *database, bstring name)
+ObjectFile *ObjectFile_create(sky_database *database, bstring name)
 {
     ObjectFile *object_file;
     

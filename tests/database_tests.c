@@ -10,14 +10,12 @@
 //
 //==============================================================================
 
-int test_Database_create_destroy() {
+int test_sky_database_create_destroy() {
     struct tagbstring root = bsStatic("/etc/sky/data");
-    Database *database = Database_create(&root);
+    sky_database *database = sky_database_create(&root);
     mu_assert(database != NULL, "Could not create database");
     mu_assert(biseqcstr(database->path, "/etc/sky/data"), "Invalid path");
-
-    Database_destroy(database);
-
+    sky_database_free(database);
     return 0;
 }
 
@@ -30,7 +28,7 @@ int test_Database_create_destroy() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Database_create_destroy);
+    mu_run_test(test_sky_database_create_destroy);
     return 0;
 }
 

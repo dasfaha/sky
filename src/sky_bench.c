@@ -159,7 +159,7 @@ void benchmark_dag(Options *options)
     int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
     
     // Create database.
-    Database *database = Database_create(options->path);
+    sky_database *database = sky_database_create(options->path);
     check_mem(database);
     
     // Open object file.
@@ -239,7 +239,7 @@ void benchmark_dag(Options *options)
     check(ObjectFile_close(object_file) == 0, "Unable to close object file");
     
     // Clean up
-    Database_destroy(database);
+    sky_database_free(database);
     ObjectFile_destroy(object_file);
 
     // Show stats.
@@ -251,7 +251,7 @@ error:
     Event_destroy(event);
     ObjectFile_close(object_file);
 
-    Database_destroy(database);
+    sky_database_free(database);
     ObjectFile_destroy(object_file);
 }
 

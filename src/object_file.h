@@ -95,7 +95,7 @@ typedef enum ObjectFileState {
 // object file also maintains a cache of block info and predefined actions and
 // properties.
 typedef struct ObjectFile {
-    Database *database;
+    sky_database *database;
     bstring name;
     bstring path;
     ObjectFileState state;
@@ -123,7 +123,7 @@ typedef struct ObjectFile {
 // Lifecycle
 //======================================
 
-ObjectFile *ObjectFile_create(Database *database, bstring name);
+ObjectFile *ObjectFile_create(sky_database *database, bstring name);
 
 void ObjectFile_destroy(ObjectFile *object_file);
 

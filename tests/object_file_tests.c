@@ -76,7 +76,7 @@ int test_ObjectFile_open() {
     
     copydb("simple");
     
-    Database *database = Database_create(&ROOT);
+    sky_database *database = sky_database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     mu_assert(object_file->state == OBJECT_FILE_STATE_CLOSED, "Expected state initialize as closed");
     mu_assert(object_file->block_size == DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
@@ -134,7 +134,7 @@ int test_ObjectFile_open() {
     mu_assert(object_file->block_size == DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
 
     ObjectFile_destroy(object_file);
-    Database_destroy(database);
+    sky_database_free(database);
 
     return 0;
 }
@@ -147,7 +147,7 @@ int test_ObjectFile_open() {
 int test_ObjectFile_add_event() {
     cleandb();
     
-    Database *database = Database_create(&ROOT);
+    sky_database *database = sky_database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     object_file->block_size = 128;
 
@@ -168,7 +168,7 @@ int test_ObjectFile_add_event() {
     mu_assert(ObjectFile_close(object_file) == 0, "");
 
     ObjectFile_destroy(object_file);
-    Database_destroy(database);
+    sky_database_free(database);
     
     return 0;
 }
@@ -181,7 +181,7 @@ int test_ObjectFile_add_event() {
 int test_ObjectFile_spanned_block_split() {
     cleandb();
     
-    Database *database = Database_create(&ROOT);
+    sky_database *database = sky_database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     object_file->block_size = 128;
 
@@ -209,7 +209,7 @@ int test_ObjectFile_spanned_block_split() {
     mu_assert(ObjectFile_close(object_file) == 0, "");
 
     ObjectFile_destroy(object_file);
-    Database_destroy(database);
+    sky_database_free(database);
     
     return 0;
 }

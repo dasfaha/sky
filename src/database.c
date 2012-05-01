@@ -10,31 +10,31 @@
 //
 //==============================================================================
 
-/*
- * Creates a reference to a database.
- *
- * path - The file path where the data resides on disk.
- */
-Database *Database_create(bstring path)
+// Creates a reference to a database.
+//
+// path - The file path where the data resides on disk.
+//
+// Returns a reference to the new database.
+sky_database *sky_database_create(bstring path)
 {
-    Database *database;
+    sky_database *database;
 
     check(path != NULL, "Cannot create database without a path");
     
-    database = malloc(sizeof(Database));
+    database = malloc(sizeof(sky_database));
     database->path = bstrcpy(path); check_mem(database->path);
 
     return database;
     
 error:
-    Database_destroy(database);
+    sky_database_free(database);
     return NULL;
 }
 
-/*
- * Removes a database reference from memory.
- */
-void Database_destroy(Database *database)
+// Removes a database reference from memory.
+//
+// database - The database to free.
+void sky_database_free(sky_database *database)
 {
     if(database) {
         bdestroy(database->path); database->path = NULL;

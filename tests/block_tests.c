@@ -49,7 +49,7 @@ sky_block *create_test_block0()
     Event *event;
     BlockInfo info;
 
-    Database *database = Database_create(&dbpath);
+    sky_database *database = sky_database_create(&dbpath);
     ObjectFile *object_file = ObjectFile_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 
@@ -152,7 +152,7 @@ int test_sky_block_deserialize() {
     Path *path;
     BlockInfo info;
 
-    Database *database = Database_create(&dbpath);
+    sky_database *database = sky_database_create(&dbpath);
     ObjectFile *object_file = ObjectFile_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 

@@ -32,7 +32,7 @@ int test_sky_cursor_next() {
     copydb("cursor0");
 
     // Open object file and create iterator.
-    Database *database = Database_create(&ROOT);
+    sky_database *database = sky_database_create(&ROOT);
     ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
     ObjectFile_open(object_file);
 
@@ -80,7 +80,7 @@ int test_sky_cursor_next() {
 
     ObjectFile_close(object_file);
     ObjectFile_destroy(object_file);
-    Database_destroy(database);
+    sky_database_free(database);
     
     return 0;
 }
