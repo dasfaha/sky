@@ -143,7 +143,7 @@ int test_Path_serialize() {
 int test_Path_deserialize() {
     ptrdiff_t ptrdiff;
 
-    EventData *data;
+    sky_event_data *data;
     Path *path = Path_create(0);
     Path_deserialize(path, &DATA, &ptrdiff);
 

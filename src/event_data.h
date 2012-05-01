@@ -20,14 +20,23 @@
 
 //==============================================================================
 //
+// Definitions
+//
+//==============================================================================
+
+#define sky_event_data_key_t int16_t
+
+
+//==============================================================================
+//
 // Typedefs
 //
 //==============================================================================
 
-typedef struct EventData {
-    int16_t key;
+typedef struct sky_event_data {
+    sky_event_data_key_t key;
     bstring value;
-} EventData;
+} sky_event_data;
 
 
 //==============================================================================
@@ -40,22 +49,22 @@ typedef struct EventData {
 // Lifecycle
 //======================================
 
-EventData *EventData_create(int16_t key, bstring value);
+sky_event_data *sky_event_data_create(sky_event_data_key_t key, bstring value);
 
-void EventData_destroy(EventData *event);
+void sky_event_data_free(sky_event_data *event);
 
-int EventData_copy(EventData *source, EventData **target);
+int sky_event_data_copy(sky_event_data *source, sky_event_data **target);
 
 
 //======================================
 // Serialization
 //======================================
 
-uint32_t EventData_get_serialized_length(EventData *data);
+uint32_t sky_event_data_get_serialized_length(sky_event_data *data);
 
-int EventData_serialize(EventData *data, void *addr, ptrdiff_t *length);
+int sky_event_data_serialize(sky_event_data *data, void *addr, ptrdiff_t *length);
 
-int EventData_deserialize(EventData *data, void *addr, ptrdiff_t *length);
+int sky_event_data_deserialize(sky_event_data *data, void *addr, ptrdiff_t *length);
 
 
 #endif

@@ -63,7 +63,7 @@ typedef struct sky_event {
     sky_object_id_t object_id;
     sky_action_id_t action_id;
     sky_event_data_count_t data_count;
-    EventData **data;
+    sky_event_data **data;
 } sky_event;
 
 
@@ -101,11 +101,13 @@ int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length);
 // Data Management
 //======================================
 
-int sky_event_get_data(sky_event *event, int16_t key, EventData **data);
+int sky_event_get_data(sky_event *event, sky_event_data_key_t key,
+                       sky_event_data **data);
 
-int sky_event_set_data(sky_event *event, int16_t key, bstring value);
+int sky_event_set_data(sky_event *event, sky_event_data_key_t key,
+                       bstring value);
 
-int sky_event_unset_data(sky_event *event, int16_t key);
+int sky_event_unset_data(sky_event *event, sky_event_data_key_t key);
 
 
 #endif

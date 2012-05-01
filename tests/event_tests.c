@@ -70,7 +70,7 @@ int test_sky_event_create() {
 //--------------------------------------
 
 int test_sky_event_set_data() {
-    EventData *data = NULL;
+    sky_event_data *data = NULL;
 
     sky_event *event = sky_event_create(0, 0, 0);
     sky_event_set_data(event, 10, &foo);
@@ -91,7 +91,7 @@ int test_sky_event_set_data() {
 }
 
 int test_sky_event_unset_data() {
-    EventData *data = NULL;
+    sky_event_data *data = NULL;
 
     sky_event *event = sky_event_create(0, 0, 0);
     sky_event_set_data(event, 10, &foo);
@@ -225,7 +225,7 @@ int test_sky_event_data_event_deserialize() {
     mu_assert(event->data != NULL, "Expected data to not be NULL");
     mu_assert(event->data_count == 2, "Expected data count to be 2");
 
-    EventData *data = NULL;
+    sky_event_data *data = NULL;
     sky_event_get_data(event, 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
     sky_event_get_data(event, 2, &data);
@@ -249,7 +249,7 @@ int test_sky_event_action_data_event_deserialize() {
     mu_assert(event->data != NULL, "Expected data to not be NULL");
     mu_assert(event->data_count == 2, "Expected data count to be 2");
 
-    EventData *data = NULL;
+    sky_event_data *data = NULL;
     sky_event_get_data(event, 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
     sky_event_get_data(event, 2, &data);

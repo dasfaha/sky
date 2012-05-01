@@ -18,7 +18,7 @@
 //======================================
 
 // Cleans the event data so that it conforms to max length standards.
-void clean(EventData *data)
+void clean(sky_event_data *data)
 {
     if(blength(data->value) > 127) {
         bstring tmp = bmidstr(data->value, 0, 127);
@@ -36,23 +36,23 @@ void clean(EventData *data)
 //
 // key   - The property id used as the key for the data.
 // value - The string value of the data.
-EventData *EventData_create(int16_t key, bstring value)
+sky_event_data *sky_event_data_create(int16_t key, bstring value)
 {
-    EventData *data;
+    sky_event_data *data;
     
-    data = malloc(sizeof(EventData));
+    data = malloc(sizeof(sky_event_data));
     data->key = key;
     data->value = bstrcpy(value); if(value) check_mem(data->value);
 
     return data;
     
 error:
-    EventData_destroy(data);
+    sky_event_data_free(data);
     return NULL;
 }
 
 // Removes an event data reference from memory.
-void EventData_destroy(EventData *data)
+void sky_event_data_free(sky_event_data *data)
 {
     if(data) {
         bdestroy(data->value);
@@ -66,16 +66,16 @@ void EventData_destroy(EventData *data)
 // target - A reference to the new event data item.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_copy(EventData *source, EventData **target)
+int sky_event_data_copy(sky_event_data *source, sky_event_data **target)
 {
     check(source != NULL, "Event data source required for copy");
 
-    *target = EventData_create(source->key, source->value);
+    *target = sky_event_data_create(source->key, source->value);
 
     return 0;
     
 error:
-    if(*target) EventData_destroy(*target);
+    if(*target) sky_event_data_free(*target);
     *target = NULL;
     
     return -1;
@@ -89,7 +89,7 @@ error:
 // Calculates the total number of bytes needed to store an event data.
 //
 // data - The event data item.
-uint32_t EventData_get_serialized_length(EventData *data)
+uint32_t sky_event_data_get_serialized_length(sky_event_data *data)
 {
     uint32_t length = 0;
 
@@ -109,7 +109,7 @@ uint32_t EventData_get_serialized_length(EventData *data)
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_serialize(EventData *data, void *addr, ptrdiff_t *length)
+int sky_event_data_serialize(sky_event_data *data, void *addr, ptrdiff_t *length)
 {
     void *start = addr;
 
@@ -148,7 +148,7 @@ error:
 // length - The number of bytes read.
 //
 // Returns 0 if successful, otherwise returns -1.
-int EventData_deserialize(EventData *data, void *addr, ptrdiff_t *length)
+int sky_event_data_deserialize(sky_event_data *data, void *addr, ptrdiff_t *length)
 {
     void *start = addr;
     

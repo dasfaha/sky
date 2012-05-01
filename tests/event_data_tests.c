@@ -28,15 +28,15 @@ int DATA_LENGTH = 6;
 // Lifecycle
 //--------------------------------------
 
-int test_EventData_create() {
+int test_sky_event_data_create() {
     struct tagbstring value = bsStatic("foo");
     
-    EventData *data = EventData_create(10, &value);
+    sky_event_data *data = sky_event_data_create(10, &value);
     mu_assert(data != NULL, "Unable to allocate event data");
     mu_assert(data->key == 10, "Event data key not assigned");
     mu_assert(biseqcstr(data->value, "foo"), "Event data value not assigned");
 
-    EventData_destroy(data);
+    sky_event_data_free(data);
 
     return 0;
 }
@@ -46,26 +46,26 @@ int test_EventData_create() {
 // Serialization
 //--------------------------------------
 
-int test_EventData_get_serialized_length() {
+int test_sky_event_data_get_serialized_length() {
     struct tagbstring value = bsStatic("foo");
-    EventData *data;
+    sky_event_data *data;
     
-    data = EventData_create(10, &value);
-    uint32_t length = EventData_get_serialized_length(data);
+    data = sky_event_data_create(10, &value);
+    uint32_t length = sky_event_data_get_serialized_length(data);
     mu_assert(length == 6, "Expected length of 6 for 'foo'");
-    EventData_destroy(data);
+    sky_event_data_free(data);
 
     return 0;
 }
 
-int test_EventData_serialize() {
+int test_sky_event_data_serialize() {
     struct tagbstring value = bsStatic("foo");
     void *addr = calloc(DATA_LENGTH, 1);
     ptrdiff_t length;
     
-    EventData *data = EventData_create(10, &value);
-    EventData_serialize(data, addr, &length);
-    EventData_destroy(data);
+    sky_event_data *data = sky_event_data_create(10, &value);
+    sky_event_data_serialize(data, addr, &length);
+    sky_event_data_free(data);
     
     mu_assert(length == DATA_LENGTH, "");
     mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
@@ -75,17 +75,17 @@ int test_EventData_serialize() {
     return 0;
 }
 
-int test_EventData_deserialize() {
+int test_sky_event_data_deserialize() {
     ptrdiff_t length;
 
-    EventData *data = EventData_create(0, NULL);
-    EventData_deserialize(data, &DATA, &length);
+    sky_event_data *data = sky_event_data_create(0, NULL);
+    sky_event_data_deserialize(data, &DATA, &length);
 
     mu_assert(length == DATA_LENGTH, "");
     mu_assert(data->key == 10, "");
     mu_assert(biseqcstr(data->value, "foo"), "");
 
-    EventData_destroy(data);
+    sky_event_data_free(data);
 
     return 0;
 }
@@ -98,10 +98,10 @@ int test_EventData_deserialize() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_EventData_create);
-    mu_run_test(test_EventData_get_serialized_length);
-    mu_run_test(test_EventData_serialize);
-    mu_run_test(test_EventData_deserialize);
+    mu_run_test(test_sky_event_data_create);
+    mu_run_test(test_sky_event_data_get_serialized_length);
+    mu_run_test(test_sky_event_data_serialize);
+    mu_run_test(test_sky_event_data_deserialize);
     return 0;
 }
 

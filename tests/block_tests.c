@@ -148,7 +148,7 @@ int test_sky_block_serialize() {
 int test_sky_block_deserialize() {
     ptrdiff_t ptrdiff;
 
-    EventData *data;
+    sky_event_data *data;
     Path *path;
     BlockInfo info;
 

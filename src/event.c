@@ -70,7 +70,7 @@ void clear_data(sky_event *event)
 int allocate_data(sky_event *event)
 {
     event->data_count++;
-    event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
+    event->data = realloc(event->data, sizeof(sky_event_data*) * event->data_count);
     check_mem(event->data);
     return 0;
     
@@ -96,7 +96,7 @@ int deallocate_data(sky_event *event)
     // Otherwise deallocate items.
     else {
         event->data_count--;
-        event->data = realloc(event->data, sizeof(EventData*) * event->data_count);
+        event->data = realloc(event->data, sizeof(sky_event_data*) * event->data_count);
         check_mem(event->data);
     }
 
@@ -150,7 +150,7 @@ void sky_event_free(sky_event *event)
         // Destroy data.
         uint32_t i=0;
         for(i=0; i<event->data_count; i++) {
-            EventData_destroy(event->data[i]);
+            sky_event_data_free(event->data[i]);
         }
         
         if(event->data) free(event->data);
@@ -170,7 +170,7 @@ void sky_event_free(sky_event *event)
 int sky_event_copy(sky_event *source, sky_event **target)
 {
     int rc;
-    EventData *data;
+    sky_event_data *data;
 
     check(source != NULL, "Source event is required for copy");
 
@@ -181,13 +181,13 @@ int sky_event_copy(sky_event *source, sky_event **target)
     if(source->data_count > 0) {
         // Allocate memory for data.
         event->data_count = source->data_count;
-        event->data = malloc(sizeof(EventData*) * event->data_count);
+        event->data = malloc(sizeof(sky_event_data*) * event->data_count);
         check_mem(event->data);
 
         // Copy each event data item.
         int i;
         for(i=0; i<event->data_count; i++) {
-            rc = EventData_copy(source->data[i], &data);
+            rc = sky_event_data_copy(source->data[i], &data);
             check(rc == 0, "Unable to copy event data");
             event->data[i] = data;
         }
@@ -220,7 +220,7 @@ uint16_t get_data_length(sky_event *event)
     
     // Add size for each data item.
     for(i=0; i<event->data_count; i++) {
-        length += EventData_get_serialized_length(event->data[i]);
+        length += sky_event_data_get_serialized_length(event->data[i]);
     }
     
     return length;
@@ -293,7 +293,7 @@ int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length)
         int i;
         for(i=0; i<event->data_count; i++) {
             ptrdiff_t ptrdiff;
-            rc = EventData_serialize(event->data[i], addr, &ptrdiff);
+            rc = sky_event_data_serialize(event->data[i], addr, &ptrdiff);
             check(rc == 0, "Unable to serialize event data: %d", i);
             addr += ptrdiff;
         }
@@ -355,9 +355,9 @@ int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length)
             ptrdiff_t ptrdiff;
 
             check(allocate_data(event) == 0, "Unable to append event data");
-            event->data[index] = EventData_create(0, NULL);
+            event->data[index] = sky_event_data_create(0, NULL);
 
-            rc = EventData_deserialize(event->data[index], addr, &ptrdiff);
+            rc = sky_event_data_deserialize(event->data[index], addr, &ptrdiff);
             check(rc == 0, "Unable to deserialize event data: %d", index);
             addr += ptrdiff;
 
@@ -391,7 +391,7 @@ error:
 //         NULL.
 //
 // Returns 0 if successful, otherwise -1.
-int sky_event_get_data(sky_event *event, int16_t key, EventData **data)
+int sky_event_get_data(sky_event *event, int16_t key, sky_event_data **data)
 {
     int i;
     bool found = false;
@@ -428,7 +428,7 @@ error:
 int sky_event_set_data(sky_event *event, int16_t key, bstring value)
 {
     int rc;
-    EventData *data = NULL;
+    sky_event_data *data = NULL;
     
     // Validation.
     check(event != NULL, "Event required");
@@ -450,7 +450,7 @@ int sky_event_set_data(sky_event *event, int16_t key, bstring value)
     // Otherwise append a new data item.
     else {
         check(allocate_data(event) == 0, "Unable to allocate event data");
-        event->data[event->data_count-1] = EventData_create(key, value);
+        event->data[event->data_count-1] = sky_event_data_create(key, value);
     }
 
     return 0;
@@ -477,7 +477,7 @@ int sky_event_unset_data(sky_event *event, int16_t key)
         // If found then unload item and resize array down.
         if(event->data[i]->key == key) {
             // Destroy data.
-            EventData_destroy(event->data[i]);
+            sky_event_data_free(event->data[i]);
             
             // Shift all items left.
             for(j=i+1; j<event->data_count; j++) {
