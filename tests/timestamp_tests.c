@@ -13,7 +13,7 @@
 #define mu_timestamp_assert(STR, VALUE) \
 timestamp = 0; \
 str = bfromcstr(STR); \
-rc = Timestamp_parse(str, &timestamp); \
+rc = sky_timestamp_parse(str, &timestamp); \
 mu_assert(rc == 0, "Invalid return code for timestamp: " #STR); \
 mu_assert(timestamp == VALUE, "Expected " #STR " to convert to " #VALUE); \
 bdestroy(str);
@@ -25,7 +25,7 @@ bdestroy(str);
 //
 //==============================================================================
 
-int test_Timestamp_parse()
+int test_sky_timestamp_parse()
 {
     int64_t timestamp = 0;
     int rc;
@@ -55,13 +55,13 @@ int test_Timestamp_parse()
     return 0;
 }
 
-int test_Timestamp_parse_invalid()
+int test_sky_timestamp_parse_invalid()
 {
     int64_t timestamp = 0;
     int rc;
 
     // Parse invalid date.
-    rc = Timestamp_parse(bfromcstr("foo"), &timestamp);
+    rc = sky_timestamp_parse(bfromcstr("foo"), &timestamp);
     mu_assert(rc == -1, "Timestamp should not have been parsed");
     
     return 0;
@@ -74,8 +74,8 @@ int test_Timestamp_parse_invalid()
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Timestamp_parse);
-    mu_run_test(test_Timestamp_parse_invalid);
+    mu_run_test(test_sky_timestamp_parse);
+    mu_run_test(test_sky_timestamp_parse_invalid);
     return 0;
 }
 
