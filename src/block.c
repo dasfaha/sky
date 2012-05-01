@@ -53,7 +53,7 @@ void sort_paths(sky_block *block)
 // info        - The header information about block.
 //
 // Returns a new block if successful, otherwise returns null.
-sky_block *sky_block_create(ObjectFile *object_file, BlockInfo *info)
+sky_block *sky_block_create(sky_object_file *object_file, sky_block_info *info)
 {
     sky_block *block;
     
@@ -277,7 +277,7 @@ int sky_block_update_info(sky_block *block)
     }
     
     // Update block info.
-    BlockInfo *info = block->info;
+    sky_block_info *info = block->info;
     info->min_object_id = min_object_id;
     info->max_object_id = max_object_id;
     info->min_timestamp = min_timestamp;

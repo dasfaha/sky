@@ -6,6 +6,7 @@
 
 #include "bstring.h"
 #include "event_data.h"
+#include "types.h"
 
 
 //==============================================================================
@@ -41,10 +42,8 @@
 //==============================================================================
 
 #define sky_event_flag_t char
-#define sky_timestamp_t int64_t
-#define sky_object_id_t int64_t
-#define sky_action_id_t int32_t
 #define sky_event_data_count_t uint16_t
+
 
 #define SKY_EVENT_FLAG_ACTION  1
 #define SKY_EVENT_FLAG_DATA    2

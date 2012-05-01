@@ -9,6 +9,7 @@
 #include "bstring.h"
 #include "database.h"
 #include "event.h"
+#include "types.h"
 
 //==============================================================================
 //
@@ -42,9 +43,10 @@
 //
 //==============================================================================
 
-#define OBJECT_FILE_LOCK_NAME ".lock"
+#define SKY_OBJECT_FILE_LOCK_NAME ".lock"
 
-#define DEFAULT_BLOCK_SIZE 0x10000
+#define SKY_DEFAULT_BLOCK_SIZE 0x10000
+
 
 //==============================================================================
 //
@@ -52,65 +54,54 @@
 //
 //==============================================================================
 
+#define sky_block_info_id_t uint32_t
+
 // The block info stores the sequential block identifier as well as the object
 // identifier range that is stored in that block. The block info is used in the
 // header file as an index when looking up block data.
-typedef struct BlockInfo {
-    uint32_t id;
-    int64_t min_object_id;
-    int64_t max_object_id;
-    int64_t min_timestamp;
-    int64_t max_timestamp;
+typedef struct sky_block_info {
+    sky_block_info_id_t id;
+    sky_object_id_t min_object_id;
+    sky_object_id_t max_object_id;
+    sky_timestamp_t min_timestamp;
+    sky_timestamp_t max_timestamp;
     bool spanned;
-} BlockInfo;
-
-// An action defines a verb that is performed in an event. 4 billion (2^32)
-// unique types of actions can be defined within an object file. The name of the
-// action is stored in the 'actions' file and the action identifier is used when
-// storing event data in a block.
-typedef struct Action {
-    int32_t id;
-    bstring name;
-} Action;
-
-// A property is a key used on data in an event. The property identifier's range
-// is split up: positive ids are used for data attached to an object, negative
-// ids are used for data attached to an action and id 0 is reserved.
-//
-// Property identifiers are used when storing events in blocks because of their
-// redundancy. Property definitions are stored in the 'properties' file.
-typedef struct Property {
-    int16_t id;
-    bstring name;
-} Property;
+} sky_block_info;
 
 // The various states that an object file can be in.
-typedef enum ObjectFileState {
-    OBJECT_FILE_STATE_CLOSED,
-    OBJECT_FILE_STATE_OPEN,
-    OBJECT_FILE_STATE_LOCKED
-} ObjectFileState;
+typedef enum sky_object_file_state_e {
+    SKY_OBJECT_FILE_STATE_CLOSED,
+    SKY_OBJECT_FILE_STATE_OPEN,
+    SKY_OBJECT_FILE_STATE_LOCKED
+} sky_object_file_state_e;
+
+
+#define sky_object_file_version_t uint32_t
+#define sky_object_file_block_size_t uint32_t
+#define sky_object_file_block_count_t uint32_t
+#define sky_object_file_action_count_t uint32_t
+#define sky_object_file_property_count_t uint16_t
 
 // The object file is a reference to the disk location where data is stored. The
 // object file also maintains a cache of block info and predefined actions and
 // properties.
-typedef struct ObjectFile {
+typedef struct sky_object_file {
     sky_database *database;
     bstring name;
     bstring path;
-    ObjectFileState state;
-    uint32_t version;
-    uint32_t block_size;
-    uint32_t block_count;
-    BlockInfo **infos;
-    Action **actions;
-    uint32_t action_count;
-    Property **properties;
-    uint16_t property_count;
+    sky_object_file_state_e state;
+    sky_object_file_version_t version;
+    sky_object_file_block_size_t block_size;
+    sky_object_file_block_count_t block_count;
+    sky_block_info **infos;
+    sky_action **actions;
+    sky_object_file_action_count_t action_count;
+    sky_property **properties;
+    sky_object_file_property_count_t property_count;
     int data_fd;
     void *data;
     size_t data_length;
-} ObjectFile;
+} sky_object_file;
 
 
 //==============================================================================
@@ -123,40 +114,40 @@ typedef struct ObjectFile {
 // Lifecycle
 //======================================
 
-ObjectFile *ObjectFile_create(sky_database *database, bstring name);
+sky_object_file *sky_object_file_create(sky_database *database, bstring name);
 
-void ObjectFile_destroy(ObjectFile *object_file);
+void sky_object_file_free(sky_object_file *object_file);
 
 
 //======================================
 // State
 //======================================
 
-int ObjectFile_open(ObjectFile *object_file);
+int sky_object_file_open(sky_object_file *object_file);
 
-int ObjectFile_close(ObjectFile *object_file);
+int sky_object_file_close(sky_object_file *object_file);
 
 
 //======================================
 // Locking
 //======================================
 
-int ObjectFile_lock(ObjectFile *object_file);
+int sky_object_file_lock(sky_object_file *object_file);
 
-int ObjectFile_unlock(ObjectFile *object_file);
+int sky_object_file_unlock(sky_object_file *object_file);
 
 
 //======================================
 // Block Management
 //======================================
 
-int ObjectFile_get_block_span_count(ObjectFile *object_file, uint32_t block_index, uint32_t *span_count);
+int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t block_index, uint32_t *span_count);
 
 
 //======================================
 // Event Management
 //======================================
 
-int ObjectFile_add_event(ObjectFile *object_file, sky_event *event);
+int sky_object_file_add_event(sky_object_file *object_file, sky_event *event);
 
 #endif

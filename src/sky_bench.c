@@ -163,11 +163,11 @@ void benchmark_dag(Options *options)
     check_mem(database);
     
     // Open object file.
-    ObjectFile *object_file = ObjectFile_create(database, options->object_type);
+    sky_object_file *object_file = sky_object_file_create(database, options->object_type);
     check_mem(object_file);
     
-    check(ObjectFile_open(object_file) == 0, "Unable to open object file");
-    check(ObjectFile_lock(object_file) == 0, "Unable to lock object file");
+    check(sky_object_file_open(object_file) == 0, "Unable to open object file");
+    check(sky_object_file_lock(object_file) == 0, "Unable to lock object file");
 
     // Loop for desired number of iterations.
     int i;
@@ -235,12 +235,12 @@ void benchmark_dag(Options *options)
     }
     
     // Close object file
-    check(ObjectFile_unlock(object_file) == 0, "Unable to unlock object file");
-    check(ObjectFile_close(object_file) == 0, "Unable to close object file");
+    check(sky_object_file_unlock(object_file) == 0, "Unable to unlock object file");
+    check(sky_object_file_close(object_file) == 0, "Unable to close object file");
     
     // Clean up
     sky_database_free(database);
-    ObjectFile_destroy(object_file);
+    sky_object_file_free(object_file);
 
     // Show stats.
     printf("Total events processed: %d\n", event_count);
@@ -249,10 +249,10 @@ void benchmark_dag(Options *options)
     
 error:
     sky_event_free(event);
-    ObjectFile_close(object_file);
+    sky_object_file_close(object_file);
 
     sky_database_free(database);
-    ObjectFile_destroy(object_file);
+    sky_object_file_free(object_file);
 }
 
 

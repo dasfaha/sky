@@ -44,8 +44,8 @@ bool file_exists(bstring path)
 // and then by id.
 int compare_block_info(const void *_a, const void *_b)
 {
-    BlockInfo **a = (BlockInfo **)_a;
-    BlockInfo **b = (BlockInfo **)_b;
+    sky_block_info **a = (sky_block_info **)_a;
+    sky_block_info **b = (sky_block_info **)_b;
 
     // Sort by min object id first.
     if((*a)->min_object_id > (*b)->min_object_id) {
@@ -81,8 +81,8 @@ int compare_block_info(const void *_a, const void *_b)
 // info to the header file.
 int compare_block_info_by_id(const void *_a, const void *_b)
 {
-    BlockInfo **a = (BlockInfo **)_a;
-    BlockInfo **b = (BlockInfo **)_b;
+    sky_block_info **a = (sky_block_info **)_a;
+    sky_block_info **b = (sky_block_info **)_b;
 
     if((*a)->id > (*b)->id) {
         return 1;
@@ -99,9 +99,9 @@ int compare_block_info_by_id(const void *_a, const void *_b)
 //
 // infos - The array of block info objects.
 // count - The number of blocks.
-void sort_blocks(BlockInfo **infos, uint32_t count)
+void sort_blocks(sky_block_info **infos, uint32_t count)
 {
-    qsort(infos, count, sizeof(BlockInfo*), compare_block_info);
+    qsort(infos, count, sizeof(sky_block_info*), compare_block_info);
 }
 
 
@@ -113,7 +113,7 @@ void sort_blocks(BlockInfo **infos, uint32_t count)
 // Retrieves the file path of an object file's header file.
 //
 // object_file - The object file who owns the header file.
-bstring get_header_file_path(ObjectFile *object_file)
+bstring get_header_file_path(sky_object_file *object_file)
 {
     return bformat("%s/header", bdata(object_file->path)); 
 }
@@ -123,15 +123,15 @@ bstring get_header_file_path(ObjectFile *object_file)
 // object_file - The object file containing the header information.
 //
 // Returns 0 if successful, otherwise returns -1.
-int save_header(ObjectFile *object_file)
+int save_header(sky_object_file *object_file)
 {
     int rc;
 
     // Copy infos to a new array to re-sort.
     uint32_t block_count = object_file->block_count;
-    BlockInfo **infos = malloc(sizeof(BlockInfo*) * block_count); check_mem(infos);
-    memcpy(infos, object_file->infos, sizeof(BlockInfo*) * block_count);
-    qsort(infos, block_count, sizeof(BlockInfo*), compare_block_info_by_id);
+    sky_block_info **infos = malloc(sizeof(sky_block_info*) * block_count); check_mem(infos);
+    memcpy(infos, object_file->infos, sizeof(sky_block_info*) * block_count);
+    qsort(infos, block_count, sizeof(sky_block_info*), compare_block_info_by_id);
 
     // Open the header file.
     bstring path = get_header_file_path(object_file); check_mem(path);
@@ -151,7 +151,7 @@ int save_header(ObjectFile *object_file)
     // Read block info items until end of file.
     uint32_t i;
     for(i=0; i<block_count; i++) {
-        BlockInfo *info = infos[i];
+        sky_block_info *info = infos[i];
 
         // Write object id range.
         rc = fwrite(&info->min_object_id, sizeof(info->min_object_id), 1, file);
@@ -187,10 +187,10 @@ error:
 // object_file - The object file where the header is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int load_header(ObjectFile *object_file)
+int load_header(sky_object_file *object_file)
 {
     FILE *file;
-    BlockInfo **infos = NULL;
+    sky_block_info **infos = NULL;
     uint32_t version = 1;
     uint32_t block_count = 0;
 
@@ -208,14 +208,14 @@ int load_header(ObjectFile *object_file)
 
         // Read block count.
         check(fread(&block_count, sizeof(block_count), 1, file) == 1, "Unable to read block count");
-        infos = malloc(sizeof(BlockInfo*) * block_count);
+        infos = malloc(sizeof(sky_block_info*) * block_count);
         if(block_count > 0) check_mem(infos);
 
         // Read block info items until end of file.
         uint32_t i;
         for(i=0; i<block_count && !feof(file); i++) {
             // Allocate info.
-            BlockInfo *info = malloc(sizeof(BlockInfo));
+            sky_block_info *info = malloc(sizeof(sky_block_info));
             
             // Set index.
             info->id = i;
@@ -283,7 +283,7 @@ error:
 // object_file - The object file where the header data is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unload_header(ObjectFile *object_file)
+int unload_header(sky_object_file *object_file)
 {
     if(object_file) {
         // Free block infos.
@@ -299,7 +299,7 @@ int unload_header(ObjectFile *object_file)
         }
 
         object_file->version = 0;
-        object_file->block_size = DEFAULT_BLOCK_SIZE;
+        object_file->block_size = SKY_DEFAULT_BLOCK_SIZE;
         object_file->block_count = 0;
     }
     
@@ -317,12 +317,12 @@ int unload_header(ObjectFile *object_file)
 // object_file - The object file where the action information is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int load_actions(ObjectFile *object_file)
+int load_actions(sky_object_file *object_file)
 {
     FILE *file;
-    Action **actions = NULL;
+    sky_action **actions = NULL;
     char *buffer;
-    uint32_t count = 0;
+    sky_object_file_action_count_t count = 0;
     
     // Retrieve file stats on actions file
     bstring path = bformat("%s/actions", bdata(object_file->path)); check_mem(path);
@@ -334,14 +334,14 @@ int load_actions(ObjectFile *object_file)
         
         // Read action count.
         fread(&count, sizeof(count), 1, file);
-        actions = malloc(sizeof(Action*) * count);
+        actions = malloc(sizeof(sky_action*) * count);
         if(count > 0) check_mem(actions);
         
         // Read actions until end of file.
         uint32_t i;
         uint16_t length;
         for(i=0; i<count && !feof(file); i++) {
-            Action *action = malloc(sizeof(Action)); check_mem(action);
+            sky_action *action = malloc(sizeof(sky_action)); check_mem(action);
             
             // Read action id and name length.
             check(fread(&action->id, sizeof(int32_t), 1, file) == 1, "Corrupt actions file");
@@ -382,7 +382,7 @@ error:
 // object_file - The object file where the action data is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unload_actions(ObjectFile *object_file)
+int unload_actions(sky_object_file *object_file)
 {
     if(object_file) {
         // Release actions.
@@ -413,12 +413,12 @@ int unload_actions(ObjectFile *object_file)
 // object_file - The object file from which to load property definitions.
 //
 // Returns 0 if sucessfuly, otherwise returns -1.
-int load_properties(ObjectFile *object_file)
+int load_properties(sky_object_file *object_file)
 {
     FILE *file;
-    Property **properties = NULL;
+    sky_property **properties = NULL;
     char *buffer;
-    uint16_t count = 0;
+    sky_object_file_property_count_t count = 0;
     
     // Retrieve file stats on properties file
     bstring path = bformat("%s/properties", bdata(object_file->path)); check_mem(path);
@@ -430,13 +430,13 @@ int load_properties(ObjectFile *object_file)
         
         // Read properties count.
         fread(&count, sizeof(count), 1, file);
-        properties = malloc(sizeof(Property*) * count);
+        properties = malloc(sizeof(sky_property*) * count);
         
         // Read properties until end of file.
         uint32_t i;
         uint16_t length;
         for(i=0; i<count && !feof(file); i++) {
-            Property *property = malloc(sizeof(Property)); check_mem(property);
+            sky_property *property = malloc(sizeof(sky_property)); check_mem(property);
             
             // Read property id and name length.
             check(fread(&property->id, sizeof(int16_t), 1, file) == 1, "Corrupt properties file");
@@ -477,7 +477,7 @@ error:
 // object_file - The object file where the property data is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unload_properties(ObjectFile *object_file)
+int unload_properties(sky_object_file *object_file)
 {
     if(object_file) {
         // Release properties.
@@ -506,7 +506,7 @@ int unload_properties(ObjectFile *object_file)
 // Retrieves the file path of an object file's data file.
 //
 // object_file - The object file who owns the data file.
-bstring get_data_file_path(ObjectFile *object_file)
+bstring get_data_file_path(sky_object_file *object_file)
 {
     return bformat("%s/data", bdata(object_file->path)); 
 }
@@ -520,7 +520,7 @@ bstring get_data_file_path(ObjectFile *object_file)
 //
 // Returns the number of bytes from the start of the data file where the block
 // begins.
-ptrdiff_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
+ptrdiff_t get_block_offset(sky_object_file *object_file, sky_block_info *info)
 {
     return (object_file->block_size * info->id);
 }
@@ -530,7 +530,7 @@ ptrdiff_t get_block_offset(ObjectFile *object_file, BlockInfo *info)
 // object_file - The object file that owns the data file.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unmap_data_file(ObjectFile *object_file)
+int unmap_data_file(sky_object_file *object_file)
 {
     // Unmap file.
     if(object_file->data != NULL) {
@@ -555,7 +555,7 @@ int unmap_data_file(ObjectFile *object_file)
 // object_file - The object file that owns the data file.
 //
 // Returns 0 if successful, otherwise returns -1.
-int map_data_file(ObjectFile *object_file)
+int map_data_file(sky_object_file *object_file)
 {
     int rc;
     void *ptr;
@@ -622,8 +622,8 @@ int save_block(sky_block *block)
 {
     int rc;
 
-    ObjectFile *object_file = block->object_file;
-    BlockInfo *info = block->info;
+    sky_object_file *object_file = block->object_file;
+    sky_block_info *info = block->info;
 
     // Move pointer to starting position of block.
     ptrdiff_t offset = get_block_offset(object_file, info);
@@ -649,17 +649,17 @@ error:
 // ret         - The block object returned to the caller.
 //
 // Returns 0 if successful, otherwise returns -1.
-int create_block(ObjectFile *object_file, sky_block **ret)
+int create_block(sky_object_file *object_file, sky_block **ret)
 {
     int rc;
     
     // Increment block count and resize block info memory.
     object_file->block_count++;
-    object_file->infos = realloc(object_file->infos, sizeof(BlockInfo*) * object_file->block_count);
+    object_file->infos = realloc(object_file->infos, sizeof(sky_block_info*) * object_file->block_count);
     if(object_file->block_count > 0) check_mem(object_file->infos);
 
     // Create new block.
-    BlockInfo *info = malloc(sizeof(BlockInfo)); check_mem(info);
+    sky_block_info *info = malloc(sizeof(sky_block_info)); check_mem(info);
     info->id = object_file->block_count-1;
     info->min_object_id = 0LL;
     info->max_object_id = 0LL;
@@ -714,10 +714,10 @@ error:
 // ret         - A reference to the correct block info returned to the caller.
 //
 // Returns 0 if successfully finds a block. Otherwise returns -1.
-int find_insertion_block(ObjectFile *object_file, sky_event *event, BlockInfo **ret)
+int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_block_info **ret)
 {
     int i, n, rc;
-    BlockInfo *info = NULL;
+    sky_block_info *info = NULL;
     info = NULL;
     
     // Initialize return value to NULL.
@@ -773,7 +773,7 @@ int find_insertion_block(ObjectFile *object_file, sky_event *event, BlockInfo **
     // that we have no blocks.
     if(*ret == NULL) {
         // Find the last block if one exists.
-        BlockInfo *last_info = (object_file->block_count > 0 ? object_file->infos[object_file->block_count-1] : NULL);
+        sky_block_info *last_info = (object_file->block_count > 0 ? object_file->infos[object_file->block_count-1] : NULL);
         
         // If the last block available is unspanned then use it.
         if(last_info != NULL && !last_info->spanned) {
@@ -802,7 +802,7 @@ error:
 // ret         - The reference to the block returned to the caller.
 //
 // Returns 0 if successful. Otherwise returns -1.
-int load_block(ObjectFile *object_file, BlockInfo *info, sky_block **ret)
+int load_block(sky_object_file *object_file, sky_block_info *info, sky_block **ret)
 {
     int rc;
     
@@ -1025,20 +1025,20 @@ error:
 //
 // Returns a reference to the new object file if successful. Otherwise returns
 // null.
-ObjectFile *ObjectFile_create(sky_database *database, bstring name)
+sky_object_file *sky_object_file_create(sky_database *database, bstring name)
 {
-    ObjectFile *object_file;
+    sky_object_file *object_file;
     
     check(database != NULL, "Cannot create object file without a database");
     check(name != NULL, "Cannot create unnamed object file");
     
-    object_file = malloc(sizeof(ObjectFile)); check_mem(object_file);
-    object_file->state = OBJECT_FILE_STATE_CLOSED;
+    object_file = malloc(sizeof(sky_object_file)); check_mem(object_file);
+    object_file->state = SKY_OBJECT_FILE_STATE_CLOSED;
     object_file->name = bstrcpy(name); check_mem(object_file->name);
     object_file->path = bformat("%s/%s", bdata(database->path), bdata(object_file->name));
     check_mem(object_file->path);
 
-    object_file->block_size = DEFAULT_BLOCK_SIZE;  // Default to 64K blocks.
+    object_file->block_size = SKY_DEFAULT_BLOCK_SIZE;  // Default to 64K blocks.
     object_file->infos = NULL;
     object_file->block_count = 0;
 
@@ -1054,14 +1054,14 @@ ObjectFile *ObjectFile_create(sky_database *database, bstring name)
     return object_file;
     
 error:
-    ObjectFile_destroy(object_file);
+    sky_object_file_free(object_file);
     return NULL;
 }
 
 // Removes an object file reference from memory.
 //
 // object_file - The object file to free.
-void ObjectFile_destroy(ObjectFile *object_file)
+void sky_object_file_free(sky_object_file *object_file)
 {
     if(object_file) {
         bdestroy(object_file->name);
@@ -1080,13 +1080,13 @@ void ObjectFile_destroy(ObjectFile *object_file)
 // object_file - The object file to open.
 //
 // Returns 0 if successful, otherwise returns -1.
-int ObjectFile_open(ObjectFile *object_file)
+int sky_object_file_open(sky_object_file *object_file)
 {
     int rc;
     
     // Validate arguments.
     check(object_file != NULL, "Object file required to open");
-    check(object_file->state == OBJECT_FILE_STATE_CLOSED, "Object file must be closed to open")
+    check(object_file->state == SKY_OBJECT_FILE_STATE_CLOSED, "Object file must be closed to open")
 
     // Create directory if it doesn't exist.
     if(!file_exists(object_file->path)) {
@@ -1104,12 +1104,12 @@ int ObjectFile_open(ObjectFile *object_file)
     check(rc == 0, "Unable to map data file");
     
     // Flag the object file as locked.
-    object_file->state = OBJECT_FILE_STATE_OPEN;
+    object_file->state = SKY_OBJECT_FILE_STATE_OPEN;
 
     return 0;
 
 error:
-    ObjectFile_close(object_file);
+    sky_object_file_close(object_file);
     return -1;
 }
 
@@ -1118,7 +1118,7 @@ error:
 // object_file - The object file to close.
 //
 // Returns 0 if successful, otherwise returns -1.
-int ObjectFile_close(ObjectFile *object_file)
+int sky_object_file_close(sky_object_file *object_file)
 {
     // Validate arguments.
     check(object_file != NULL, "Object file required to close");
@@ -1132,7 +1132,7 @@ int ObjectFile_close(ObjectFile *object_file)
     unmap_data_file(object_file);
 
     // Update state.
-    object_file->state = OBJECT_FILE_STATE_CLOSED;
+    object_file->state = SKY_OBJECT_FILE_STATE_CLOSED;
 
     return 0;
     
@@ -1151,16 +1151,16 @@ error:
 // object_file - The object file to lock.
 //
 // Returns 0 if successful, otherwise returns -1.
-int ObjectFile_lock(ObjectFile *object_file)
+int sky_object_file_lock(sky_object_file *object_file)
 {
     FILE *file;
 
     // Validate arguments.
     check(object_file != NULL, "Object file required to lock");
-    check(object_file->state == OBJECT_FILE_STATE_OPEN, "Object file must be open to lock")
+    check(object_file->state == SKY_OBJECT_FILE_STATE_OPEN, "Object file must be open to lock")
 
     // Construct path to lock.
-    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
+    bstring path = bformat("%s/%s", bdata(object_file->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
 
     // Raise error if object file is already locked.
     check(!file_exists(path), "Cannot obtain lock: %s", bdata(path));
@@ -1172,7 +1172,7 @@ int ObjectFile_lock(ObjectFile *object_file)
     fclose(file);
 
     // Flag the object file as locked.
-    object_file->state = OBJECT_FILE_STATE_LOCKED;
+    object_file->state = SKY_OBJECT_FILE_STATE_LOCKED;
 
     // Clean up.
     bdestroy(path);
@@ -1190,17 +1190,17 @@ error:
 // object_file - The object file to unlock.
 //
 // Returns 0 if successful, otherwise returns -1.
-int ObjectFile_unlock(ObjectFile *object_file)
+int sky_object_file_unlock(sky_object_file *object_file)
 {
     FILE *file;
     pid_t pid = 0;
 
     // Validate arguments.
     check(object_file != NULL, "Object file required to unlock");
-    check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to unlock")
+    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be locked to unlock")
 
     // Construct path to lock.
-    bstring path = bformat("%s/%s", bdata(object_file->path), OBJECT_FILE_LOCK_NAME); check_mem(path);
+    bstring path = bformat("%s/%s", bdata(object_file->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
 
     // If file exists, check its PID and then attempt to remove it.
     if(file_exists(path)) {
@@ -1218,7 +1218,7 @@ int ObjectFile_unlock(ObjectFile *object_file)
     }
 
     // Flag the object file as open.
-    object_file->state = OBJECT_FILE_STATE_OPEN;
+    object_file->state = SKY_OBJECT_FILE_STATE_OPEN;
 
     // Clean up.
     bdestroy(path);
@@ -1244,7 +1244,7 @@ error:
 // span_count  - A pointer to where the return value should be stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int ObjectFile_get_block_span_count(ObjectFile *object_file, uint32_t block_index, uint32_t *span_count)
+int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t block_index, uint32_t *span_count)
 {
     check(object_file != NULL, "Object file required");
     check(block_index < object_file->block_count, "Block index out of range");
@@ -1280,10 +1280,10 @@ error:
 // Event Management
 //======================================
 
-int ObjectFile_add_event(ObjectFile *object_file, sky_event *event)
+int sky_object_file_add_event(sky_object_file *object_file, sky_event *event)
 {
     int rc = 0;
-    BlockInfo *info = NULL;
+    sky_block_info *info = NULL;
     sky_block *block = NULL;
     
     sky_block **affected_blocks = NULL;
@@ -1292,7 +1292,7 @@ int ObjectFile_add_event(ObjectFile *object_file, sky_event *event)
     // Verify arguments.
     check(object_file != NULL, "Object file is required");
     check(event != NULL, "Event is required");
-    check(object_file->state == OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
+    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
     
     // Make a copy of the event.
     sky_event *tmp = NULL;

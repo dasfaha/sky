@@ -47,10 +47,10 @@ char DATA[] = {
 sky_block *create_test_block0()
 {
     sky_event *event;
-    BlockInfo info;
+    sky_block_info info;
 
     sky_database *database = sky_database_create(&dbpath);
-    ObjectFile *object_file = ObjectFile_create(database, &objname);
+    sky_object_file *object_file = sky_object_file_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 
     sky_block *block = sky_block_create(object_file, &info);
@@ -150,10 +150,10 @@ int test_sky_block_deserialize() {
 
     sky_event_data *data;
     Path *path;
-    BlockInfo info;
+    sky_block_info info;
 
     sky_database *database = sky_database_create(&dbpath);
-    ObjectFile *object_file = ObjectFile_create(database, &objname);
+    sky_object_file *object_file = sky_object_file_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 
     sky_block *block = sky_block_create(object_file, &info);

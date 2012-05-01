@@ -26,7 +26,7 @@
 // Returns a pointer to the address of the current path.
 void *get_data_address(PathIterator *iterator)
 {
-    BlockInfo *info = iterator->object_file->infos[iterator->block_index];
+    sky_block_info *info = iterator->object_file->infos[iterator->block_index];
     return iterator->object_file->data + (info->id * iterator->object_file->block_size) + iterator->byte_index;
 }
 
@@ -40,7 +40,7 @@ void *get_data_address(PathIterator *iterator)
 //
 // Returns a reference to the new path iterator if successful. Otherwise returns
 // null.
-PathIterator *PathIterator_create(ObjectFile *object_file)
+PathIterator *PathIterator_create(sky_object_file *object_file)
 {
     PathIterator *iterator;
     
@@ -96,7 +96,7 @@ int PathIterator_next(PathIterator *iterator, sky_cursor *cursor)
     void *ptr = NULL;
     while(true) {
         // Determine address of current location.
-        BlockInfo *info = iterator->object_file->infos[iterator->block_index];
+        sky_block_info *info = iterator->object_file->infos[iterator->block_index];
         ptr = get_data_address(iterator);
 
         // If byte index is too close to the end-of-block or if there is no more
@@ -126,7 +126,7 @@ int PathIterator_next(PathIterator *iterator, sky_cursor *cursor)
             if(info->spanned) {
                 uint32_t i, span_count;
 
-                rc = ObjectFile_get_block_span_count(iterator->object_file, iterator->block_index, &span_count);
+                rc = sky_object_file_get_block_span_count(iterator->object_file, iterator->block_index, &span_count);
                 check(rc == 0, "Unable to calculate span count");
                 iterator->byte_index = BLOCK_HEADER_LENGTH;
 

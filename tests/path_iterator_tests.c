@@ -44,8 +44,8 @@ int test_PathIterator_next() {
 
     // Open object file and create iterator.
     sky_database *database = sky_database_create(&ROOT);
-    ObjectFile *object_file = ObjectFile_create(database, &OBJECT_TYPE);
-    ObjectFile_open(object_file);
+    sky_object_file *object_file = sky_object_file_create(database, &OBJECT_TYPE);
+    sky_object_file_open(object_file);
 
     sky_cursor *cursor = sky_cursor_create();
     PathIterator *iterator = PathIterator_create(object_file);
@@ -78,8 +78,8 @@ int test_PathIterator_next() {
     PathIterator_destroy(iterator);
     sky_cursor_free(cursor);
 
-    ObjectFile_close(object_file);
-    ObjectFile_destroy(object_file);
+    sky_object_file_close(object_file);
+    sky_object_file_free(object_file);
     sky_database_free(database);
     
     return 0;

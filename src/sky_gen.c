@@ -187,11 +187,11 @@ void generate(Options *options)
     check_mem(database);
     
     // Open object file.
-    ObjectFile *object_file = ObjectFile_create(database, options->object_type);
+    sky_object_file *object_file = sky_object_file_create(database, options->object_type);
     check_mem(object_file);
     
-    check(ObjectFile_open(object_file) == 0, "Unable to open object file");
-    check(ObjectFile_lock(object_file) == 0, "Unable to lock object file");
+    check(sky_object_file_open(object_file) == 0, "Unable to open object file");
+    check(sky_object_file_lock(object_file) == 0, "Unable to lock object file");
 
     // Loop over paths and create events.
     int i, j;
@@ -204,28 +204,28 @@ void generate(Options *options)
             int64_t timestamp = random() % INT64_MAX;
             int32_t action_id = (random() % options->action_count) + 1;
             event = sky_event_create(timestamp, object_id, action_id);
-            rc = ObjectFile_add_event(object_file, event);
+            rc = sky_object_file_add_event(object_file, event);
             check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%d", event->timestamp, event->object_id, event->action_id);
             sky_event_free(event);
         }
     }
     
     // Close object file
-    check(ObjectFile_unlock(object_file) == 0, "Unable to unlock object file");
-    check(ObjectFile_close(object_file) == 0, "Unable to close object file");
+    check(sky_object_file_unlock(object_file) == 0, "Unable to unlock object file");
+    check(sky_object_file_close(object_file) == 0, "Unable to close object file");
     
     // Clean up
     sky_database_free(database);
-    ObjectFile_destroy(object_file);
+    sky_object_file_free(object_file);
     
     return;
     
 error:
     sky_event_free(event);
-    ObjectFile_close(object_file);
+    sky_object_file_close(object_file);
 
     sky_database_free(database);
-    ObjectFile_destroy(object_file);
+    sky_object_file_free(object_file);
 }
 
 

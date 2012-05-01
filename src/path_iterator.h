@@ -22,7 +22,7 @@
 // used to iterate over the raw path data.
 //
 // To perform the relational database equivalent of a full table scan, the
-// `ObjectFile_create_iterator()` function can be used to create a path
+// `sky_object_file_create_iterator()` function can be used to create a path
 // iterator. That contains all the paths in the object file.
 //
 // The path iterator operates as a forward-only iterator. Jumping to the
@@ -41,7 +41,7 @@
 //==============================================================================
 
 typedef struct PathIterator {
-    ObjectFile *object_file;
+    sky_object_file *object_file;
     uint32_t block_index;
     uint32_t byte_index;
     bool eof;
@@ -58,7 +58,7 @@ typedef struct PathIterator {
 // Lifecycle
 //======================================
 
-PathIterator *PathIterator_create(ObjectFile *object_file);
+PathIterator *PathIterator_create(sky_object_file *object_file);
 
 void PathIterator_destroy(PathIterator *iterator);
 
