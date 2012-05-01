@@ -44,7 +44,7 @@ char DATA[] = {
 
 
 // Creates a block containing several paths.
-Block *create_test_block0()
+sky_block *create_test_block0()
 {
     Event *event;
     BlockInfo info;
@@ -53,19 +53,19 @@ Block *create_test_block0()
     ObjectFile *object_file = ObjectFile_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 
-    Block *block = Block_create(object_file, &info);
+    sky_block *block = sky_block_create(object_file, &info);
 
     // Path 2 (len=17)
     event = Event_create(946692000000000LL, 11, 0);
     Event_set_data(event, 1, &bar);
-    Block_add_event(block, event);
+    sky_block_add_event(block, event);
 
     // Path 1 (len=46)
     event = Event_create(946684800000000LL, 10, 6);
-    Block_add_event(block, event);
+    sky_block_add_event(block, event);
     event = Event_create(946688400000000LL, 10, 7);
     Event_set_data(event, 1, &foo);
-    Block_add_event(block, event);
+    sky_block_add_event(block, event);
     
     return block;
 }
@@ -81,8 +81,8 @@ Block *create_test_block0()
 // Event management
 //--------------------------------------
 
-int test_Block_add_remove_events() {
-    Block *block = create_test_block0();
+int test_sky_block_add_remove_events() {
+    sky_block *block = create_test_block0();
     Event *event;
 
     // Check order of paths (based on object id).
@@ -92,14 +92,14 @@ int test_Block_add_remove_events() {
 
     // Remove event on path with single event.
     event = block->paths[1]->events[0];
-    Block_remove_event(block, event);
+    sky_block_remove_event(block, event);
     mu_assert(block->path_count == 1, "");
     mu_assert(block->paths[0]->object_id == 10, "");
     Event_destroy(event);
     
     // Remove event on path with multiple events.
     event = block->paths[0]->events[0];
-    Block_remove_event(block, event);
+    sky_block_remove_event(block, event);
     mu_assert(block->path_count == 1, "");
     mu_assert(block->paths[0]->object_id == 10, "");
     mu_assert(block->paths[0]->event_count == 1, "");
@@ -107,7 +107,7 @@ int test_Block_add_remove_events() {
     Event_destroy(event);
     
     // Clean up.
-    Block_destroy(block);
+    sky_block_free(block);
 
     return 0;
 }
@@ -117,10 +117,10 @@ int test_Block_add_remove_events() {
 // Serialization length
 //--------------------------------------
 
-int test_Block_get_serialized_length() {
-    Block *block = create_test_block0();
-    mu_assert(Block_get_serialized_length(block) == 79, "");
-    Block_destroy(block);
+int test_sky_block_get_serialized_length() {
+    sky_block *block = create_test_block0();
+    mu_assert(sky_block_get_serialized_length(block) == 79, "");
+    sky_block_free(block);
     return 0;
 }
 
@@ -129,12 +129,12 @@ int test_Block_get_serialized_length() {
 // Serialization
 //--------------------------------------
 
-int test_Block_serialize() {
+int test_sky_block_serialize() {
     ptrdiff_t ptrdiff;
     void *addr = calloc(DATA_LENGTH, 1);
-    Block *block = create_test_block0();
-    Block_serialize(block, addr, &ptrdiff);
-    Block_destroy(block);
+    sky_block *block = create_test_block0();
+    sky_block_serialize(block, addr, &ptrdiff);
+    sky_block_free(block);
     mu_assert(ptrdiff == 79, "");
     mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
     free(addr);
@@ -145,7 +145,7 @@ int test_Block_serialize() {
 // Deserialization
 //--------------------------------------
 
-int test_Block_deserialize() {
+int test_sky_block_deserialize() {
     ptrdiff_t ptrdiff;
 
     EventData *data;
@@ -156,8 +156,8 @@ int test_Block_deserialize() {
     ObjectFile *object_file = ObjectFile_create(database, &objname);
     object_file->block_size = 0x10000;  // 64K
 
-    Block *block = Block_create(object_file, &info);
-    Block_deserialize(block, &DATA, &ptrdiff);
+    sky_block *block = sky_block_create(object_file, &info);
+    sky_block_deserialize(block, &DATA, &ptrdiff);
 
     mu_assert(ptrdiff == 79, "");
 
@@ -205,10 +205,10 @@ int test_Block_deserialize() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Block_add_remove_events);
-    mu_run_test(test_Block_get_serialized_length);
-    mu_run_test(test_Block_serialize);
-    mu_run_test(test_Block_deserialize);
+    mu_run_test(test_sky_block_add_remove_events);
+    mu_run_test(test_sky_block_get_serialized_length);
+    mu_run_test(test_sky_block_serialize);
+    mu_run_test(test_sky_block_deserialize);
 
     return 0;
 }

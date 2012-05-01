@@ -618,7 +618,7 @@ error:
 // block       - The in-memory block to write to disk.
 //
 // Returns 0 if successful. Otherwise returns -1.
-int save_block(Block *block)
+int save_block(sky_block *block)
 {
     int rc;
 
@@ -631,11 +631,11 @@ int save_block(Block *block)
 
     // Serialize block.
     ptrdiff_t ptrdiff;
-    rc = Block_serialize(block, addr, &ptrdiff);
+    rc = sky_block_serialize(block, addr, &ptrdiff);
     check(rc == 0, "Failed to serialize block: %d", info->id);
 
     // Update block info.
-    Block_update_info(block);
+    sky_block_update_info(block);
 
     return 0;
 
@@ -649,7 +649,7 @@ error:
 // ret         - The block object returned to the caller.
 //
 // Returns 0 if successful, otherwise returns -1.
-int create_block(ObjectFile *object_file, Block **ret)
+int create_block(ObjectFile *object_file, sky_block **ret)
 {
     int rc;
     
@@ -671,7 +671,7 @@ int create_block(ObjectFile *object_file, Block **ret)
     check(rc == 0, "Unable to remap data file");
 
     // Save empty block to file.
-    Block *block = Block_create(object_file, info);
+    sky_block *block = sky_block_create(object_file, info);
     rc = save_block(block);
     check(rc == 0, "Unable to initialize new block");
 
@@ -684,7 +684,7 @@ int create_block(ObjectFile *object_file, Block **ret)
     return 0;
     
 error:
-    if(block) Block_destroy(block);
+    if(block) sky_block_free(block);
     *ret = block = NULL;
 
     return -1;
@@ -781,11 +781,11 @@ int find_insertion_block(ObjectFile *object_file, Event *event, BlockInfo **ret)
         }
         // Otherwise just create a new block.
         else {
-            Block *block;
+            sky_block *block;
             rc = create_block(object_file, &block);
             check(rc == 0, "Unable to create block");
             *ret = block->info;
-            Block_destroy(block);
+            sky_block_free(block);
         }
     }
     
@@ -802,7 +802,7 @@ error:
 // ret         - The reference to the block returned to the caller.
 //
 // Returns 0 if successful. Otherwise returns -1.
-int load_block(ObjectFile *object_file, BlockInfo *info, Block **ret)
+int load_block(ObjectFile *object_file, BlockInfo *info, sky_block **ret)
 {
     int rc;
     
@@ -812,8 +812,8 @@ int load_block(ObjectFile *object_file, BlockInfo *info, Block **ret)
 
     // Deserialize block.
     ptrdiff_t ptrdiff;
-    Block *block = Block_create(object_file, info);
-    rc = Block_deserialize(block, addr, &ptrdiff);
+    sky_block *block = sky_block_create(object_file, info);
+    rc = sky_block_deserialize(block, addr, &ptrdiff);
     check(rc == 0, "Failed to deserialize block: %d", info->id);
     
     // Assign block to return value.
@@ -833,7 +833,7 @@ error:
 // count  - The number of blocks in the array.
 //
 // Returns 0 if successful, otherwise returns -1.
-int create_target_block(Block *source, Block **target, Block ***blocks, int *count)
+int create_target_block(sky_block *source, sky_block **target, sky_block ***blocks, int *count)
 {
     int rc;
     
@@ -843,7 +843,7 @@ int create_target_block(Block *source, Block **target, Block ***blocks, int *cou
     
     // Increment block count.
     (*count)++;
-    *blocks = realloc(*blocks, sizeof(Block*) * (*count));
+    *blocks = realloc(*blocks, sizeof(sky_block*) * (*count));
     check_mem(*blocks);
     
     // Append target block.
@@ -852,7 +852,7 @@ int create_target_block(Block *source, Block **target, Block ***blocks, int *cou
     return 0;
 
 error:
-    if(*target) Block_destroy(*target);
+    if(*target) sky_block_free(*target);
     *target = NULL;
 
     return -1;    
@@ -867,20 +867,20 @@ error:
 // affected_block_count - The number of blocks in the affected_blocks array.
 //
 // Returns 0 if successful, otherwise returns -1.
-int split_block(Block *block, Block ***affected_blocks, int *affected_block_count)
+int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_block_count)
 {
     int rc;
-    Block *target_block;
+    sky_block *target_block;
     Event **events;
     uint32_t event_count;
 
     // Add original block to list of affected blocks.
     *affected_block_count = 1;
-    *affected_blocks = malloc(sizeof(Block*)); check_mem(*affected_blocks);
+    *affected_blocks = malloc(sizeof(sky_block*)); check_mem(*affected_blocks);
     (*affected_blocks)[0] = block;
 
     // If block size has not been exceeded then exit this function immediately.
-    uint32_t block_serialized_length = Block_get_serialized_length(block);
+    uint32_t block_serialized_length = sky_block_get_serialized_length(block);
     if(block_serialized_length <= block->object_file->block_size) {
         return 0;
     }
@@ -888,7 +888,7 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
     // Extract paths and info from original block.
     bool spanned = block->info->spanned;
     Path **paths = block->paths;
-    uint32_t path_count = block->path_count;
+    sky_path_count_t path_count = block->path_count;
     block->paths = NULL;
     block->path_count = 0;
     
@@ -927,7 +927,7 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
                 // Create new target path if adding event will make path exceed block size.
                 if(target_path != NULL) {
                     if(Path_get_serialized_length(target_path) + event_serialized_length > max_block_size) {
-                        rc = Block_add_path(target_block, target_path);
+                        rc = sky_block_add_path(target_block, target_path);
                         check(rc == 0, "Unable to add path to block[1]: %d", target_block->info->id);
                         target_path = NULL;
 
@@ -951,7 +951,7 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
                 
                 // Add target path to new block if we're at the end.
                 if(j == event_count-1) {
-                    rc = Block_add_path(target_block, target_path);
+                    rc = sky_block_add_path(target_block, target_path);
                     check(rc == 0, "Unable to add path to block[2]: %d", target_block->info->id);
                     target_path = NULL;
                 }
@@ -967,7 +967,7 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
         }
         // Otherwise add path to the target block.
         else {
-            block_serialized_length = Block_get_serialized_length(target_block);
+            block_serialized_length = sky_block_get_serialized_length(target_block);
 
             // If target block will be larger than target block size then create
             // a new block. Only do this if a path exists on the block though.
@@ -979,7 +979,7 @@ int split_block(Block *block, Block ***affected_blocks, int *affected_block_coun
             }
             
             // Add path to target block.
-            rc = Block_add_path(target_block, path);
+            rc = sky_block_add_path(target_block, path);
             check(rc == 0, "Unable to add path to block[3]: %d", target_block->info->id);
         }
     }
@@ -1284,9 +1284,9 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
 {
     int rc = 0;
     BlockInfo *info = NULL;
-    Block *block = NULL;
+    sky_block *block = NULL;
     
-    Block **affected_blocks = NULL;
+    sky_block **affected_blocks = NULL;
     int affected_block_count = 0;
     
     // Verify arguments.
@@ -1309,7 +1309,7 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     check(rc == 0, "Unable to load block %d", info->id);
     
     // Add event to block.
-    rc = Block_add_event(block, event);
+    rc = sky_block_add_event(block, event);
     check(rc == 0, "Unable to add event to block %d", info->id);
     
     // Attempt to split block into multiple blocks if necessary.
@@ -1330,12 +1330,12 @@ int ObjectFile_add_event(ObjectFile *object_file, Event *event)
     save_header(object_file);
 
     // Clean up.
-    Block_destroy(block);
+    sky_block_free(block);
     
     return 0;
 
 error:
     // TODO: Restore state of database if an error occurred.
-    Block_destroy(block);
+    sky_block_free(block);
     return -1;
 }

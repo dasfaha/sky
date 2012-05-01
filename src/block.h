@@ -21,12 +21,15 @@
 
 //==============================================================================
 //
-// Constants
+// Definitions
 //
 //==============================================================================
 
+// Stores the number of paths that a block contains.
+#define sky_path_count_t uint32_t
+
 // The length of non-path data in the block.
-#define BLOCK_HEADER_LENGTH sizeof(uint32_t)
+#define BLOCK_HEADER_LENGTH sizeof(sky_path_count_t)
 
 
 //==============================================================================
@@ -35,13 +38,12 @@
 //
 //==============================================================================
 
-// The block stores an array of paths.
-typedef struct Block {
+typedef struct sky_block {
     ObjectFile *object_file;
     BlockInfo *info;
-    uint32_t path_count;
+    sky_path_count_t path_count;
     Path **paths;
-} Block;
+} sky_block;
 
 
 //==============================================================================
@@ -54,44 +56,44 @@ typedef struct Block {
 // Lifecycle
 //======================================
 
-Block *Block_create(ObjectFile *object_file, BlockInfo *info);
+sky_block *sky_block_create(ObjectFile *object_file, BlockInfo *info);
 
-void Block_destroy(Block *block);
+void sky_block_free(sky_block *block);
 
 
 //======================================
 // Serialization
 //======================================
 
-uint32_t Block_get_serialized_length(Block *block);
+uint32_t sky_block_get_serialized_length(sky_block *block);
 
-int Block_serialize(Block *block, void *addr, ptrdiff_t *length);
+int sky_block_serialize(sky_block *block, void *addr, ptrdiff_t *length);
 
-int Block_deserialize(Block *block, void *addr, ptrdiff_t *length);
+int sky_block_deserialize(sky_block *block, void *addr, ptrdiff_t *length);
 
 
 //======================================
 // Block Info
 //======================================
 
-int Block_update_info(Block *block);
+int sky_block_update_info(sky_block *block);
 
 
 //======================================
 // Event Management
 //======================================
 
-int Block_add_event(Block *block, Event *event);
+int sky_block_add_event(sky_block *block, Event *event);
 
-int Block_remove_event(Block *block, Event *event);
+int sky_block_remove_event(sky_block *block, Event *event);
 
 
 //======================================
 // Path Management
 //======================================
 
-int Block_add_path(Block *block, Path *path);
+int sky_block_add_path(sky_block *block, Path *path);
 
-int Block_remove_path(Block *block, Path *path);
+int sky_block_remove_path(sky_block *block, Path *path);
 
 #endif

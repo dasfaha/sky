@@ -37,7 +37,7 @@ int compare_paths(const void *_a, const void *_b)
 // Sorts paths in a block.
 //
 // block - The block containing the paths.
-void sort_paths(Block *block)
+void sort_paths(sky_block *block)
 {
     qsort(block->paths, block->path_count, sizeof(Path*), compare_paths);
 }
@@ -53,11 +53,11 @@ void sort_paths(Block *block)
 // info        - The header information about block.
 //
 // Returns a new block if successful, otherwise returns null.
-Block *Block_create(ObjectFile *object_file, BlockInfo *info)
+sky_block *sky_block_create(ObjectFile *object_file, BlockInfo *info)
 {
-    Block *block;
+    sky_block *block;
     
-    block = malloc(sizeof(Block)); check_mem(block);
+    block = malloc(sizeof(sky_block)); check_mem(block);
 
     block->object_file = object_file;
     block->info = info;
@@ -68,14 +68,14 @@ Block *Block_create(ObjectFile *object_file, BlockInfo *info)
     return block;
     
 error:
-    Block_destroy(block);
+    sky_block_free(block);
     return NULL;
 }
 
 // Removes a block reference from memory.
 //
 // block - The block to free.
-void Block_destroy(Block *block)
+void sky_block_free(sky_block *block)
 {
     if(block) {
         block->object_file = NULL;
@@ -102,7 +102,7 @@ void Block_destroy(Block *block)
 
 // Calculates the total number of bytes needed to store just the paths section
 // of the block.
-uint32_t get_paths_length(Block *block)
+uint32_t get_paths_length(sky_block *block)
 {
     uint32_t i;
     uint32_t length = 0;
@@ -119,7 +119,7 @@ uint32_t get_paths_length(Block *block)
 // This number does not include the padding added after the block.
 //
 // block - The block.
-uint32_t Block_get_serialized_length(Block *block)
+uint32_t sky_block_get_serialized_length(sky_block *block)
 {
     uint32_t length = 0;
 
@@ -137,7 +137,7 @@ uint32_t Block_get_serialized_length(Block *block)
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_serialize(Block *block, void *addr, ptrdiff_t *length)
+int sky_block_serialize(sky_block *block, void *addr, ptrdiff_t *length)
 {
     int rc;
     void *start = addr;
@@ -181,7 +181,7 @@ error:
 // length - The number of bytes read.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_deserialize(Block *block, void *addr, ptrdiff_t *length)
+int sky_block_deserialize(sky_block *block, void *addr, ptrdiff_t *length)
 {
     int rc;
     void *start = addr;
@@ -232,7 +232,7 @@ error:
 // block - The block to update.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_update_info(Block *block)
+int sky_block_update_info(sky_block *block)
 {
     int64_t min_object_id = 0;
     int64_t max_object_id = 0;
@@ -302,7 +302,7 @@ error:
 // event - The event that is to be inserted.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_add_event(Block *block, Event *event)
+int sky_block_add_event(sky_block *block, Event *event)
 {
     uint32_t i;
     int rc;
@@ -324,7 +324,7 @@ int Block_add_event(Block *block, Event *event)
     // If matching path could not be found then create one.
     if(path == NULL) {
         path = Path_create(event->object_id); check_mem(path);
-        rc = Block_add_path(block, path);
+        rc = sky_block_add_path(block, path);
         check(rc == 0, "Unable to add new path to block")
     }
     
@@ -345,7 +345,7 @@ error:
 // event - The event that will be removed.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_remove_event(Block *block, Event *event)
+int sky_block_remove_event(sky_block *block, Event *event)
 {
     uint32_t i, j, index;
     int rc;
@@ -384,7 +384,7 @@ int Block_remove_event(Block *block, Event *event)
     
     // If path has no events then remove path from block.
     if(path != NULL && path->event_count == 0) {
-        Block_remove_path(block, path);
+        sky_block_remove_path(block, path);
     }
 
     return 0;
@@ -404,7 +404,7 @@ error:
 // path  - The path to add.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_add_path(Block *block, Path *path)
+int sky_block_add_path(sky_block *block, Path *path)
 {
     // Validation.
     check(block != NULL, "Block required");
@@ -434,7 +434,7 @@ error:
 // path  - The path in the block to remove.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Block_remove_path(Block *block, Path *path)
+int sky_block_remove_path(sky_block *block, Path *path)
 {
     uint32_t i, j;
 

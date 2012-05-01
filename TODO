@@ -3,12 +3,6 @@
   - Add event
   - Find object path
 
-- Iterator
-  - Aggregate to DAG
-  - Add standalone support
-  - Add server support
-  - Benchmark
-
 - EQL
   - flex/bison -> AST
   - AST -> LLVM
