@@ -19,8 +19,8 @@
 // Compares two paths and sorts them by object id.
 int compare_paths(const void *_a, const void *_b)
 {
-    Path **a = (Path**)_a;
-    Path **b = (Path**)_b;
+    sky_path **a = (sky_path**)_a;
+    sky_path **b = (sky_path**)_b;
 
     // Sort by object id.
     if((*a)->object_id > (*b)->object_id) {
@@ -39,7 +39,7 @@ int compare_paths(const void *_a, const void *_b)
 // block - The block containing the paths.
 void sort_paths(sky_block *block)
 {
-    qsort(block->paths, block->path_count, sizeof(Path*), compare_paths);
+    qsort(block->paths, block->path_count, sizeof(sky_path*), compare_paths);
 }
 
 
@@ -84,7 +84,7 @@ void sky_block_free(sky_block *block)
         // Destroy paths.
         uint32_t i=0;
         for(i=0; i<block->path_count; i++) {
-            Path_destroy(block->paths[i]);
+            sky_path_free(block->paths[i]);
         }
         
         if(block->paths) free(block->paths);
@@ -109,7 +109,7 @@ uint32_t get_paths_length(sky_block *block)
     
     // Add size for each path.
     for(i=0; i<block->path_count; i++) {
-        length += Path_get_serialized_length(block->paths[i]);
+        length += sky_path_get_serialized_length(block->paths[i]);
     }
     
     return length;
@@ -153,7 +153,7 @@ int sky_block_serialize(sky_block *block, void *addr, ptrdiff_t *length)
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
         ptrdiff_t ptrdiff;
-        rc = Path_serialize(block->paths[i], addr, &ptrdiff);
+        rc = sky_path_serialize(block->paths[i], addr, &ptrdiff);
         check(rc == 0, "Unable to serialize block path: %d", i);
         addr += ptrdiff;
     }
@@ -194,17 +194,17 @@ int sky_block_deserialize(sky_block *block, void *addr, ptrdiff_t *length)
     memread(addr, &block->path_count, sizeof(block->path_count), "block path count");
 
     // Allocate paths.
-    block->paths = realloc(block->paths, sizeof(Path*) * block->path_count);
+    block->paths = realloc(block->paths, sizeof(sky_path*) * block->path_count);
     check_mem(block->paths);
 
     // Loop over paths and delegate deserialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
         ptrdiff_t ptrdiff;
-        Path *path = Path_create(0); check_mem(path);
+        sky_path *path = sky_path_create(0); check_mem(path);
         block->paths[i] = path;
         
-        rc = Path_deserialize(path, addr, &ptrdiff);
+        rc = sky_path_deserialize(path, addr, &ptrdiff);
         check(rc == 0, "Unable to deserialize block path: %d", i);
         addr += ptrdiff;
     }
@@ -251,7 +251,7 @@ int sky_block_update_info(sky_block *block)
     else {
         uint32_t i, j;
         for(i=0; i<block->path_count; i++) {
-            Path *path = block->paths[i];
+            sky_path *path = block->paths[i];
         
             // Find object id range.
             if(min_object_id == 0 || path->object_id < min_object_id) {
@@ -313,7 +313,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     check(event->object_id != 0, "Event object id cannot be 0");
 
     // Find existing path by object id.
-    Path *path = NULL;
+    sky_path *path = NULL;
     for(i=0; i<block->path_count; i++) {
         if(block->paths[i]->object_id == event->object_id) {
             path = block->paths[i];
@@ -323,13 +323,13 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     
     // If matching path could not be found then create one.
     if(path == NULL) {
-        path = Path_create(event->object_id); check_mem(path);
+        path = sky_path_create(event->object_id); check_mem(path);
         rc = sky_block_add_path(block, path);
         check(rc == 0, "Unable to add new path to block")
     }
     
     // Add event to path.
-    rc = Path_add_event(path, event);
+    rc = sky_path_add_event(path, event);
     check(rc == 0, "Unable to add event to path");
 
     return 0;
@@ -356,7 +356,7 @@ int sky_block_remove_event(sky_block *block, sky_event *event)
     check(event->object_id != 0, "Event object id cannot be 0");
 
     // Find event in paths.
-    Path *path;
+    sky_path *path;
 
     for(i=0; i<block->path_count; i++) {
         bool found = false;
@@ -367,7 +367,7 @@ int sky_block_remove_event(sky_block *block, sky_event *event)
             for(j=0; j<path->event_count; j++) {
                 // If event is found then remove it.
                 if(path->events[j] == event) {
-                    rc = Path_remove_event(path, event);
+                    rc = sky_path_remove_event(path, event);
                     check(rc == 0, "Unable to remove event from path");
                     found = true;
                     break;
@@ -404,7 +404,7 @@ error:
 // path  - The path to add.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_block_add_path(sky_block *block, Path *path)
+int sky_block_add_path(sky_block *block, sky_path *path)
 {
     // Validation.
     check(block != NULL, "Block required");
@@ -434,7 +434,7 @@ error:
 // path  - The path in the block to remove.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_block_remove_path(sky_block *block, Path *path)
+int sky_block_remove_path(sky_block *block, sky_path *path)
 {
     uint32_t i, j;
 
@@ -448,7 +448,7 @@ int sky_block_remove_path(sky_block *block, Path *path)
 
             // Reallocate memory.
             block->path_count--;
-            block->paths = realloc(block->paths, sizeof(Path*) * block->path_count);
+            block->paths = realloc(block->paths, sizeof(sky_path*) * block->path_count);
             check_mem(block->paths);
             
             return 0;

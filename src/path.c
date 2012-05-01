@@ -50,7 +50,7 @@ int compare_events(const void *_a, const void *_b)
 // Sorts events in a path.
 //
 // path - The path containing the events.
-void sort_events(Path *path)
+void sort_events(sky_path *path)
 {
     qsort(path->events, path->event_count, sizeof(sky_event*), compare_events);
 }
@@ -60,14 +60,16 @@ void sort_events(Path *path)
 // Lifecycle
 //======================================
 
-/*
- * Creates a reference to a path.
- */
-Path *Path_create(int64_t object_id)
+// Creates a reference to a path.
+//
+// object_id - The object identifier associated with the path.
+//
+// Returns a new path.
+sky_path *sky_path_create(sky_object_id_t object_id)
 {
-    Path *path;
+    sky_path *path;
     
-    path = malloc(sizeof(Path)); check_mem(path);
+    path = malloc(sizeof(sky_path)); check_mem(path);
     
     path->object_id = object_id;
     
@@ -77,18 +79,18 @@ Path *Path_create(int64_t object_id)
     return path;
     
 error:
-    Path_destroy(path);
+    sky_path_free(path);
     return NULL;
 }
 
-/*
- * Removes a path reference from memory.
- */
-void Path_destroy(Path *path)
+// Removes a path reference from memory.
+//
+// path - The path to free.
+void sky_path_free(sky_path *path)
 {
     if(path) {
         // Destroy events.
-        uint32_t i=0;
+        sky_path_event_count_t i=0;
         for(i=0; i<path->event_count; i++) {
             sky_event_free(path->events[i]);
         }
@@ -108,10 +110,10 @@ void Path_destroy(Path *path)
 
 // Calculates the total number of bytes needed to store just the events section
 // of the path.
-uint32_t get_events_length(Path *path)
+sky_path_events_length_t get_events_length(sky_path *path)
 {
-    uint32_t i;
-    uint32_t length = 0;
+    sky_path_event_count_t i;
+    sky_path_events_length_t length = 0;
     
     // Add size for each event.
     for(i=0; i<path->event_count; i++) {
@@ -124,15 +126,15 @@ uint32_t get_events_length(Path *path)
 // Calculates the total number of bytes needed to store a path and its events.
 //
 // path - The path.
-uint32_t Path_get_serialized_length(Path *path)
+uint32_t sky_path_get_serialized_length(sky_path *path)
 {
-    uint32_t length = 0;
+    sky_path_events_length_t length = 0;
 
     // Add header length
-    length += PATH_HEADER_LENGTH;
+    length += SKY_PATH_HEADER_LENGTH;
 
     // Add event length.
-    uint32_t events_length = get_events_length(path);
+    sky_path_events_length_t events_length = get_events_length(path);
     length += events_length;
     
     return length;
@@ -143,13 +145,13 @@ uint32_t Path_get_serialized_length(Path *path)
 // ptr - A pointer to raw, serialized path data.
 //
 // Returns the length of the path.
-uint32_t Path_get_length(const void *ptr)
+uint32_t sky_path_get_length(const void *ptr)
 {
     // Read events length from raw data.
-    uint32_t events_length;
-    memcpy(&events_length, ptr+sizeof(int64_t), sizeof(events_length));
+    sky_path_events_length_t events_length;
+    memcpy(&events_length, ptr+sizeof(sky_object_id_t), sizeof(events_length));
     
-    return PATH_HEADER_LENGTH + events_length;
+    return SKY_PATH_HEADER_LENGTH + events_length;
 }
 
 // Serializes a path at a given memory location.
@@ -159,9 +161,8 @@ uint32_t Path_get_length(const void *ptr)
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_serialize(Path *path, void *addr, ptrdiff_t *length)
+int sky_path_serialize(sky_path *path, void *addr, ptrdiff_t *length)
 {
-    uint32_t i;
     int rc;
     void *start = addr;
     
@@ -177,6 +178,7 @@ int Path_serialize(Path *path, void *addr, ptrdiff_t *length)
     memwrite(addr, &events_length, sizeof(events_length), "path events length");
 
     // Serialize events.
+    sky_path_event_count_t i;
     for(i=0; i<path->event_count; i++) {
         ptrdiff_t ptrdiff;
         rc = sky_event_serialize(path->events[i], addr, &ptrdiff);
@@ -203,7 +205,7 @@ error:
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_deserialize(Path *path, void *addr, ptrdiff_t *length)
+int sky_path_deserialize(sky_path *path, void *addr, ptrdiff_t *length)
 {
     int rc;
     void *start = addr;
@@ -216,7 +218,7 @@ int Path_deserialize(Path *path, void *addr, ptrdiff_t *length)
     memread(addr, &path->object_id, sizeof(path->object_id), "path object id");
 
     // Read events length.
-    uint32_t events_length;
+    sky_path_events_length_t events_length;
     memread(addr, &events_length, sizeof(events_length), "path events length");
 
     // Deserialize events.
@@ -261,7 +263,7 @@ error:
 // event - The event to add to the path.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_add_event(Path *path, sky_event *event)
+int sky_path_add_event(sky_path *path, sky_event *event)
 {
     // Validation.
     check(path != NULL, "Path required");
@@ -300,7 +302,7 @@ error:
 // event - The event to remove.
 //
 // Returns 0 if successful, otherwise returns -1.
-int Path_remove_event(Path *path, sky_event *event)
+int sky_path_remove_event(sky_path *path, sky_event *event)
 {
     // Validation.
     check(path != NULL, "Path required");

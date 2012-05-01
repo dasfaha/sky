@@ -149,7 +149,7 @@ int test_sky_block_deserialize() {
     ptrdiff_t ptrdiff;
 
     sky_event_data *data;
-    Path *path;
+    sky_path *path;
     sky_block_info info;
 
     sky_database *database = sky_database_create(&dbpath);
@@ -192,7 +192,7 @@ int test_sky_block_deserialize() {
     sky_event_get_data(path->events[0], 1, &data);
     mu_assert(biseqcstr(data->value, "bar"), "");
 
-    Path_destroy(path);
+    sky_path_free(path);
     
     return 0;
 }

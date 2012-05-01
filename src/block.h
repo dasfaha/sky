@@ -42,7 +42,7 @@ typedef struct sky_block {
     sky_object_file *object_file;
     sky_block_info *info;
     sky_path_count_t path_count;
-    Path **paths;
+    sky_path **paths;
 } sky_block;
 
 
@@ -92,8 +92,8 @@ int sky_block_remove_event(sky_block *block, sky_event *event);
 // Path Management
 //======================================
 
-int sky_block_add_path(sky_block *block, Path *path);
+int sky_block_add_path(sky_block *block, sky_path *path);
 
-int sky_block_remove_path(sky_block *block, Path *path);
+int sky_block_remove_path(sky_block *block, sky_path *path);
 
 #endif

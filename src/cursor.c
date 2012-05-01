@@ -124,10 +124,10 @@ void set_current_path(sky_cursor *cursor, uint32_t index)
     uint32_t events_length;
     void *ptr = cursor->paths[index];
     memcpy(&events_length, ptr+sizeof(int64_t), sizeof(events_length));
-    cursor->path_length = PATH_HEADER_LENGTH + events_length;
+    cursor->path_length = SKY_PATH_HEADER_LENGTH + events_length;
 
     // Store position of first event and store position of end of path.
-    cursor->ptr    = ptr + PATH_HEADER_LENGTH;
+    cursor->ptr    = ptr + SKY_PATH_HEADER_LENGTH;
     cursor->endptr = ptr + cursor->path_length;
 }
 

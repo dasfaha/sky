@@ -101,7 +101,7 @@ int PathIterator_next(PathIterator *iterator, sky_cursor *cursor)
 
         // If byte index is too close to the end-of-block or if there is no more
         // data in the block then go to the next block.
-        if(iterator->byte_index >= block_size-PATH_HEADER_LENGTH ||
+        if(iterator->byte_index >= block_size-SKY_PATH_HEADER_LENGTH ||
            memcmp(ptr, &zero, sizeof(zero)) == 0)
         {
             // Move to the next block.
@@ -143,7 +143,7 @@ int PathIterator_next(PathIterator *iterator, sky_cursor *cursor)
             else {
                 rc = sky_cursor_set_path(cursor, ptr);
                 check(rc == 0, "Unable to set path on cursor");
-                iterator->byte_index += Path_get_length(ptr);
+                iterator->byte_index += sky_path_get_length(ptr);
             }
             break;
         }

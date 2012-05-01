@@ -887,7 +887,7 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
     
     // Extract paths and info from original block.
     bool spanned = block->info->spanned;
-    Path **paths = block->paths;
+    sky_path **paths = block->paths;
     sky_path_count_t path_count = block->path_count;
     block->paths = NULL;
     block->path_count = 0;
@@ -903,8 +903,8 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
     // Loop over paths and spread them across blocks.
     uint32_t i, j;
     for(i=0; i<path_count; i++) {
-        Path *path = paths[i];
-        uint32_t path_serialized_length = Path_get_serialized_length(path);
+        sky_path *path = paths[i];
+        uint32_t path_serialized_length = sky_path_get_serialized_length(path);
         
         // If path is already spanned or the path is larger than max block size
         // then spread its events across multiple blocks.
@@ -919,14 +919,14 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
             target_block->info->spanned = true;
 
             // Split path into spanned blocks.
-            Path *target_path = NULL;
+            sky_path *target_path = NULL;
             for(j=0; j<event_count; j++) {
                 sky_event *event = events[j];
                 uint32_t event_serialized_length = sky_event_get_serialized_length(event);
                 
                 // Create new target path if adding event will make path exceed block size.
                 if(target_path != NULL) {
-                    if(Path_get_serialized_length(target_path) + event_serialized_length > max_block_size) {
+                    if(sky_path_get_serialized_length(target_path) + event_serialized_length > max_block_size) {
                         rc = sky_block_add_path(target_block, target_path);
                         check(rc == 0, "Unable to add path to block[1]: %d", target_block->info->id);
                         target_path = NULL;
@@ -941,12 +941,12 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
                 
                 // Create a path if we don't have one available.
                 if(target_path == NULL) {
-                    target_path = Path_create(event->object_id);
+                    target_path = sky_path_create(event->object_id);
                     check_mem(target_path);
                 }
                 
                 // Add event to new target path.
-                rc = Path_add_event(target_path, event);
+                rc = sky_path_add_event(target_path, event);
                 check(rc == 0, "Unable to add event to new target path");
                 
                 // Add target path to new block if we're at the end.
@@ -958,7 +958,7 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
             }
             
             // Remove path since it's now been split into smaller subpaths.
-            Path_destroy(path);
+            sky_path_free(path);
             
             // Clean up event list.
             free(events);
@@ -995,7 +995,7 @@ error:
     // Clean up paths extracted from block.
     if(paths) {
         for(i=0; i<path_count; i++) {
-            Path_destroy(paths[i]);
+            sky_path_free(paths[i]);
         }
         free(paths);
     }

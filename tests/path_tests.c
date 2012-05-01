@@ -33,25 +33,25 @@ char DATA[] = {
 
 
 // Creates a path containing action-only, data-only and action+data events.
-Path *create_test_path0()
+sky_path *create_test_path0()
 {
     sky_event *event;
-    Path *path = Path_create(10);
+    sky_path *path = sky_path_create(10);
 
     // Action-only event
     event = sky_event_create(946684800000000LL, 10, 6);
-    Path_add_event(path, event);
+    sky_path_add_event(path, event);
 
     // Action+data event
     event = sky_event_create(946688400000000LL, 10, 7);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
-    Path_add_event(path, event);
+    sky_path_add_event(path, event);
 
     // Data-only event
     event = sky_event_create(946692000000000LL, 10, 0);
     sky_event_set_data(event, 1, &foo);
-    Path_add_event(path, event);
+    sky_path_add_event(path, event);
 
     return path;
 }
@@ -67,11 +67,11 @@ Path *create_test_path0()
 // Lifecycle
 //--------------------------------------
 
-int test_Path_create() {
-    Path *path = Path_create(10);
+int test_sky_path_create() {
+    sky_path *path = sky_path_create(10);
     mu_assert(path != NULL, "Unable to allocate path");
     mu_assert(path->object_id == 10, "Path object id not assigned");
-    Path_destroy(path);
+    sky_path_free(path);
 
     return 0;
 }
@@ -81,13 +81,13 @@ int test_Path_create() {
 // Event management
 //--------------------------------------
 
-int test_Path_add_remove_event() {
-    Path *path = Path_create(10);
+int test_sky_path_add_remove_event() {
+    sky_path *path = sky_path_create(10);
 
     sky_event *event0 = sky_event_create(1325377000000LL, 10, 200);
-    Path_add_event(path, event0);
+    sky_path_add_event(path, event0);
     sky_event *event1 = sky_event_create(1325376000000LL, 10, 200);
-    Path_add_event(path, event1);
+    sky_path_add_event(path, event1);
     
     // Check order of events (e1 should be after e0 based on timestamp).
     mu_assert(path->event_count == 2, "");
@@ -95,13 +95,13 @@ int test_Path_add_remove_event() {
     mu_assert(path->events[1] == event0, "");
 
     // Remove event.
-    Path_remove_event(path, event1);
+    sky_path_remove_event(path, event1);
     mu_assert(path->event_count == 1, "");
     mu_assert(path->events[0] == event0, "");
     
     // Clean up.
     sky_event_free(event1);
-    Path_destroy(path);
+    sky_path_free(path);
 
     return 0;
 }
@@ -111,10 +111,10 @@ int test_Path_add_remove_event() {
 // Serialization length
 //--------------------------------------
 
-int test_Path_get_serialized_length() {
-    Path *path = create_test_path0();
-    mu_assert(Path_get_serialized_length(path) == 69, "");
-    Path_destroy(path);
+int test_sky_path_get_serialized_length() {
+    sky_path *path = create_test_path0();
+    mu_assert(sky_path_get_serialized_length(path) == 69, "");
+    sky_path_free(path);
     return 0;
 }
 
@@ -123,12 +123,12 @@ int test_Path_get_serialized_length() {
 // Serialization
 //--------------------------------------
 
-int test_Path_serialize() {
+int test_sky_path_serialize() {
     ptrdiff_t ptrdiff;
     void *addr = calloc(DATA_LENGTH, 1);
-    Path *path = create_test_path0();
-    Path_serialize(path, addr, &ptrdiff);
-    Path_destroy(path);
+    sky_path *path = create_test_path0();
+    sky_path_serialize(path, addr, &ptrdiff);
+    sky_path_free(path);
     mu_assert(ptrdiff == DATA_LENGTH, "");
     mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
     free(addr);
@@ -140,12 +140,12 @@ int test_Path_serialize() {
 // Deserialization
 //--------------------------------------
 
-int test_Path_deserialize() {
+int test_sky_path_deserialize() {
     ptrdiff_t ptrdiff;
 
     sky_event_data *data;
-    Path *path = Path_create(0);
-    Path_deserialize(path, &DATA, &ptrdiff);
+    sky_path *path = sky_path_create(0);
+    sky_path_deserialize(path, &DATA, &ptrdiff);
 
     mu_assert(ptrdiff == DATA_LENGTH, "");
 
@@ -173,7 +173,7 @@ int test_Path_deserialize() {
     sky_event_get_data(path->events[2], 1, &data);
     mu_assert(biseqcstr(data->value, "foo"), "");
 
-    Path_destroy(path);
+    sky_path_free(path);
     
     return 0;
 }
@@ -186,11 +186,11 @@ int test_Path_deserialize() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_Path_create);
-    mu_run_test(test_Path_add_remove_event);
-    mu_run_test(test_Path_get_serialized_length);
-    mu_run_test(test_Path_serialize);
-    mu_run_test(test_Path_deserialize);
+    mu_run_test(test_sky_path_create);
+    mu_run_test(test_sky_path_add_remove_event);
+    mu_run_test(test_sky_path_get_serialized_length);
+    mu_run_test(test_sky_path_serialize);
+    mu_run_test(test_sky_path_deserialize);
 
     return 0;
 }
