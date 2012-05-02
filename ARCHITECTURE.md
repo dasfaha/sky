@@ -98,3 +98,45 @@ in each block. If a block only has one path then the min and max object id will
 be the same. If multiple blocks have the same object id then the path spans
 blocks. The subpaths will be joined behind the scenes when traversing the path
 so the query engine will not have to know about the split.
+
+
+## Network Protocol
+
+### Overview
+
+Sky communicates with clients by sending messages over TCP in a binary format.
+The message is an envelope that contains a `message version`, `message type`,
+`message length` and the `message body`. The message version allows the format
+to change over time while preserving backward compatibility. The message type
+describes the contents of the message body. The message length states, in bytes,
+how long the body will be. Below is the format for the message in EBNF:
+
+    MSG_VERSION = uint16
+    MSG_TYPE = uint32
+    MSG_LENGTH = uint32
+    MSG_BODY = char*
+    MESSAGE = MSG_VERSION MSG_TYPE MSG_LENGTH MSG_BODY
+
+Currently the server only supports the Event Add (`EADD`) message.
+
+
+# Event Add Message (EADD)
+
+The `EADD` message is one of the most fundamental message to Sky. It sends a
+timestamped event for an object containing the action and/or any related data.
+
+Below is the form of the body of the EADD message in EBNF:
+
+    OBJECT_ID = int64
+    TIMESTAMP = int64
+    ACTION_NAME_LENGTH = uint16
+    ACTION_NAME = char*
+    DATA_COUNT = uint32
+    DATA_KEY_LENGTH = uint16
+    DATA_KEY = char*
+    DATA_VALUE_LENGTH = uint8
+    DATA_VALUE = char*
+    
+    MSG_BODY = OBJECT_ID TIMESTAMP ACTION_NAME_LENGTH ACTION_NAME DATA_COUNT \
+               (DATA_KEY_LENGTH DATA_KEY DATA_VALUE_LENGTH DATA_VALUE)*
+
