@@ -44,7 +44,8 @@ char EADD_MESSAGE[] =
 //--------------------------------------
 
 int test_sky_message_header_parse() {
-    sky_message_header *header = malloc(sizeof(sky_message_header));
+    sky_message_header *header = sky_message_header_create();
+    mu_assert(header != NULL, "");
     mu_assert(sky_message_header_parse(MESSAGE_HEADER, header) == 0, "");
     mu_assert(header->version == 1, "");
     mu_assert(header->type == 0x10001, "");
@@ -59,7 +60,8 @@ int test_sky_message_header_parse() {
 //--------------------------------------
 
 int test_sky_eadd_message_parse() {
-    sky_eadd_message *message = malloc(sizeof(sky_eadd_message));
+    sky_eadd_message *message = sky_eadd_message_create();
+    mu_assert(message != NULL, "");
     mu_assert(sky_eadd_message_parse(EADD_MESSAGE, message) == 0, "");
     mu_assert(message->object_id == 20, "");
     mu_assert(message->timestamp == 1325376000000LL, "");

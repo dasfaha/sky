@@ -18,6 +18,29 @@
 // Header
 //======================================
 
+// Creates a message header object in memory.
+sky_message_header *sky_message_header_create()
+{
+    sky_message_header *header = NULL;
+    header = calloc(1, sizeof(sky_message_header)); check_mem(header);
+
+    return header;
+
+error:
+    sky_message_header_free(header);
+    return NULL;
+}
+
+// Frees a message header from memory.
+//
+// header - The header object to be freed.
+void sky_message_header_free(sky_message_header *header)
+{
+    if(header) {
+        free(header);
+    }
+}
+
 // Retrieves the message header from memory.
 //
 // ptr     - A pointer to the start of the message.
@@ -44,21 +67,44 @@ error:
     return -1;
 }
 
-// Frees a message header from memory.
-//
-// header - The header object to be freed.
-void sky_message_header_free(sky_message_header *header)
-{
-    if(header) {
-        free(header);
-    }
-}
-
 
 
 //======================================
 // EADD
 //======================================
+
+// Creates an EADD message object.
+sky_eadd_message *sky_eadd_message_create()
+{
+    sky_eadd_message *message = NULL;
+    message = calloc(1, sizeof(sky_eadd_message)); check_mem(message);
+    
+    return message;
+
+error:
+    sky_eadd_message_free(message);
+    return NULL;
+}
+
+// Frees an EADD message object from memory.
+//
+// message - The message object to be freed.
+void sky_eadd_message_free(sky_eadd_message *message)
+{
+    if(message) {
+        uint16_t i;
+        for(i=0; i<message->data_count; i++) {
+            bdestroy(message->data_keys[i]);
+            message->data_keys[i] = NULL;
+            bdestroy(message->data_values[i]);
+            message->data_values[i] = NULL;
+        }
+        if(message->data_keys) free(message->data_keys);
+        if(message->data_values) free(message->data_values);
+        free(message);
+    }
+}
+
 
 // Parses an EADD message.
 //
@@ -70,10 +116,11 @@ void sky_message_header_free(sky_message_header *header)
 int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
 {
     // Parse header.
-    sky_message_header *header = malloc(sizeof(sky_message_header));
+    sky_message_header *header = sky_message_header_create();
     check(sky_message_header_parse(ptr, header) == 0, "Unable to parse header");
     ptr += SKY_MESSAGE_HEADER_LENGTH;
     
+
     // Determine end of message.
     void *maxptr = ptr + header->length;
     
@@ -127,22 +174,4 @@ error:
     return -1;
 }
 
-// Frees an EADD message object from memory.
-//
-// message - The message object to be freed.
-void sky_eadd_message_free(sky_eadd_message *message)
-{
-    if(message) {
-        uint16_t i;
-        for(i=0; i<message->data_count; i++) {
-            bdestroy(message->data_keys[i]);
-            message->data_keys[i] = NULL;
-            bdestroy(message->data_values[i]);
-            message->data_values[i] = NULL;
-        }
-        if(message->data_keys) free(message->data_keys);
-        if(message->data_values) free(message->data_values);
-        free(message);
-    }
-}
 

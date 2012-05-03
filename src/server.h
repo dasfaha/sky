@@ -3,12 +3,12 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <netinet/in.h>
 
 #include "bstring.h"
 #include "database.h"
 #include "object_file.h"
 #include "event.h"
-#include "dbg.h"
 
 
 //==============================================================================
@@ -28,6 +28,10 @@
 //
 //==============================================================================
 
+#define SKY_DEFAULT_PORT 8585
+
+#define SKY_LISTEN_BACKLOG 511
+
 
 //==============================================================================
 //
@@ -35,54 +39,21 @@
 //
 //==============================================================================
 
-#define sky_block_info_id_t uint32_t
+// The various states that the server can be in.
+typedef enum sky_server_state_e {
+    SKY_SERVER_STATE_STOPPED,
+    SKY_SERVER_STATE_RUNNING,
+} sky_server_state_e;
 
-// The block info stores the sequential block identifier as well as the object
-// identifier range that is stored in that block. The block info is used in the
-// header file as an index when looking up block data.
-typedef struct sky_block_info {
-    sky_block_info_id_t id;
-    sky_object_id_t min_object_id;
-    sky_object_id_t max_object_id;
-    sky_timestamp_t min_timestamp;
-    sky_timestamp_t max_timestamp;
-    bool spanned;
-} sky_block_info;
-
-// The various states that an object file can be in.
-typedef enum sky_object_file_state_e {
-    SKY_OBJECT_FILE_STATE_CLOSED,
-    SKY_OBJECT_FILE_STATE_OPEN,
-    SKY_OBJECT_FILE_STATE_LOCKED
-} sky_object_file_state_e;
-
-
-#define sky_object_file_version_t uint32_t
-#define sky_object_file_block_size_t uint32_t
-#define sky_object_file_block_count_t uint32_t
-#define sky_object_file_action_count_t uint32_t
-#define sky_object_file_property_count_t uint16_t
-
-// The object file is a reference to the disk location where data is stored. The
-// object file also maintains a cache of block info and predefined actions and
-// properties.
-typedef struct sky_object_file {
-    sky_database *database;
-    bstring name;
+typedef struct sky_server {
+    sky_server_state_e state;
     bstring path;
-    sky_object_file_state_e state;
-    sky_object_file_version_t version;
-    sky_object_file_block_size_t block_size;
-    sky_object_file_block_count_t block_count;
-    sky_block_info **infos;
-    sky_action **actions;
-    sky_object_file_action_count_t action_count;
-    sky_property **properties;
-    sky_object_file_property_count_t property_count;
-    int data_fd;
-    void *data;
-    size_t data_length;
-} sky_object_file;
+    int port;
+    struct sockaddr_in* sockaddr;
+    int socket;
+} sky_server;
+
+
 
 
 //==============================================================================
@@ -95,40 +66,18 @@ typedef struct sky_object_file {
 // Lifecycle
 //======================================
 
-sky_object_file *sky_object_file_create(sky_database *database, bstring name);
+sky_server *sky_server_create(bstring path);
 
-void sky_object_file_free(sky_object_file *object_file);
+void sky_server_free(sky_server *server);
 
 
 //======================================
 // State
 //======================================
 
-int sky_object_file_open(sky_object_file *object_file);
+int sky_server_start(sky_server *server);
 
-int sky_object_file_close(sky_object_file *object_file);
+int sky_server_stop(sky_server *server);
 
-
-//======================================
-// Locking
-//======================================
-
-int sky_object_file_lock(sky_object_file *object_file);
-
-int sky_object_file_unlock(sky_object_file *object_file);
-
-
-//======================================
-// Block Management
-//======================================
-
-int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t block_index, uint32_t *span_count);
-
-
-//======================================
-// Event Management
-//======================================
-
-int sky_object_file_add_event(sky_object_file *object_file, sky_event *event);
 
 #endif

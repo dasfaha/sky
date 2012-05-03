@@ -72,18 +72,22 @@ typedef struct sky_eadd_message {
 // Header
 //======================================
 
-int sky_message_header_parse(void *ptr, sky_message_header *header);
+sky_message_header *sky_message_header_create();
 
 void sky_message_header_free(sky_message_header *header);
+
+int sky_message_header_parse(void *ptr, sky_message_header *header);
 
 
 //======================================
 // EADD
 //======================================
 
-int sky_eadd_message_parse(void *ptr, sky_eadd_message *message);
+sky_eadd_message *sky_eadd_message_create();
 
 void sky_eadd_message_free(sky_eadd_message *message);
+
+int sky_eadd_message_parse(void *ptr, sky_eadd_message *message);
 
 
 #endif
