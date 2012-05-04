@@ -80,4 +80,11 @@ int sky_server_start(sky_server *server);
 int sky_server_stop(sky_server *server);
 
 
+//======================================
+// Message Processing
+//======================================
+
+int sky_server_process_eadd_message(sky_server *server, int socket,
+                                    void *buffer);
+
 #endif

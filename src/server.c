@@ -16,29 +16,87 @@
 //==============================================================================
 
 //======================================
-// Message Processing
+// Object file management
 //======================================
 
-// Processes an "Event Add" message.
+// Opens an object file.
 //
-// server - The server that received the message.
-// socket - The socket that sent the message.
-// buffer - The buffer that contains the full message.
+// server - The server that is opening the object file.
+// database_name - The name of the database to open.
+// object_file_name - The name of the object file to open.
+// database - Returns the instance of the database to the caller. 
+// object_file - Returns the instance of the object file to the caller. 
 //
 // Returns 0 if successful, otherwise returns -1.
-int process_eadd_message(sky_server *server, int socket, void *buffer)
+int open_object_file(sky_server *server, bstring database_name,
+                     bstring object_file_name, sky_database **database,
+                     sky_object_file **object_file)
 {
-    // TODO: Parse message from buffer.
-    // TODO: Open database.
-    // TODO: Open object file.
-    // TODO: Look up action.
-    // TODO: Look up property keys.
-    // TODO: Add event.
-    // TODO: Send respond to socket.
+    int rc;
+    
+    // Determine the path to the database.
+    bstring path = bformat("%s/%s", bdata(server->path), bdata(database_name)); 
+    
+    // Create the database.
+    *database = sky_database_create(path);
+    check_mem(*database);
+    
+    // Create the object file.
+    *object_file = sky_object_file_create(*database, object_file_name);
+    check_mem(*object_file);
+    
+    // Open the object file.
+    rc = sky_object_file_open(*object_file);
+    check(rc == 0, "Unable to open object file");
+    
+    // Lock the object file.
+    rc = sky_object_file_lock(*object_file);
+    check(rc == 0, "Unable to lock object file");
     
     return 0;
 
 error:
+    sky_database_free(*database);
+    sky_object_file_free(*object_file);
+    *database = NULL;
+    *object_file = NULL;
+    return -1;
+}
+
+// Closes an object file.
+//
+// server - The server that is opening the object file.
+// database - The database that the object file belongs to.
+// object_file - The object file to close.
+//
+// Returns 0 if successful, otherwise returns -1.
+int close_object_file(sky_server *server, sky_database *database,
+                      sky_object_file *object_file)
+{
+    int rc;
+    
+    // HACK: Suppress unused "server" variable warning for now.
+    server = server;
+    
+    // Unlock the object file.
+    rc = sky_object_file_unlock(object_file);
+    check(rc == 0, "Unable to unlock object file");
+
+    // Close the object file.
+    rc = sky_object_file_close(object_file);
+    check(rc == 0, "Unable to close object file");
+
+    // Free the object file.
+    sky_object_file_free(object_file);
+    
+    // Free the database file.
+    sky_database_free(database);
+    
+    return 0;
+
+error:
+    sky_object_file_free(object_file);
+    sky_database_free(database);
     return -1;
 }
 
@@ -187,7 +245,7 @@ int sky_server_accept(sky_server *server)
     // Parse appropriate message type.
     switch(header->type) {
         case SKY_MESSAGE_EADD: {
-            rc = process_eadd_message(server, socket, buffer);
+            rc = sky_server_process_eadd_message(server, socket, buffer);
             check(rc == 0, "Unable to process EADD message");
             break;
         }
@@ -209,3 +267,80 @@ error:
     if(socket > 0) close(socket);
     return -1;
 }
+
+
+//======================================
+// Message Processing
+//======================================
+
+// Processes an "Event Add" message.
+//
+// server - The server that received the message.
+// socket - The socket that sent the message.
+// buffer - The buffer that contains the full message.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_eadd_message(sky_server *server, int socket,
+                                    void *buffer)
+{
+    int rc;
+    
+    // Parse message from buffer.
+    sky_eadd_message *message = sky_eadd_message_create();
+    rc = sky_eadd_message_parse(buffer, message);
+    
+    // Validate message.
+    check(server->path != NULL, "Server path is required");
+    check(message->database_name != NULL, "Database name is required");
+    check(message->object_file_name != NULL, "Object file name is required");
+    check(message->object_id != 0, "Object ID is required");
+    
+    // Open object file.
+    sky_database *database;
+    sky_object_file *object_file;
+    open_object_file(server, message->database_name, message->object_file_name,
+                     &database, &object_file);
+
+    // Look up action.
+    sky_action_id_t action_id = 0;
+    if(message->action_name != NULL) {
+        rc = sky_object_file_find_or_create_action_id_by_name(object_file, message->action_name, &action_id);
+        check(rc == 0, "Unable to find or create action id: %s", bdata(message->action_name));
+    }
+
+    // Create event.
+    sky_event *event = sky_event_create(message->timestamp, message->object_id, action_id);
+    
+    // Add data to event.
+    int i;
+    for(i=0; i<message->data_count; i++) {
+        // Look up key.
+        sky_property_id_t property_id;
+        rc = sky_object_file_find_or_create_property_id_by_name(object_file, message->data_keys[i], &property_id);
+        check(rc == 0, "Unable to find or create property id: %s", bdata(message->data_keys[i]));
+        
+        // Add event data.
+        sky_event_set_data(event, property_id, message->data_values[i]);
+    }
+    
+    // Add event to object file.
+    rc = sky_object_file_add_event(object_file, event);
+    check(rc == 0, "Unable to add event to object file");
+    
+    // TODO: Send respond to socket.
+    
+    // Close object file.
+    close_object_file(server, database, object_file);
+
+    // Clean up.
+    sky_event_free(event);
+    sky_eadd_message_free(message);
+
+    return 0;
+
+error:
+    sky_event_free(event);
+    sky_eadd_message_free(message);
+    return -1;
+}
+

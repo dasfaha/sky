@@ -127,6 +127,10 @@ timestamped event for an object containing the action and/or any related data.
 
 Below is the form of the body of the EADD message in EBNF:
 
+    DB_NAME_LENGTH = uint8
+    DB_NAME = char*
+    OBJ_FILE_NAME_LENGTH = uint8
+    OBJ_FILE_NAME_NAME = char*
     OBJECT_ID = int64
     TIMESTAMP = int64
     ACTION_NAME_LENGTH = uint16

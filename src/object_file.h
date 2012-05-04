@@ -150,4 +150,21 @@ int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t 
 
 int sky_object_file_add_event(sky_object_file *object_file, sky_event *event);
 
+
+//======================================
+// Action Management
+//======================================
+
+int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_file,
+                                                     bstring name,
+                                                     sky_action_id_t *action_id);
+
+//======================================
+// Property Management
+//======================================
+
+int sky_object_file_find_or_create_property_id_by_name(sky_object_file *object_file,
+                                                       bstring name,
+                                                       sky_property_id_t *property_id);
+
 #endif

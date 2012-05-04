@@ -312,6 +312,66 @@ int unload_header(sky_object_file *object_file)
 // Action Management
 //======================================
 
+// Retrieves the file path of an object file's actions file.
+//
+// object_file - The object file who owns the header file.
+bstring get_actions_file_path(sky_object_file *object_file)
+{
+    return bformat("%s/actions", bdata(object_file->path)); 
+}
+
+// Saves action information to file.
+//
+// object_file - The object file where the action information is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
+int save_actions(sky_object_file *object_file)
+{
+    int rc;
+
+    // Open the actions file.
+    bstring path = get_actions_file_path(object_file); check_mem(path);
+    FILE *file = fopen(bdata(path), "w");
+    check(file, "Failed to open actions file for writing: %s", bdata(path));
+
+    // Write action count.
+    rc = fwrite(&object_file->action_count, sizeof(object_file->action_count), 1, file);
+    check(rc == 1, "Unable to write action count");
+
+    // Write actions to file.
+    sky_object_file_action_count_t i;
+    for(i=0; i<object_file->action_count; i++) {
+        sky_action *action = object_file->actions[i];
+        
+        // Write action id.
+        rc = fwrite(&action->id, sizeof(sky_action_id_t), 1, file);
+        check(rc == 1, "Unable to write action id");
+
+        // Write action name length.
+        uint16_t action_name_length = blength(action->name);
+        rc = fwrite(&action_name_length, sizeof(action_name_length), 1, file);
+        check(rc == 1, "Unable to write action name length");
+
+        // Write action name.
+        char *name = bdata(action->name);
+        rc = fwrite(name, action_name_length, 1, file);
+        check(rc == 1, "Unable to write action name");
+    }
+
+    // Close the file.
+    fclose(file);
+
+    // Clean up.
+    bdestroy(path);
+
+    return 0;
+
+error:
+    bdestroy(path);
+    if(file) fclose(file);
+    return -1;
+}
+
 // Loads action information from file.
 //
 // object_file - The object file where the action information is stored.
@@ -325,7 +385,7 @@ int load_actions(sky_object_file *object_file)
     sky_object_file_action_count_t count = 0;
     
     // Retrieve file stats on actions file
-    bstring path = bformat("%s/actions", bdata(object_file->path)); check_mem(path);
+    bstring path = get_actions_file_path(object_file); check_mem(path);
     
     // Read in actions file if it exists.
     if(file_exists(path)) {
@@ -408,6 +468,67 @@ int unload_actions(sky_object_file *object_file)
 // Property Management
 //======================================
 
+// Retrieves the file path of an object file's actions file.
+//
+// object_file - The object file who owns the header file.
+bstring get_properties_file_path(sky_object_file *object_file)
+{
+    return bformat("%s/properties", bdata(object_file->path)); 
+}
+
+
+// Saves property information to file.
+//
+// object_file - The object file where the property information is stored.
+//
+// Returns 0 if successful, otherwise returns -1.
+int save_properties(sky_object_file *object_file)
+{
+    int rc;
+
+    // Open the properties file.
+    bstring path = get_properties_file_path(object_file); check_mem(path);
+    FILE *file = fopen(bdata(path), "w");
+    check(file, "Failed to open properties file for writing: %s", bdata(path));
+
+    // Write property count.
+    rc = fwrite(&object_file->property_count, sizeof(object_file->property_count), 1, file);
+    check(rc == 1, "Unable to write property count");
+
+    // Write properties to file.
+    sky_object_file_property_count_t i;
+    for(i=0; i<object_file->property_count; i++) {
+        sky_property *property = object_file->properties[i];
+        
+        // Write property id.
+        rc = fwrite(&property->id, sizeof(sky_property_id_t), 1, file);
+        check(rc == 1, "Unable to write property id");
+
+        // Write property name length.
+        uint16_t property_name_length = blength(property->name);
+        rc = fwrite(&property_name_length, sizeof(property_name_length), 1, file);
+        check(rc == 1, "Unable to write property name length");
+
+        // Write property name.
+        char *name = bdata(property->name);
+        rc = fwrite(name, property_name_length, 1, file);
+        check(rc == 1, "Unable to write property name");
+    }
+
+    // Close the file.
+    fclose(file);
+
+    // Clean up.
+    bdestroy(path);
+
+    return 0;
+
+error:
+    bdestroy(path);
+    if(file) fclose(file);
+    return -1;
+}
+
 // Loads property information from file.
 //
 // object_file - The object file from which to load property definitions.
@@ -421,7 +542,7 @@ int load_properties(sky_object_file *object_file)
     sky_object_file_property_count_t count = 0;
     
     // Retrieve file stats on properties file
-    bstring path = bformat("%s/properties", bdata(object_file->path)); check_mem(path);
+    bstring path = get_properties_file_path(object_file); check_mem(path);
     
     // Read in properties file if it exists.
     if(file_exists(path)) {
@@ -1337,5 +1458,123 @@ int sky_object_file_add_event(sky_object_file *object_file, sky_event *event)
 error:
     // TODO: Restore state of database if an error occurred.
     sky_block_free(block);
+    return -1;
+}
+
+
+//======================================
+// Action Management
+//======================================
+
+// Retrieves the id for an action with a given name.
+//
+// object_file - The object file that the action belongs to.
+// name        - The name of the action.
+// action_id   - A pointer to where the action id should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_file,
+                                                     bstring name,
+                                                     sky_action_id_t *action_id)
+{
+    check(object_file != NULL, "Object file required");
+    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be open to retrieve action");
+    check(name != NULL, "Action name required");
+    check(blength(name) > 0, "Action name cannot be blank");
+    
+    // Initialize action id to zero.
+    *action_id = 0;
+    
+    // Loop over actions to find matching name.
+    sky_object_file_action_count_t i;
+    for(i=0; i<object_file->action_count; i++) {
+        if(biseq(object_file->actions[i]->name, name) == 1) {
+            *action_id = object_file->actions[i]->id;
+            break;
+        }
+    }
+    
+    // If no action was found then create one.
+    if(*action_id == 0) {
+        // Create action.
+        sky_action *action = malloc(sizeof(sky_action)); check_mem(action);
+        action->id = object_file->action_count+1;
+        action->name = bstrcpy(name);
+        
+        // Append to actions.
+        object_file->action_count++;
+        object_file->actions = realloc(object_file->actions, sizeof(sky_action*) * object_file->action_count);
+        object_file->actions[object_file->action_count-1] = action;
+        
+        // Save actions file.
+        save_actions(object_file);
+        
+        // Return action id to caller.
+        *action_id = action->id;
+    }
+    
+    return 0;
+
+error:
+    *action_id = 0;
+    return -1;
+}
+
+
+//======================================
+// Property Management
+//======================================
+
+// Retrieves the id for a property with a given name.
+//
+// object_file - The object file that the property belongs to.
+// name        - The name of the property.
+// property_id - A pointer to where the property id should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_object_file_find_or_create_property_id_by_name(sky_object_file *object_file,
+                                                       bstring name,
+                                                       sky_property_id_t *property_id)
+{
+    check(object_file != NULL, "Object file required");
+    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be open to retrieve property");
+    check(name != NULL, "Property name required");
+    check(blength(name) > 0, "Property name cannot be blank");
+    
+    // Initialize property id to zero.
+    *property_id = 0;
+    
+    // Loop over properties to find matching name.
+    sky_object_file_property_count_t i;
+    for(i=0; i<object_file->property_count; i++) {
+        if(biseq(object_file->properties[i]->name, name) == 1) {
+            *property_id = object_file->properties[i]->id;
+            break;
+        }
+    }
+    
+    // If no property was found then create one.
+    if(*property_id == 0) {
+        // Create property.
+        sky_property *property = malloc(sizeof(sky_property)); check_mem(property);
+        property->id = object_file->property_count+1;
+        property->name = bstrcpy(name);
+        
+        // Append to properties.
+        object_file->property_count++;
+        object_file->properties = realloc(object_file->properties, sizeof(sky_property*) * object_file->property_count);
+        object_file->properties[object_file->property_count-1] = property;
+        
+        // Save properties file.
+        save_properties(object_file);
+        
+        // Return property id to caller.
+        *property_id = property->id;
+    }
+    
+    return 0;
+
+error:
+    *property_id = 0;
     return -1;
 }

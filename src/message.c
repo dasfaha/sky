@@ -119,13 +119,22 @@ int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
     sky_message_header *header = sky_message_header_create();
     check(sky_message_header_parse(ptr, header) == 0, "Unable to parse header");
     ptr += SKY_MESSAGE_HEADER_LENGTH;
-    
 
     // Determine end of message.
     void *maxptr = ptr + header->length;
     
     // TODO: Check for EOF of message before each read.
-    
+
+    // Parse database name.
+    uint8_t database_name_length;
+    memread(ptr, &database_name_length, sizeof(database_name_length), "message database name length");
+    memread_bstr(ptr, message->database_name, database_name_length, "message database name");
+
+    // Parse object file name.
+    uint8_t object_file_name_length;
+    memread(ptr, &object_file_name_length, sizeof(object_file_name_length), "message object file name length");
+    memread_bstr(ptr, message->object_file_name, object_file_name_length, "message object file name");
+
     // Parse object id.
     memread(ptr, &message->object_id, sizeof(message->object_id), "message object id");
     message->object_id = ntohll(message->object_id);
