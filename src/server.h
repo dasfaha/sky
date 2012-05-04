@@ -81,6 +81,13 @@ int sky_server_stop(sky_server *server);
 
 
 //======================================
+// Connection Management
+//======================================
+
+int sky_server_accept(sky_server *server);
+
+
+//======================================
 // Message Processing
 //======================================
 

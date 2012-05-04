@@ -210,6 +210,11 @@ int sky_server_stop(sky_server *server)
     return 0;
 }
 
+
+//======================================
+// Connection Management
+//======================================
+
 // Accepts a connection on a running server. Once a connection is accepted then
 // the message is parsed and processed.
 //

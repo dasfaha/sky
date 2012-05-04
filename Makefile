@@ -16,7 +16,7 @@ TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 # Default Target
 ################################################################################
 
-all: build/libsky.a build/sky-gen build/sky-bench test
+all: build/libsky.a build/skyd build/sky-gen build/sky-bench test
 
 
 ################################################################################
@@ -27,6 +27,10 @@ build/libsky.a: build ${LIB_OBJECTS}
 	rm -f build/libsky.a
 	ar rcs $@ ${LIB_OBJECTS}
 	ranlib $@
+
+build/skyd: build ${OBJECTS}
+	$(CC) $(CFLAGS) src/skyd.o -o $@ build/libsky.a
+	chmod 700 $@
 
 build/sky-gen: build ${OBJECTS}
 	$(CC) $(CFLAGS) src/sky_gen.o -o $@ build/libsky.a

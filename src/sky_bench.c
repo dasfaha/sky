@@ -111,7 +111,7 @@ error:
     exit(1);
 }
 
-void Options_destroy(Options *options)
+void Options_free(Options *options)
 {
     if(options) {
         bdestroy(options->path);
@@ -284,7 +284,7 @@ int main(int argc, char **argv)
     printf("Elapsed Time: %.3f seconds\n", ((float)(t1-t0))/1000);
 
     // Clean up.
-    Options_destroy(options);
+    Options_free(options);
     
     return 0;
 }

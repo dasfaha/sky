@@ -10,7 +10,7 @@
 //
 //==============================================================================
 
-int test_sky_database_create_destroy() {
+int test_sky_database_create() {
     struct tagbstring root = bsStatic("/etc/sky/data");
     sky_database *database = sky_database_create(&root);
     mu_assert(database != NULL, "Could not create database");
@@ -28,7 +28,7 @@ int test_sky_database_create_destroy() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_database_create_destroy);
+    mu_run_test(test_sky_database_create);
     return 0;
 }
 
