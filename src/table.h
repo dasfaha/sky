@@ -1,5 +1,5 @@
-#ifndef _object_file_h
-#define _object_file_h
+#ifndef _table_h
+#define _table_h
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -17,8 +17,8 @@
 //
 //==============================================================================
 
-// The object file represents the storage for a type of object. The object file
-// is analogous to a table in a relational database. The object file is
+// The table represents the storage for a type of object. The table
+// is analogous to a table in a relational database. The table is
 // represented on the file system as a directory that contains a header file
 // and multiple data extent files numbered sequentially (1, 2, 3, etc).
 //
@@ -68,40 +68,40 @@ typedef struct sky_block_info {
     bool spanned;
 } sky_block_info;
 
-// The various states that an object file can be in.
-typedef enum sky_object_file_state_e {
+// The various states that an table can be in.
+typedef enum sky_table_state_e {
     SKY_OBJECT_FILE_STATE_CLOSED,
     SKY_OBJECT_FILE_STATE_OPEN,
     SKY_OBJECT_FILE_STATE_LOCKED
-} sky_object_file_state_e;
+} sky_table_state_e;
 
 
-#define sky_object_file_version_t uint32_t
-#define sky_object_file_block_size_t uint32_t
-#define sky_object_file_block_count_t uint32_t
-#define sky_object_file_action_count_t uint32_t
-#define sky_object_file_property_count_t uint16_t
+#define sky_table_version_t uint32_t
+#define sky_table_block_size_t uint32_t
+#define sky_table_block_count_t uint32_t
+#define sky_table_action_count_t uint32_t
+#define sky_table_property_count_t uint16_t
 
-// The object file is a reference to the disk location where data is stored. The
-// object file also maintains a cache of block info and predefined actions and
+// The table is a reference to the disk location where data is stored. The
+// table also maintains a cache of block info and predefined actions and
 // properties.
-typedef struct sky_object_file {
+typedef struct sky_table {
     sky_database *database;
     bstring name;
     bstring path;
-    sky_object_file_state_e state;
-    sky_object_file_version_t version;
-    sky_object_file_block_size_t block_size;
-    sky_object_file_block_count_t block_count;
+    sky_table_state_e state;
+    sky_table_version_t version;
+    sky_table_block_size_t block_size;
+    sky_table_block_count_t block_count;
     sky_block_info **infos;
     sky_action **actions;
-    sky_object_file_action_count_t action_count;
+    sky_table_action_count_t action_count;
     sky_property **properties;
-    sky_object_file_property_count_t property_count;
+    sky_table_property_count_t property_count;
     int data_fd;
     void *data;
     size_t data_length;
-} sky_object_file;
+} sky_table;
 
 
 //==============================================================================
@@ -114,48 +114,48 @@ typedef struct sky_object_file {
 // Lifecycle
 //======================================
 
-sky_object_file *sky_object_file_create(sky_database *database, bstring name);
+sky_table *sky_table_create(sky_database *database, bstring name);
 
-void sky_object_file_free(sky_object_file *object_file);
+void sky_table_free(sky_table *table);
 
 
 //======================================
 // State
 //======================================
 
-int sky_object_file_open(sky_object_file *object_file);
+int sky_table_open(sky_table *table);
 
-int sky_object_file_close(sky_object_file *object_file);
+int sky_table_close(sky_table *table);
 
 
 //======================================
 // Locking
 //======================================
 
-int sky_object_file_lock(sky_object_file *object_file);
+int sky_table_lock(sky_table *table);
 
-int sky_object_file_unlock(sky_object_file *object_file);
+int sky_table_unlock(sky_table *table);
 
 
 //======================================
 // Block Management
 //======================================
 
-int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t block_index, uint32_t *span_count);
+int sky_table_get_block_span_count(sky_table *table, uint32_t block_index, uint32_t *span_count);
 
 
 //======================================
 // Event Management
 //======================================
 
-int sky_object_file_add_event(sky_object_file *object_file, sky_event *event);
+int sky_table_add_event(sky_table *table, sky_event *event);
 
 
 //======================================
 // Action Management
 //======================================
 
-int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_file,
+int sky_table_find_or_create_action_id_by_name(sky_table *table,
                                                      bstring name,
                                                      sky_action_id_t *action_id);
 
@@ -163,7 +163,7 @@ int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_fil
 // Property Management
 //======================================
 
-int sky_object_file_find_or_create_property_id_by_name(sky_object_file *object_file,
+int sky_table_find_or_create_property_id_by_name(sky_table *table,
                                                        bstring name,
                                                        sky_property_id_t *property_id);
 

@@ -22,8 +22,8 @@ these types.
 
 ### Overview
 
-Each Sky database is a directory containing object files (which are also
-directories). Object files contain the following data and control files:
+Each Sky database is a directory containing tables (which are also
+directories). Tables contain the following data and control files:
 
 1. `data` - The main data file. It is subdivided into blocks which store paths
    and events.
@@ -31,12 +31,12 @@ directories). Object files contain the following data and control files:
 1. `header` - Stores object id ranges for blocks in the data file. It works as
    an index for finding paths by object id.
 
-1. `actions` - A list of actions in the object file and their associated id.
+1. `actions` - A list of actions in the table and their associated id.
 
-1. `properties` - A list of property keys in the object file and their
+1. `properties` - A list of property keys in the table and their
    associated id.
 
-1. `.lock` - A file used for locking the object file for writing.
+1. `.lock` - A file used for locking the table for writing.
 
 
 ### Format

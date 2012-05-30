@@ -50,10 +50,10 @@ sky_block *create_test_block0()
     sky_block_info info;
 
     sky_database *database = sky_database_create(&dbpath);
-    sky_object_file *object_file = sky_object_file_create(database, &objname);
-    object_file->block_size = 0x10000;  // 64K
+    sky_table *table = sky_table_create(database, &objname);
+    table->block_size = 0x10000;  // 64K
 
-    sky_block *block = sky_block_create(object_file, &info);
+    sky_block *block = sky_block_create(table, &info);
 
     // Path 2 (len=17)
     event = sky_event_create(946692000000000LL, 11, 0);
@@ -153,10 +153,10 @@ int test_sky_block_deserialize() {
     sky_block_info info;
 
     sky_database *database = sky_database_create(&dbpath);
-    sky_object_file *object_file = sky_object_file_create(database, &objname);
-    object_file->block_size = 0x10000;  // 64K
+    sky_table *table = sky_table_create(database, &objname);
+    table->block_size = 0x10000;  // 64K
 
-    sky_block *block = sky_block_create(object_file, &info);
+    sky_block *block = sky_block_create(table, &info);
     sky_block_deserialize(block, &DATA, &ptrdiff);
 
     mu_assert(ptrdiff == 79, "");

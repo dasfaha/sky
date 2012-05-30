@@ -10,8 +10,8 @@
 //==============================================================================
 
 /**
- * The database is a collection of object files. For more information on the
- * data storage format, read the object_file.c source.
+ * The database is a collection of tables. For more information on the
+ * data storage format, read the table.c source.
  */
 
 

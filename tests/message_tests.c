@@ -23,7 +23,7 @@ char EADD_MESSAGE[] =
     "\x00\x01\x00\x01"                  // Type
     "\x00\x00\x00\x3D"                  // Length (71 bytes)
     "\x03" "foo"                        // Database Name
-    "\x05" "users"                      // Object File Name
+    "\x05" "users"                      // Table Name
     "\x00\x00\x00\x00\x00\x00\x00\x14"  // Object ID
     "\x00\x00\x01\x34\x96\x90\xD0\x00"  // Timestamp
     "\x00\x07" "sign up"                // Action Name
@@ -66,7 +66,7 @@ int test_sky_eadd_message_parse() {
     mu_assert(message != NULL, "");
     mu_assert(sky_eadd_message_parse(EADD_MESSAGE, message) == 0, "");
     mu_assert(biseqcstr(message->database_name, "foo"), "");
-    mu_assert(biseqcstr(message->object_file_name, "users"), "");
+    mu_assert(biseqcstr(message->table_name, "users"), "");
     mu_assert(message->object_id == 20, "");
     mu_assert(message->timestamp == 1325376000000LL, "");
     mu_assert(biseqcstr(message->action_name, "sign up"), "");

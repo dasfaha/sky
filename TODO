@@ -1,21 +1,34 @@
-- Server
-  - Command parser
-  - Add event
-  - Find object path
+# Server
+- Tests
+- Daemonize
 
-- EQL
-  - flex/bison -> AST
-  - AST -> LLVM
-  - Integrate LLVM with iterator.
-  - Add standalone support
-  - Add server support
+# EQL
+- flex/bison -> AST
+- AST -> LLVM
+- Integrate LLVM with iterator.
+- Add standalone support
+- Add server support
 
-- Multicore
-  - ZMQ messaging
-  - Shard object files
+# Client API (hisky)
+- Add event
+- EQL query
+- Ruby impl
 
-- Distributed
-  - ZMQ messaging
-  - Load balancing
-  - Heartbeat
-  
+# Technical Debt
+- Keep databases open on server.
+- Rewrite header file to be in-memory.
+
+# Documentation
+- man pages
+- web site
+- pdf
+
+# Multicore
+- ZMQ messaging
+- Shard tables
+
+# Distributed
+- ZMQ messaging
+- Load balancing
+- Heartbeat
+

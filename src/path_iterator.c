@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "path_iterator.h"
-#include "object_file.h"
+#include "table.h"
 #include "block.h"
 #include "path.h"
 #include "mem.h"
@@ -26,8 +26,8 @@
 // Returns a pointer to the address of the current path.
 void *get_data_address(sky_path_iterator *iterator)
 {
-    sky_block_info *info = iterator->object_file->infos[iterator->block_index];
-    return iterator->object_file->data + (info->id * iterator->object_file->block_size) + iterator->byte_index;
+    sky_block_info *info = iterator->table->infos[iterator->block_index];
+    return iterator->table->data + (info->id * iterator->table->block_size) + iterator->byte_index;
 }
 
 //======================================
@@ -36,16 +36,16 @@ void *get_data_address(sky_path_iterator *iterator)
 
 // Creates a reference to a path iterator.
 // 
-// object_file - The object file to iterate over.
+// table - The table to iterate over.
 //
 // Returns a reference to the new path iterator if successful. Otherwise returns
 // null.
-sky_path_iterator *sky_path_iterator_create(sky_object_file *object_file)
+sky_path_iterator *sky_path_iterator_create(sky_table *table)
 {
     sky_path_iterator *iterator;
     
     iterator = malloc(sizeof(sky_path_iterator)); check_mem(iterator);
-    iterator->object_file = object_file;
+    iterator->table = table;
     iterator->block_index = 0;
     iterator->byte_index = BLOCK_HEADER_LENGTH;
     iterator->eof = false;
@@ -63,7 +63,7 @@ error:
 void sky_path_iterator_free(sky_path_iterator *iterator)
 {
     if(iterator) {
-        iterator->object_file = NULL;
+        iterator->table = NULL;
         free(iterator);
     }
 }
@@ -89,14 +89,14 @@ int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
     check(cursor != NULL, "Existing cursor is required for iteration");
 
     // Retrieve some data file info.
-    uint32_t block_size  = iterator->object_file->block_size;
-    uint32_t block_count = iterator->object_file->block_count;
+    uint32_t block_size  = iterator->table->block_size;
+    uint32_t block_count = iterator->table->block_count;
     
     // Loop until we find the next available path.
     void *ptr = NULL;
     while(true) {
         // Determine address of current location.
-        sky_block_info *info = iterator->object_file->infos[iterator->block_index];
+        sky_block_info *info = iterator->table->infos[iterator->block_index];
         ptr = get_data_address(iterator);
 
         // If byte index is too close to the end-of-block or if there is no more
@@ -126,7 +126,7 @@ int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
             if(info->spanned) {
                 uint32_t i, span_count;
 
-                rc = sky_object_file_get_block_span_count(iterator->object_file, iterator->block_index, &span_count);
+                rc = sky_table_get_block_span_count(iterator->table, iterator->block_index, &span_count);
                 check(rc == 0, "Unable to calculate span count");
                 iterator->byte_index = BLOCK_HEADER_LENGTH;
 

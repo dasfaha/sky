@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-#include "object_file.h"
+#include "table.h"
 #include "path.h"
 #include "event.h"
 
@@ -39,7 +39,7 @@
 //==============================================================================
 
 typedef struct sky_block {
-    sky_object_file *object_file;
+    sky_table *table;
     sky_block_info *info;
     sky_path_count_t path_count;
     sky_path **paths;
@@ -56,7 +56,7 @@ typedef struct sky_block {
 // Lifecycle
 //======================================
 
-sky_block *sky_block_create(sky_object_file *object_file, sky_block_info *info);
+sky_block *sky_block_create(sky_table *table, sky_block_info *info);
 
 void sky_block_free(sky_block *block);
 

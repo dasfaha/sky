@@ -21,7 +21,7 @@ char EADD_MESSAGE[] =
     "\x00\x01\x00\x01"                  // Type
     "\x00\x00\x00\x3C"                  // Length (70 bytes)
     "\x02" "db"                         // Database Name
-    "\x05" "users"                      // Object File Name
+    "\x05" "users"                      // Table Name
     "\x00\x00\x00\x00\x00\x00\x00\x14"  // Object ID
     "\x00\x00\x01\x34\x96\x90\xD0\x00"  // Timestamp
     "\x00\x07" "sign up"                // Action Name

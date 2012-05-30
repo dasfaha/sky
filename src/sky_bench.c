@@ -6,7 +6,7 @@
 #include "bstring.h"
 #include "dbg.h"
 #include "database.h"
-#include "object_file.h"
+#include "table.h"
 #include "cursor.h"
 #include "path_iterator.h"
 #include "version.h"
@@ -162,19 +162,19 @@ void benchmark_dag(Options *options)
     sky_database *database = sky_database_create(options->path);
     check_mem(database);
     
-    // Open object file.
-    sky_object_file *object_file = sky_object_file_create(database, options->object_type);
-    check_mem(object_file);
+    // Open table.
+    sky_table *table = sky_table_create(database, options->object_type);
+    check_mem(table);
     
-    check(sky_object_file_open(object_file) == 0, "Unable to open object file");
-    check(sky_object_file_lock(object_file) == 0, "Unable to lock object file");
+    check(sky_table_open(table) == 0, "Unable to open table");
+    check(sky_table_lock(table) == 0, "Unable to lock table");
 
     // Loop for desired number of iterations.
     int i;
     for(i=0; i<options->iterations; i++) {
-        // Create a path iterator for the object file.
+        // Create a path iterator for the table.
         sky_cursor *cursor = sky_cursor_create();
-        sky_path_iterator *iterator = sky_path_iterator_create(object_file);
+        sky_path_iterator *iterator = sky_path_iterator_create(table);
         sky_path_iterator_next(iterator, cursor);
         
         // Create a square matrix of structs.
@@ -234,13 +234,13 @@ void benchmark_dag(Options *options)
         //printf("total: %d\n", total);
     }
     
-    // Close object file
-    check(sky_object_file_unlock(object_file) == 0, "Unable to unlock object file");
-    check(sky_object_file_close(object_file) == 0, "Unable to close object file");
+    // Close table
+    check(sky_table_unlock(table) == 0, "Unable to unlock table");
+    check(sky_table_close(table) == 0, "Unable to close table");
     
     // Clean up
     sky_database_free(database);
-    sky_object_file_free(object_file);
+    sky_table_free(table);
 
     // Show stats.
     printf("Total events processed: %d\n", event_count);
@@ -249,10 +249,10 @@ void benchmark_dag(Options *options)
     
 error:
     sky_event_free(event);
-    sky_object_file_close(object_file);
+    sky_table_close(table);
 
     sky_database_free(database);
-    sky_object_file_free(object_file);
+    sky_table_free(table);
 }
 
 

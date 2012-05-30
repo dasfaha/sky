@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "bstring.h"
-#include "object_file.h"
+#include "table.h"
 #include "cursor.h"
 
 
@@ -22,8 +22,8 @@
 // used to iterate over the raw path data.
 //
 // To perform the relational database equivalent of a full table scan, the
-// `sky_object_file_create_iterator()` function can be used to create a path
-// iterator. That contains all the paths in the object file.
+// `sky_table_create_iterator()` function can be used to create a path
+// iterator. That contains all the paths in the table.
 //
 // The path iterator operates as a forward-only iterator. Jumping to the
 // previous path or jumping to a path by index is not allowed.
@@ -41,7 +41,7 @@
 //==============================================================================
 
 typedef struct sky_path_iterator {
-    sky_object_file *object_file;
+    sky_table *table;
     uint32_t block_index;
     uint32_t byte_index;
     bool eof;
@@ -58,7 +58,7 @@ typedef struct sky_path_iterator {
 // Lifecycle
 //======================================
 
-sky_path_iterator *sky_path_iterator_create(sky_object_file *object_file);
+sky_path_iterator *sky_path_iterator_create(sky_table *table);
 
 void sky_path_iterator_free(sky_path_iterator *iterator);
 

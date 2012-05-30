@@ -130,10 +130,10 @@ int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
     memread(ptr, &database_name_length, sizeof(database_name_length), "message database name length");
     memread_bstr(ptr, message->database_name, database_name_length, "message database name");
 
-    // Parse object file name.
-    uint8_t object_file_name_length;
-    memread(ptr, &object_file_name_length, sizeof(object_file_name_length), "message object file name length");
-    memread_bstr(ptr, message->object_file_name, object_file_name_length, "message object file name");
+    // Parse table name.
+    uint8_t table_name_length;
+    memread(ptr, &table_name_length, sizeof(table_name_length), "message table name length");
+    memread_bstr(ptr, message->table_name, table_name_length, "message table name");
 
     // Parse object id.
     memread(ptr, &message->object_id, sizeof(message->object_id), "message object id");

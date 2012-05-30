@@ -54,7 +54,7 @@ typedef struct sky_message_header {
 // A message for adding events to the database.
 typedef struct sky_eadd_message {
     bstring database_name;
-    bstring object_file_name;
+    bstring table_name;
     sky_object_id_t object_id;
     sky_timestamp_t timestamp;
     bstring action_name;

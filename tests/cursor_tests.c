@@ -31,15 +31,15 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 int test_sky_cursor_next() {
     copydb("cursor0");
 
-    // Open object file and create iterator.
+    // Open table and create iterator.
     sky_database *database = sky_database_create(&ROOT);
-    sky_object_file *object_file = sky_object_file_create(database, &OBJECT_TYPE);
-    sky_object_file_open(object_file);
+    sky_table *table = sky_table_create(database, &OBJECT_TYPE);
+    sky_table_open(table);
 
     sky_cursor *cursor = sky_cursor_create();
-    sky_path_iterator *iterator = sky_path_iterator_create(object_file);
+    sky_path_iterator *iterator = sky_path_iterator_create(table);
     
-    void *data = object_file->data;
+    void *data = table->data;
 
     // First path (OID#10).
     sky_path_iterator_next(iterator, cursor);
@@ -78,8 +78,8 @@ int test_sky_cursor_next() {
     sky_path_iterator_free(iterator);
     sky_cursor_free(cursor);
 
-    sky_object_file_close(object_file);
-    sky_object_file_free(object_file);
+    sky_table_close(table);
+    sky_table_free(table);
     sky_database_free(database);
     
     return 0;

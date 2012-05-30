@@ -7,7 +7,7 @@
 
 #include "bstring.h"
 #include "database.h"
-#include "object_file.h"
+#include "table.h"
 #include "event.h"
 
 

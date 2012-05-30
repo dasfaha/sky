@@ -6,7 +6,7 @@
 #include "bstring.h"
 #include "dbg.h"
 #include "database.h"
-#include "object_file.h"
+#include "table.h"
 #include "version.h"
 
 
@@ -186,12 +186,12 @@ void generate(Options *options)
     sky_database *database = sky_database_create(options->path);
     check_mem(database);
     
-    // Open object file.
-    sky_object_file *object_file = sky_object_file_create(database, options->object_type);
-    check_mem(object_file);
+    // Open table.
+    sky_table *table = sky_table_create(database, options->object_type);
+    check_mem(table);
     
-    check(sky_object_file_open(object_file) == 0, "Unable to open object file");
-    check(sky_object_file_lock(object_file) == 0, "Unable to lock object file");
+    check(sky_table_open(table) == 0, "Unable to open table");
+    check(sky_table_lock(table) == 0, "Unable to lock table");
 
     // Loop over paths and create events.
     int i, j;
@@ -204,28 +204,28 @@ void generate(Options *options)
             sky_timestamp_t timestamp = random() % INT64_MAX;
             sky_action_id_t action_id = (random() % options->action_count) + 1;
             event = sky_event_create(timestamp, object_id, action_id);
-            rc = sky_object_file_add_event(object_file, event);
+            rc = sky_table_add_event(table, event);
             check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%d", event->timestamp, event->object_id, event->action_id);
             sky_event_free(event);
         }
     }
     
-    // Close object file
-    check(sky_object_file_unlock(object_file) == 0, "Unable to unlock object file");
-    check(sky_object_file_close(object_file) == 0, "Unable to close object file");
+    // Close table
+    check(sky_table_unlock(table) == 0, "Unable to unlock table");
+    check(sky_table_close(table) == 0, "Unable to close table");
     
     // Clean up
     sky_database_free(database);
-    sky_object_file_free(object_file);
+    sky_table_free(table);
     
     return;
     
 error:
     sky_event_free(event);
-    sky_object_file_close(object_file);
+    sky_table_close(table);
 
     sky_database_free(database);
-    sky_object_file_free(object_file);
+    sky_table_free(table);
 }
 
 

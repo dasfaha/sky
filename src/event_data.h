@@ -15,7 +15,7 @@
 
 // Event data is a simple hash of keys and values. Keys are stored as the id
 // of the property they represent. Additional property information such as the
-// property name is stored globally in the object file.
+// property name is stored globally in the table.
 
 
 //==============================================================================

@@ -34,7 +34,7 @@
 #define sky_property_id_t int16_t
 
 // An action defines a verb that is performed in an event. 4 billion (2^32)
-// unique types of actions can be defined within an object file. The name of the
+// unique types of actions can be defined within an table. The name of the
 // action is stored in the 'actions' file and the action identifier is used when
 // storing event data in a block.
 typedef struct sky_action {

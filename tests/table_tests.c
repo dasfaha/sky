@@ -5,7 +5,7 @@
 
 #include <dbg.h>
 #include <database.h>
-#include <object_file.h>
+#include <table.h>
 #include <bstring.h>
 
 #include "minunit.h"
@@ -19,14 +19,14 @@
 
 #define ADD_EVENT(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID) do {\
     sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
-    mu_assert(sky_object_file_add_event(OBJECT_FILE, event) == 0, "");\
+    mu_assert(sky_table_add_event(OBJECT_FILE, event) == 0, "");\
     sky_event_free(event);\
 } while(0)
 
 #define ADD_EVENT_WITH_DATA1(OBJECT_FILE, TIMESTAMP, OBJECT_ID, ACTION_ID, KEY, VALUE) do {\
     sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
     sky_event_set_data(event, KEY, VALUE);\
-    mu_assert(sky_object_file_add_event(OBJECT_FILE, event) == 0, "");\
+    mu_assert(sky_table_add_event(OBJECT_FILE, event) == 0, "");\
     sky_event_free(event);\
 } while(0)
 
@@ -34,7 +34,7 @@
     sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID);\
     sky_event_set_data(event, KEY1, VALUE1);\
     sky_event_set_data(event, KEY2, VALUE2);\
-    mu_assert(sky_object_file_add_event(OBJECT_FILE, event) == 0, "");\
+    mu_assert(sky_table_add_event(OBJECT_FILE, event) == 0, "");\
     sky_event_free(event);\
 } while(0)
 
@@ -70,27 +70,27 @@ struct tagbstring data50 = bsStatic("0123456789012345678901234567890123456789012
 // Open
 //--------------------------------------
 
-int test_sky_object_file_open() {
+int test_sky_table_open() {
     struct stat buffer;
     int rc;
     
     copydb("simple");
     
     sky_database *database = sky_database_create(&ROOT);
-    sky_object_file *object_file = sky_object_file_create(database, &OBJECT_TYPE);
-    mu_assert(object_file->state == SKY_OBJECT_FILE_STATE_CLOSED, "Expected state initialize as closed");
-    mu_assert(object_file->block_size == SKY_DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
+    sky_table *table = sky_table_create(database, &OBJECT_TYPE);
+    mu_assert(table->state == SKY_OBJECT_FILE_STATE_CLOSED, "Expected state initialize as closed");
+    mu_assert(table->block_size == SKY_DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
 
-    rc = sky_object_file_open(object_file);
-    mu_assert(rc == 0, "Object file could not be opened");
+    rc = sky_table_open(table);
+    mu_assert(rc == 0, "Table could not be opened");
 
-    mu_assert(object_file->state == SKY_OBJECT_FILE_STATE_OPEN, "Expected state to be open");
-    mu_assert(object_file->block_count == 9, "Expected 9 blocks");
-    mu_assert(object_file->block_size == 0x10000, "Expected block size to be 64K");
+    mu_assert(table->state == SKY_OBJECT_FILE_STATE_OPEN, "Expected state to be open");
+    mu_assert(table->block_count == 9, "Expected 9 blocks");
+    mu_assert(table->block_size == 0x10000, "Expected block size to be 64K");
 
-    rc = sky_object_file_lock(object_file);
-    mu_assert(rc == 0, "Object file could not be locked");
-    mu_assert(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Expected state to be locked");
+    rc = sky_table_lock(table);
+    mu_assert(rc == 0, "Table could not be locked");
+    mu_assert(table->state == SKY_OBJECT_FILE_STATE_LOCKED, "Expected state to be locked");
 
     // Verify lock file.
     rc = stat("tmp/db/users/.lock", &buffer);
@@ -108,32 +108,32 @@ int test_sky_object_file_open() {
     mu_assert_block_info(8, 6, 10, 10, 1335830400000000LL, 1338508800000000LL, true);
 
     // Verify actions.
-    mu_assert(object_file->action_count == 3, "Expected 3 actions");
+    mu_assert(table->action_count == 3, "Expected 3 actions");
     mu_assert_action(0, 1, "home_page");
     mu_assert_action(1, 2, "sign_up");
     mu_assert_action(2, 3, "sign_in");
 
     // Verify properties.
-    mu_assert(object_file->property_count == 3, "Expected 3 properties");
+    mu_assert(table->property_count == 3, "Expected 3 properties");
     mu_assert_property(0, 1, "first_name");
     mu_assert_property(1, 2, "last_name");
     mu_assert_property(2, 3, "salary");
 
-    rc = sky_object_file_unlock(object_file);
-    mu_assert(rc == 0, "Object file could not be unlocked");
-    mu_assert(object_file->state == SKY_OBJECT_FILE_STATE_OPEN, "Expected state to be open after unlock");
+    rc = sky_table_unlock(table);
+    mu_assert(rc == 0, "Table could not be unlocked");
+    mu_assert(table->state == SKY_OBJECT_FILE_STATE_OPEN, "Expected state to be open after unlock");
 
     // Verify lock is gone.
     rc = stat("tmp/db/users/.lock", &buffer);
     mu_assert(rc == -1, "Expected lock file to not exist");
     mu_assert(errno == ENOENT, "Expected stat error on lock file to be ENOENT");
 
-    rc = sky_object_file_close(object_file);
-    mu_assert(rc == 0, "Object file could not be closed");
-    mu_assert(object_file->state == SKY_OBJECT_FILE_STATE_CLOSED, "Expected state to be closed");
-    mu_assert(object_file->block_size == SKY_DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
+    rc = sky_table_close(table);
+    mu_assert(rc == 0, "Table could not be closed");
+    mu_assert(table->state == SKY_OBJECT_FILE_STATE_CLOSED, "Expected state to be closed");
+    mu_assert(table->block_size == SKY_DEFAULT_BLOCK_SIZE, "Expected block size to be reset");
 
-    sky_object_file_free(object_file);
+    sky_table_free(table);
     sky_database_free(database);
 
     return 0;
@@ -144,30 +144,30 @@ int test_sky_object_file_open() {
 // Add events
 //--------------------------------------
 
-int test_sky_object_file_add_event() {
+int test_sky_table_add_event() {
     cleandb();
     
     sky_database *database = sky_database_create(&ROOT);
-    sky_object_file *object_file = sky_object_file_create(database, &OBJECT_TYPE);
-    object_file->block_size = 128;
+    sky_table *table = sky_table_create(database, &OBJECT_TYPE);
+    table->block_size = 128;
 
-    mu_assert(sky_object_file_open(object_file) == 0, "");
-    mu_assert(sky_object_file_lock(object_file) == 0, "");
+    mu_assert(sky_table_open(table) == 0, "");
+    mu_assert(sky_table_lock(table) == 0, "");
 
-    ADD_EVENT(object_file, 946684800000000LL, 10, 20);
-    ADD_EVENT_WITH_DATA2(object_file, 946684800000000LL, 11, 0, 1, &foo, 2, &bar);
-    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 11, 20, 1, &foo);
-    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 10, 21, 1, &google);
-    ADD_EVENT(object_file, 946692000000000LL, 10, 22);
+    ADD_EVENT(table, 946684800000000LL, 10, 20);
+    ADD_EVENT_WITH_DATA2(table, 946684800000000LL, 11, 0, 1, &foo, 2, &bar);
+    ADD_EVENT_WITH_DATA1(table, 946688400000000LL, 11, 20, 1, &foo);
+    ADD_EVENT_WITH_DATA1(table, 946688400000000LL, 10, 21, 1, &google);
+    ADD_EVENT(table, 946692000000000LL, 10, 22);
 
     // Verify database files.
-    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/object_file_test0/users/data");
-    mu_assert_file("tmp/db/users/header", "tests/fixtures/db/object_file_test0/users/header");
+    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/table_test0/users/data");
+    mu_assert_file("tmp/db/users/header", "tests/fixtures/db/table_test0/users/header");
     
-    mu_assert(sky_object_file_unlock(object_file) == 0, "");
-    mu_assert(sky_object_file_close(object_file) == 0, "");
+    mu_assert(sky_table_unlock(table) == 0, "");
+    mu_assert(sky_table_close(table) == 0, "");
 
-    sky_object_file_free(object_file);
+    sky_table_free(table);
     sky_database_free(database);
     
     return 0;
@@ -178,22 +178,22 @@ int test_sky_object_file_add_event() {
 // Block Split
 //--------------------------------------
 
-int test_sky_object_file_spanned_block_split() {
+int test_sky_table_spanned_block_split() {
     cleandb();
     
     sky_database *database = sky_database_create(&ROOT);
-    sky_object_file *object_file = sky_object_file_create(database, &OBJECT_TYPE);
-    object_file->block_size = 128;
+    sky_table *table = sky_table_create(database, &OBJECT_TYPE);
+    table->block_size = 128;
 
-    mu_assert(sky_object_file_open(object_file) == 0, "");
-    mu_assert(sky_object_file_lock(object_file) == 0, "");
+    mu_assert(sky_table_open(table) == 0, "");
+    mu_assert(sky_table_lock(table) == 0, "");
 
-    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 10, 20, 5, &data50);
-    ADD_EVENT_WITH_DATA1(object_file, 946684800000000LL, 12, 20, 1, &data30);
-    ADD_EVENT_WITH_DATA1(object_file, 946688400000000LL, 11, 20, 1, &data10);
-    ADD_EVENT_WITH_DATA1(object_file, 946692000000000LL, 10, 0, 1, &data50);
-    ADD_EVENT_WITH_DATA1(object_file, 946684800000000LL, 11, 20, 1, &data10);
-    ADD_EVENT_WITH_DATA1(object_file, 946684800000000LL, 10, 0, 2, &data10);
+    ADD_EVENT_WITH_DATA1(table, 946688400000000LL, 10, 20, 5, &data50);
+    ADD_EVENT_WITH_DATA1(table, 946684800000000LL, 12, 20, 1, &data30);
+    ADD_EVENT_WITH_DATA1(table, 946688400000000LL, 11, 20, 1, &data10);
+    ADD_EVENT_WITH_DATA1(table, 946692000000000LL, 10, 0, 1, &data50);
+    ADD_EVENT_WITH_DATA1(table, 946684800000000LL, 11, 20, 1, &data10);
+    ADD_EVENT_WITH_DATA1(table, 946684800000000LL, 10, 0, 2, &data10);
 
     // Verify block info.
     mu_assert_block_info(0, 0, 10, 10, 946684800000000LL, 946688400000000LL, true);
@@ -202,13 +202,13 @@ int test_sky_object_file_spanned_block_split() {
     mu_assert_block_info(3, 3, 12, 12, 946684800000000LL, 946684800000000LL, false);
 
     // Verify database files.
-    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/object_file_test1/users/data");
-    mu_assert_file("tmp/db/users/header", "tests/fixtures/db/object_file_test1/users/header");
+    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/table_test1/users/data");
+    mu_assert_file("tmp/db/users/header", "tests/fixtures/db/table_test1/users/header");
     
-    mu_assert(sky_object_file_unlock(object_file) == 0, "");
-    mu_assert(sky_object_file_close(object_file) == 0, "");
+    mu_assert(sky_table_unlock(table) == 0, "");
+    mu_assert(sky_table_close(table) == 0, "");
 
-    sky_object_file_free(object_file);
+    sky_table_free(table);
     sky_database_free(database);
     
     return 0;
@@ -222,9 +222,9 @@ int test_sky_object_file_spanned_block_split() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_object_file_open);
-    mu_run_test(test_sky_object_file_add_event);
-    mu_run_test(test_sky_object_file_spanned_block_split);
+    mu_run_test(test_sky_table_open);
+    mu_run_test(test_sky_table_add_event);
+    mu_run_test(test_sky_table_spanned_block_split);
     return 0;
 }
 

@@ -49,17 +49,17 @@ void sort_paths(sky_block *block)
 
 // Creates a reference to an in-memory block.
 //
-// object_file - The object file that this block belongs to.
+// table - The table that this block belongs to.
 // info        - The header information about block.
 //
 // Returns a new block if successful, otherwise returns null.
-sky_block *sky_block_create(sky_object_file *object_file, sky_block_info *info)
+sky_block *sky_block_create(sky_table *table, sky_block_info *info)
 {
     sky_block *block;
     
     block = malloc(sizeof(sky_block)); check_mem(block);
 
-    block->object_file = object_file;
+    block->table = table;
     block->info = info;
 
     block->paths = NULL;
@@ -78,7 +78,7 @@ error:
 void sky_block_free(sky_block *block)
 {
     if(block) {
-        block->object_file = NULL;
+        block->table = NULL;
         block->info = NULL;
 
         // Destroy paths.
@@ -159,7 +159,7 @@ int sky_block_serialize(sky_block *block, void *addr, ptrdiff_t *length)
     }
     
     // Null fill the rest of the block.
-    int fillcount = block->object_file->block_size - (addr-start);
+    int fillcount = block->table->block_size - (addr-start);
     check(memset(addr, 0, fillcount) != NULL, "Unable to null fill end of block");
     
     // Store number of bytes written.

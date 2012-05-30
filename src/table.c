@@ -11,7 +11,7 @@
 #include "bstring.h"
 #include "database.h"
 #include "block.h"
-#include "object_file.h"
+#include "table.h"
 
 //==============================================================================
 //
@@ -110,38 +110,38 @@ void sort_blocks(sky_block_info **infos, uint32_t count)
 // Header Management
 //======================================
 
-// Retrieves the file path of an object file's header file.
+// Retrieves the file path of an table's header file.
 //
-// object_file - The object file who owns the header file.
-bstring get_header_file_path(sky_object_file *object_file)
+// table - The table who owns the header file.
+bstring get_header_file_path(sky_table *table)
 {
-    return bformat("%s/header", bdata(object_file->path)); 
+    return bformat("%s/header", bdata(table->path)); 
 }
 
 // Saves header information to file.
 //
-// object_file - The object file containing the header information.
+// table - The table containing the header information.
 //
 // Returns 0 if successful, otherwise returns -1.
-int save_header(sky_object_file *object_file)
+int save_header(sky_table *table)
 {
     int rc;
 
     // Copy infos to a new array to re-sort.
-    uint32_t block_count = object_file->block_count;
+    uint32_t block_count = table->block_count;
     sky_block_info **infos = malloc(sizeof(sky_block_info*) * block_count); check_mem(infos);
-    memcpy(infos, object_file->infos, sizeof(sky_block_info*) * block_count);
+    memcpy(infos, table->infos, sizeof(sky_block_info*) * block_count);
     qsort(infos, block_count, sizeof(sky_block_info*), compare_block_info_by_id);
 
     // Open the header file.
-    bstring path = get_header_file_path(object_file); check_mem(path);
+    bstring path = get_header_file_path(table); check_mem(path);
     FILE *file = fopen(bdata(path), "w");
     check(file, "Failed to open header file for writing: %s",  bdata(path));
     
     // Write database format version & block size.
-    rc = fwrite(&object_file->version, sizeof(object_file->version), 1, file);
+    rc = fwrite(&table->version, sizeof(table->version), 1, file);
     check(rc == 1, "Unable to write version");
-    rc = fwrite(&object_file->block_size, sizeof(object_file->block_size), 1, file);
+    rc = fwrite(&table->block_size, sizeof(table->block_size), 1, file);
     check(rc == 1, "Unable to write block size");
 
     // Write block count.
@@ -184,10 +184,10 @@ error:
 
 // Loads header information from file.
 //
-// object_file - The object file where the header is stored.
+// table - The table where the header is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int load_header(sky_object_file *object_file)
+int load_header(sky_table *table)
 {
     FILE *file;
     sky_block_info **infos = NULL;
@@ -195,7 +195,7 @@ int load_header(sky_object_file *object_file)
     uint32_t block_count = 0;
 
     // Retrieve file stats on header file
-    bstring path = get_header_file_path(object_file); check_mem(path);
+    bstring path = get_header_file_path(table); check_mem(path);
     
     // Read in header file if it exists.
     if(file_exists(path)) {
@@ -204,7 +204,7 @@ int load_header(sky_object_file *object_file)
 
         // Read database format version & block size.
         check(fread(&version, sizeof(version), 1, file) == 1, "Unable to read version");
-        check(fread(&object_file->block_size, sizeof(object_file->block_size), 1, file) == 1, "Unable to read block size");
+        check(fread(&table->block_size, sizeof(table->block_size), 1, file) == 1, "Unable to read block size");
 
         // Read block count.
         check(fread(&block_count, sizeof(block_count), 1, file) == 1, "Unable to read block count");
@@ -262,10 +262,10 @@ int load_header(sky_object_file *object_file)
         }
     }
 
-    // Store version and block information on object file.
-    object_file->version = version;
-    object_file->block_count = block_count;
-    object_file->infos = infos;
+    // Store version and block information on table.
+    table->version = version;
+    table->block_count = block_count;
+    table->infos = infos;
 
     // Clean up.
     bdestroy(path);
@@ -280,27 +280,27 @@ error:
 
 // Unloads the header data.
 //
-// object_file - The object file where the header data is stored.
+// table - The table where the header data is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unload_header(sky_object_file *object_file)
+int unload_header(sky_table *table)
 {
-    if(object_file) {
+    if(table) {
         // Free block infos.
         uint32_t i;
-        if(object_file->infos) {
-            for(i=0; i<object_file->block_count; i++) {
-                free(object_file->infos[i]);
-                object_file->infos[i] = NULL;
+        if(table->infos) {
+            for(i=0; i<table->block_count; i++) {
+                free(table->infos[i]);
+                table->infos[i] = NULL;
             }
 
-            free(object_file->infos);
-            object_file->infos = NULL;
+            free(table->infos);
+            table->infos = NULL;
         }
 
-        object_file->version = 0;
-        object_file->block_size = SKY_DEFAULT_BLOCK_SIZE;
-        object_file->block_count = 0;
+        table->version = 0;
+        table->block_size = SKY_DEFAULT_BLOCK_SIZE;
+        table->block_count = 0;
     }
     
     return 0;
@@ -312,36 +312,36 @@ int unload_header(sky_object_file *object_file)
 // Action Management
 //======================================
 
-// Retrieves the file path of an object file's actions file.
+// Retrieves the file path of an table's actions file.
 //
-// object_file - The object file who owns the header file.
-bstring get_actions_file_path(sky_object_file *object_file)
+// table - The table who owns the header file.
+bstring get_actions_file_path(sky_table *table)
 {
-    return bformat("%s/actions", bdata(object_file->path)); 
+    return bformat("%s/actions", bdata(table->path)); 
 }
 
 // Saves action information to file.
 //
-// object_file - The object file where the action information is stored.
+// table - The table where the action information is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int save_actions(sky_object_file *object_file)
+int save_actions(sky_table *table)
 {
     int rc;
 
     // Open the actions file.
-    bstring path = get_actions_file_path(object_file); check_mem(path);
+    bstring path = get_actions_file_path(table); check_mem(path);
     FILE *file = fopen(bdata(path), "w");
     check(file, "Failed to open actions file for writing: %s", bdata(path));
 
     // Write action count.
-    rc = fwrite(&object_file->action_count, sizeof(object_file->action_count), 1, file);
+    rc = fwrite(&table->action_count, sizeof(table->action_count), 1, file);
     check(rc == 1, "Unable to write action count");
 
     // Write actions to file.
-    sky_object_file_action_count_t i;
-    for(i=0; i<object_file->action_count; i++) {
-        sky_action *action = object_file->actions[i];
+    sky_table_action_count_t i;
+    for(i=0; i<table->action_count; i++) {
+        sky_action *action = table->actions[i];
         
         // Write action id.
         rc = fwrite(&action->id, sizeof(sky_action_id_t), 1, file);
@@ -374,18 +374,18 @@ error:
 
 // Loads action information from file.
 //
-// object_file - The object file where the action information is stored.
+// table - The table where the action information is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int load_actions(sky_object_file *object_file)
+int load_actions(sky_table *table)
 {
     FILE *file;
     sky_action **actions = NULL;
     char *buffer;
-    sky_object_file_action_count_t count = 0;
+    sky_table_action_count_t count = 0;
     
     // Retrieve file stats on actions file
-    bstring path = get_actions_file_path(object_file); check_mem(path);
+    bstring path = get_actions_file_path(table); check_mem(path);
     
     // Read in actions file if it exists.
     if(file_exists(path)) {
@@ -421,9 +421,9 @@ int load_actions(sky_object_file *object_file)
         fclose(file);
     }
 
-    // Store action list on object file.
-    object_file->actions = actions;
-    object_file->action_count = count;
+    // Store action list on table.
+    table->actions = actions;
+    table->action_count = count;
     
     // Clean up.
     bdestroy(path);
@@ -439,25 +439,25 @@ error:
 
 // Unloads the action data.
 //
-// object_file - The object file where the action data is stored.
+// table - The table where the action data is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unload_actions(sky_object_file *object_file)
+int unload_actions(sky_table *table)
 {
-    if(object_file) {
+    if(table) {
         // Release actions.
-        if(object_file->actions) {
+        if(table->actions) {
             uint32_t i=0;
-            for(i=0; i<object_file->action_count; i++) {
-                bdestroy(object_file->actions[i]->name);
-                free(object_file->actions[i]);
-                object_file->actions[i] = NULL;
+            for(i=0; i<table->action_count; i++) {
+                bdestroy(table->actions[i]->name);
+                free(table->actions[i]);
+                table->actions[i] = NULL;
             }
-            free(object_file->actions);
-            object_file->actions = NULL;
+            free(table->actions);
+            table->actions = NULL;
         }
         
-        object_file->action_count = 0;
+        table->action_count = 0;
     }
     
     return 0;
@@ -468,37 +468,37 @@ int unload_actions(sky_object_file *object_file)
 // Property Management
 //======================================
 
-// Retrieves the file path of an object file's actions file.
+// Retrieves the file path of an table's actions file.
 //
-// object_file - The object file who owns the header file.
-bstring get_properties_file_path(sky_object_file *object_file)
+// table - The table who owns the header file.
+bstring get_properties_file_path(sky_table *table)
 {
-    return bformat("%s/properties", bdata(object_file->path)); 
+    return bformat("%s/properties", bdata(table->path)); 
 }
 
 
 // Saves property information to file.
 //
-// object_file - The object file where the property information is stored.
+// table - The table where the property information is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int save_properties(sky_object_file *object_file)
+int save_properties(sky_table *table)
 {
     int rc;
 
     // Open the properties file.
-    bstring path = get_properties_file_path(object_file); check_mem(path);
+    bstring path = get_properties_file_path(table); check_mem(path);
     FILE *file = fopen(bdata(path), "w");
     check(file, "Failed to open properties file for writing: %s", bdata(path));
 
     // Write property count.
-    rc = fwrite(&object_file->property_count, sizeof(object_file->property_count), 1, file);
+    rc = fwrite(&table->property_count, sizeof(table->property_count), 1, file);
     check(rc == 1, "Unable to write property count");
 
     // Write properties to file.
-    sky_object_file_property_count_t i;
-    for(i=0; i<object_file->property_count; i++) {
-        sky_property *property = object_file->properties[i];
+    sky_table_property_count_t i;
+    for(i=0; i<table->property_count; i++) {
+        sky_property *property = table->properties[i];
         
         // Write property id.
         rc = fwrite(&property->id, sizeof(sky_property_id_t), 1, file);
@@ -531,18 +531,18 @@ error:
 
 // Loads property information from file.
 //
-// object_file - The object file from which to load property definitions.
+// table - The table from which to load property definitions.
 //
 // Returns 0 if sucessfuly, otherwise returns -1.
-int load_properties(sky_object_file *object_file)
+int load_properties(sky_table *table)
 {
     FILE *file;
     sky_property **properties = NULL;
     char *buffer;
-    sky_object_file_property_count_t count = 0;
+    sky_table_property_count_t count = 0;
     
     // Retrieve file stats on properties file
-    bstring path = get_properties_file_path(object_file); check_mem(path);
+    bstring path = get_properties_file_path(table); check_mem(path);
     
     // Read in properties file if it exists.
     if(file_exists(path)) {
@@ -577,9 +577,9 @@ int load_properties(sky_object_file *object_file)
         fclose(file);
     }
 
-    // Store property list on object file.
-    object_file->properties = properties;
-    object_file->property_count = count;
+    // Store property list on table.
+    table->properties = properties;
+    table->property_count = count;
     
     // Clean up.
     bdestroy(path);
@@ -595,25 +595,25 @@ error:
 
 // Unloads the property data.
 //
-// object_file - The object file where the property data is stored.
+// table - The table where the property data is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unload_properties(sky_object_file *object_file)
+int unload_properties(sky_table *table)
 {
-    if(object_file) {
+    if(table) {
         // Release properties.
-        if(object_file->properties) {
+        if(table->properties) {
             uint32_t i=0;
-            for(i=0; i<object_file->property_count; i++) {
-                bdestroy(object_file->properties[i]->name);
-                free(object_file->properties[i]);
-                object_file->properties[i] = NULL;
+            for(i=0; i<table->property_count; i++) {
+                bdestroy(table->properties[i]->name);
+                free(table->properties[i]);
+                table->properties[i] = NULL;
             }
-            free(object_file->properties);
-            object_file->properties = NULL;
+            free(table->properties);
+            table->properties = NULL;
         }
         
-        object_file->property_count = 0;
+        table->property_count = 0;
     }
     
     return 0;
@@ -624,112 +624,112 @@ int unload_properties(sky_object_file *object_file)
 // Block Management
 //======================================
 
-// Retrieves the file path of an object file's data file.
+// Retrieves the file path of an table's data file.
 //
-// object_file - The object file who owns the data file.
-bstring get_data_file_path(sky_object_file *object_file)
+// table - The table who owns the data file.
+bstring get_data_file_path(sky_table *table)
 {
-    return bformat("%s/data", bdata(object_file->path)); 
+    return bformat("%s/data", bdata(table->path)); 
 }
 
 
 // Calculates the byte offset in a data file for a block. This is simply the
 // block index multiplied by the block size.
 //
-// object_file - The object file that contains the block.
+// table - The table that contains the block.
 // info        - The header info about the block.
 //
 // Returns the number of bytes from the start of the data file where the block
 // begins.
-ptrdiff_t get_block_offset(sky_object_file *object_file, sky_block_info *info)
+ptrdiff_t get_block_offset(sky_table *table, sky_block_info *info)
 {
-    return (object_file->block_size * info->id);
+    return (table->block_size * info->id);
 }
 
 // Unmaps a data file for an object.
 //
-// object_file - The object file that owns the data file.
+// table - The table that owns the data file.
 //
 // Returns 0 if successful, otherwise returns -1.
-int unmap_data_file(sky_object_file *object_file)
+int unmap_data_file(sky_table *table)
 {
     // Unmap file.
-    if(object_file->data != NULL) {
-        munmap(object_file->data, object_file->data_length);
-        object_file->data = NULL;
+    if(table->data != NULL) {
+        munmap(table->data, table->data_length);
+        table->data = NULL;
     }
     
     // Close file descriptor.
-    if(object_file->data_fd != 0) {
-        close(object_file->data_fd);
-        object_file->data_fd = 0;
+    if(table->data_fd != 0) {
+        close(table->data_fd);
+        table->data_fd = 0;
     }
     
-    object_file->data_length = 0;
+    table->data_length = 0;
     
     return 0;
 }
 
-// Maps the data file for an object file. If the data file is already mapped
+// Maps the data file for an table. If the data file is already mapped
 // then it is remapped.
 //
-// object_file - The object file that owns the data file.
+// table - The table that owns the data file.
 //
 // Returns 0 if successful, otherwise returns -1.
-int map_data_file(sky_object_file *object_file)
+int map_data_file(sky_table *table)
 {
     int rc;
     void *ptr;
     
     // Calculate the data length.
     size_t data_length;
-    if(object_file->block_count == 0) {
-        data_length = object_file->block_size;
+    if(table->block_count == 0) {
+        data_length = table->block_size;
     }
     else {
-        data_length = object_file->block_count * object_file->block_size;
+        data_length = table->block_count * table->block_size;
     }
     
     // Close mapping if remapping isn't supported.
     if(!MREMAP_AVAILABLE) {
-        unmap_data_file(object_file);
+        unmap_data_file(table);
     }
     
     // Find the path to the data file.
-    bstring path = get_data_file_path(object_file); check_mem(path);
+    bstring path = get_data_file_path(table); check_mem(path);
 
     // Open the data file and map it if it is not currently open.
-    if(object_file->data_fd == 0) {
-        object_file->data_fd = open(bdata(path), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-        check(object_file->data_fd != -1, "Failed to open data file descriptor: %s",  bdata(path));
+    if(table->data_fd == 0) {
+        table->data_fd = open(bdata(path), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        check(table->data_fd != -1, "Failed to open data file descriptor: %s",  bdata(path));
 
         // Truncate the file to the appropriate size (larger or smaller).
-        rc = ftruncate(object_file->data_fd, data_length);
+        rc = ftruncate(table->data_fd, data_length);
         check(rc == 0, "Unable to truncate data file");
         
         // Memory map the data file.
-        ptr = mmap(0, data_length, PROT_READ | PROT_WRITE, MAP_SHARED, object_file->data_fd, 0);
+        ptr = mmap(0, data_length, PROT_READ | PROT_WRITE, MAP_SHARED, table->data_fd, 0);
         check(ptr != MAP_FAILED, "Unable to memory map data file");
     }
     // If we already have the data mapped then simply remap it to the
     // appropriate size.
     else {
 #if MREMAP_AVAILABLE
-        ptr = mremap(object_file->data, object_file->data_length, data_length, MREMAP_MAYMOVE);
+        ptr = mremap(table->data, table->data_length, data_length, MREMAP_MAYMOVE);
         check(ptr != MAP_FAILED, "Unable to remap data file");
 #endif
     }
 
-    // Update the object file.
-    object_file->data = ptr;
-    object_file->data_length = data_length;
+    // Update the table.
+    table->data = ptr;
+    table->data_length = data_length;
 
     bdestroy(path);
     
     return 0;
 
 error:
-    object_file->data = NULL;
+    table->data = NULL;
     bdestroy(path);
     return -1;
 }
@@ -743,12 +743,12 @@ int save_block(sky_block *block)
 {
     int rc;
 
-    sky_object_file *object_file = block->object_file;
+    sky_table *table = block->table;
     sky_block_info *info = block->info;
 
     // Move pointer to starting position of block.
-    ptrdiff_t offset = get_block_offset(object_file, info);
-    void *addr = object_file->data + offset;
+    ptrdiff_t offset = get_block_offset(table, info);
+    void *addr = table->data + offset;
 
     // Serialize block.
     ptrdiff_t ptrdiff;
@@ -764,40 +764,40 @@ error:
     return -1;
 }
 
-// Creates an empty block in the object file and returns it.
+// Creates an empty block in the table and returns it.
 //
-// object_file - The object file that will own the new block.
+// table - The table that will own the new block.
 // ret         - The block object returned to the caller.
 //
 // Returns 0 if successful, otherwise returns -1.
-int create_block(sky_object_file *object_file, sky_block **ret)
+int create_block(sky_table *table, sky_block **ret)
 {
     int rc;
     
     // Increment block count and resize block info memory.
-    object_file->block_count++;
-    object_file->infos = realloc(object_file->infos, sizeof(sky_block_info*) * object_file->block_count);
-    if(object_file->block_count > 0) check_mem(object_file->infos);
+    table->block_count++;
+    table->infos = realloc(table->infos, sizeof(sky_block_info*) * table->block_count);
+    if(table->block_count > 0) check_mem(table->infos);
 
     // Create new block.
     sky_block_info *info = malloc(sizeof(sky_block_info)); check_mem(info);
-    info->id = object_file->block_count-1;
+    info->id = table->block_count-1;
     info->min_object_id = 0LL;
     info->max_object_id = 0LL;
     info->spanned = false;
-    object_file->infos[object_file->block_count-1] = info;
+    table->infos[table->block_count-1] = info;
 
     // Remap data file.
-    rc = map_data_file(object_file);
+    rc = map_data_file(table);
     check(rc == 0, "Unable to remap data file");
 
     // Save empty block to file.
-    sky_block *block = sky_block_create(object_file, info);
+    sky_block *block = sky_block_create(table, info);
     rc = save_block(block);
     check(rc == 0, "Unable to initialize new block");
 
     // Sort blocks.
-    sort_blocks(object_file->infos, object_file->block_count);
+    sort_blocks(table->infos, table->block_count);
 
     // Return the block.
     *ret = block;
@@ -830,12 +830,12 @@ error:
 //
 // 4. If no block is found by the end then the last block is used for insertion.
 //
-// object_file - The object file that the event is being added to.
-// event       - The event to add to the object file.
+// table - The table that the event is being added to.
+// event       - The event to add to the table.
 // ret         - A reference to the correct block info returned to the caller.
 //
 // Returns 0 if successfully finds a block. Otherwise returns -1.
-int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_block_info **ret)
+int find_insertion_block(sky_table *table, sky_event *event, sky_block_info **ret)
 {
     int i, n, rc;
     sky_block_info *info = NULL;
@@ -849,9 +849,9 @@ int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_blo
     sky_timestamp_t timestamp = event->timestamp;
 
     // Loop over sorted blocks to find the appropriate insertion point.
-    n = object_file->block_count;
+    n = table->block_count;
     for(i=0; i<n; i++) {
-        info = object_file->infos[i];
+        info = table->infos[i];
         
         // If block is within range then use the block.
         if(object_id >= info->min_object_id && object_id <= info->max_object_id) {
@@ -859,8 +859,8 @@ int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_blo
             // based on timestamp.
             if(info->spanned) {
                 // Find first block where timestamp is before the max.
-                while(i<n && object_file->infos[i]->min_object_id == object_id) {
-                    if(timestamp <= object_file->infos[i]->max_timestamp) {
+                while(i<n && table->infos[i]->min_object_id == object_id) {
+                    if(timestamp <= table->infos[i]->max_timestamp) {
                         *ret = info;
                         break;
                     }
@@ -870,7 +870,7 @@ int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_blo
                 // If this event is being appended to the object path then use
                 // the last block.
                 if(*ret == NULL) {
-                    *ret = object_file->infos[i-1];
+                    *ret = table->infos[i-1];
                 }
 
                 break;
@@ -894,7 +894,7 @@ int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_blo
     // that we have no blocks.
     if(*ret == NULL) {
         // Find the last block if one exists.
-        sky_block_info *last_info = (object_file->block_count > 0 ? object_file->infos[object_file->block_count-1] : NULL);
+        sky_block_info *last_info = (table->block_count > 0 ? table->infos[table->block_count-1] : NULL);
         
         // If the last block available is unspanned then use it.
         if(last_info != NULL && !last_info->spanned) {
@@ -903,7 +903,7 @@ int find_insertion_block(sky_object_file *object_file, sky_event *event, sky_blo
         // Otherwise just create a new block.
         else {
             sky_block *block;
-            rc = create_block(object_file, &block);
+            rc = create_block(table, &block);
             check(rc == 0, "Unable to create block");
             *ret = block->info;
             sky_block_free(block);
@@ -918,22 +918,22 @@ error:
 
 // Reads a block in from disk and deserializes it.
 // 
-// object_file - The object file that contains the block.
+// table - The table that contains the block.
 // info        - A reference to the block position.
 // ret         - The reference to the block returned to the caller.
 //
 // Returns 0 if successful. Otherwise returns -1.
-int load_block(sky_object_file *object_file, sky_block_info *info, sky_block **ret)
+int load_block(sky_table *table, sky_block_info *info, sky_block **ret)
 {
     int rc;
     
     // Create pointer at starting position of block.
-    ptrdiff_t offset = get_block_offset(object_file, info);
-    void *addr = object_file->data + offset;
+    ptrdiff_t offset = get_block_offset(table, info);
+    void *addr = table->data + offset;
 
     // Deserialize block.
     ptrdiff_t ptrdiff;
-    sky_block *block = sky_block_create(object_file, info);
+    sky_block *block = sky_block_create(table, info);
     rc = sky_block_deserialize(block, addr, &ptrdiff);
     check(rc == 0, "Failed to deserialize block: %d", info->id);
     
@@ -959,7 +959,7 @@ int create_target_block(sky_block *source, sky_block **target, sky_block ***bloc
     int rc;
     
     // Create new block.
-    rc = create_block(source->object_file, target);
+    rc = create_block(source->table, target);
     check(rc == 0, "Unable to create target block");
     
     // Increment block count.
@@ -980,7 +980,7 @@ error:
 }
 
 // Attempts to split a given block into multiple smaller blocks if the block
-// exceeds the maximum block size allowed for an object file.
+// exceeds the maximum block size allowed for an table.
 //
 // block           - The block to attempt to split.
 // affected_blocks - An array of blocks. This includes the original block passed
@@ -1002,7 +1002,7 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
 
     // If block size has not been exceeded then exit this function immediately.
     uint32_t block_serialized_length = sky_block_get_serialized_length(block);
-    if(block_serialized_length <= block->object_file->block_size) {
+    if(block_serialized_length <= block->table->block_size) {
         return 0;
     }
     
@@ -1017,7 +1017,7 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
     target_block = block;
     
     // Calculate target block size if we were to spread paths evenly across blocks.
-    uint32_t max_block_size = block->object_file->block_size - BLOCK_HEADER_LENGTH;
+    uint32_t max_block_size = block->table->block_size - BLOCK_HEADER_LENGTH;
     uint32_t target_block_count = (uint32_t)ceil((double)block_serialized_length / (double)max_block_size);
     uint32_t target_block_size = block_serialized_length / target_block_count;
     
@@ -1139,55 +1139,55 @@ error:
 //======================================
 
 
-// Creates a reference to an object file.
+// Creates a reference to an table.
 // 
-// database - A reference to the database that the object file belongs to.
-// name - The name of the object file.
+// database - A reference to the database that the table belongs to.
+// name - The name of the table.
 //
-// Returns a reference to the new object file if successful. Otherwise returns
+// Returns a reference to the new table if successful. Otherwise returns
 // null.
-sky_object_file *sky_object_file_create(sky_database *database, bstring name)
+sky_table *sky_table_create(sky_database *database, bstring name)
 {
-    sky_object_file *object_file;
+    sky_table *table;
     
-    check(database != NULL, "Cannot create object file without a database");
-    check(name != NULL, "Cannot create unnamed object file");
+    check(database != NULL, "Cannot create table without a database");
+    check(name != NULL, "Cannot create unnamed table");
     
-    object_file = malloc(sizeof(sky_object_file)); check_mem(object_file);
-    object_file->state = SKY_OBJECT_FILE_STATE_CLOSED;
-    object_file->name = bstrcpy(name); check_mem(object_file->name);
-    object_file->path = bformat("%s/%s", bdata(database->path), bdata(object_file->name));
-    check_mem(object_file->path);
+    table = malloc(sizeof(sky_table)); check_mem(table);
+    table->state = SKY_OBJECT_FILE_STATE_CLOSED;
+    table->name = bstrcpy(name); check_mem(table->name);
+    table->path = bformat("%s/%s", bdata(database->path), bdata(table->name));
+    check_mem(table->path);
 
-    object_file->block_size = SKY_DEFAULT_BLOCK_SIZE;  // Default to 64K blocks.
-    object_file->infos = NULL;
-    object_file->block_count = 0;
+    table->block_size = SKY_DEFAULT_BLOCK_SIZE;  // Default to 64K blocks.
+    table->infos = NULL;
+    table->block_count = 0;
 
-    object_file->actions = NULL;
-    object_file->action_count = 0;
+    table->actions = NULL;
+    table->action_count = 0;
 
-    object_file->properties = NULL;
-    object_file->property_count = 0;
+    table->properties = NULL;
+    table->property_count = 0;
 
-    object_file->data = NULL;
-    object_file->data_length = 0;
+    table->data = NULL;
+    table->data_length = 0;
 
-    return object_file;
+    return table;
     
 error:
-    sky_object_file_free(object_file);
+    sky_table_free(table);
     return NULL;
 }
 
-// Removes an object file reference from memory.
+// Removes an table reference from memory.
 //
-// object_file - The object file to free.
-void sky_object_file_free(sky_object_file *object_file)
+// table - The table to free.
+void sky_table_free(sky_table *table)
 {
-    if(object_file) {
-        bdestroy(object_file->name);
-        bdestroy(object_file->path);
-        free(object_file);
+    if(table) {
+        bdestroy(table->name);
+        bdestroy(table->path);
+        free(table);
     }
 }
 
@@ -1196,64 +1196,64 @@ void sky_object_file_free(sky_object_file *object_file)
 // State
 //======================================
 
-// Opens the object file for reading and writing events.
+// Opens the table for reading and writing events.
 // 
-// object_file - The object file to open.
+// table - The table to open.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_open(sky_object_file *object_file)
+int sky_table_open(sky_table *table)
 {
     int rc;
     
     // Validate arguments.
-    check(object_file != NULL, "Object file required to open");
-    check(object_file->state == SKY_OBJECT_FILE_STATE_CLOSED, "Object file must be closed to open")
+    check(table != NULL, "Table required to open");
+    check(table->state == SKY_OBJECT_FILE_STATE_CLOSED, "Table must be closed to open")
 
     // Create directory if it doesn't exist.
-    if(!file_exists(object_file->path)) {
-        rc = mkdir(bdata(object_file->path), S_IRWXU);
-        check(rc == 0, "Unable to create object file directory: %s", bdata(object_file->path));
+    if(!file_exists(table->path)) {
+        rc = mkdir(bdata(table->path), S_IRWXU);
+        check(rc == 0, "Unable to create table directory: %s", bdata(table->path));
     }
 
     // Load header, action and properties data.
-    check(load_header(object_file) == 0, "Unable to load header data");
-    check(load_actions(object_file) == 0, "Unable to load action data");
-    check(load_properties(object_file) == 0, "Unable to load property data");
+    check(load_header(table) == 0, "Unable to load header data");
+    check(load_actions(table) == 0, "Unable to load action data");
+    check(load_properties(table) == 0, "Unable to load property data");
 
     // Map the data file.
-    rc = map_data_file(object_file);
+    rc = map_data_file(table);
     check(rc == 0, "Unable to map data file");
     
-    // Flag the object file as locked.
-    object_file->state = SKY_OBJECT_FILE_STATE_OPEN;
+    // Flag the table as locked.
+    table->state = SKY_OBJECT_FILE_STATE_OPEN;
 
     return 0;
 
 error:
-    sky_object_file_close(object_file);
+    sky_table_close(table);
     return -1;
 }
 
-// Closes an object file.
+// Closes an table.
 //
-// object_file - The object file to close.
+// table - The table to close.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_close(sky_object_file *object_file)
+int sky_table_close(sky_table *table)
 {
     // Validate arguments.
-    check(object_file != NULL, "Object file required to close");
+    check(table != NULL, "Table required to close");
 
     // Unload header, action and properties data.
-    check(unload_header(object_file) == 0, "Unable to unload header data");
-    check(unload_actions(object_file) == 0, "Unable to unload action data");
-    check(unload_properties(object_file) == 0, "Unable to unload property data");
+    check(unload_header(table) == 0, "Unable to unload header data");
+    check(unload_actions(table) == 0, "Unable to unload action data");
+    check(unload_properties(table) == 0, "Unable to unload property data");
 
     // Unmap data file.
-    unmap_data_file(object_file);
+    unmap_data_file(table);
 
     // Update state.
-    object_file->state = SKY_OBJECT_FILE_STATE_CLOSED;
+    table->state = SKY_OBJECT_FILE_STATE_CLOSED;
 
     return 0;
     
@@ -1267,23 +1267,23 @@ error:
 //======================================
 
 
-// Locks an object file for writing.
+// Locks an table for writing.
 // 
-// object_file - The object file to lock.
+// table - The table to lock.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_lock(sky_object_file *object_file)
+int sky_table_lock(sky_table *table)
 {
     FILE *file;
 
     // Validate arguments.
-    check(object_file != NULL, "Object file required to lock");
-    check(object_file->state == SKY_OBJECT_FILE_STATE_OPEN, "Object file must be open to lock")
+    check(table != NULL, "Table required to lock");
+    check(table->state == SKY_OBJECT_FILE_STATE_OPEN, "Table must be open to lock")
 
     // Construct path to lock.
-    bstring path = bformat("%s/%s", bdata(object_file->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
+    bstring path = bformat("%s/%s", bdata(table->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
 
-    // Raise error if object file is already locked.
+    // Raise error if table is already locked.
     check(!file_exists(path), "Cannot obtain lock: %s", bdata(path));
 
     // Write pid to lock file.
@@ -1292,8 +1292,8 @@ int sky_object_file_lock(sky_object_file *object_file)
     check(fprintf(file, "%d", getpid()) > 0, "Error writing lock file: %s",  bdata(path));
     fclose(file);
 
-    // Flag the object file as locked.
-    object_file->state = SKY_OBJECT_FILE_STATE_LOCKED;
+    // Flag the table as locked.
+    table->state = SKY_OBJECT_FILE_STATE_LOCKED;
 
     // Clean up.
     bdestroy(path);
@@ -1306,22 +1306,22 @@ error:
     return -1;
 }
 
-// Unlocks an object file.
+// Unlocks an table.
 // 
-// object_file - The object file to unlock.
+// table - The table to unlock.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_unlock(sky_object_file *object_file)
+int sky_table_unlock(sky_table *table)
 {
     FILE *file;
     pid_t pid = 0;
 
     // Validate arguments.
-    check(object_file != NULL, "Object file required to unlock");
-    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be locked to unlock")
+    check(table != NULL, "Table required to unlock");
+    check(table->state == SKY_OBJECT_FILE_STATE_LOCKED, "Table must be locked to unlock")
 
     // Construct path to lock.
-    bstring path = bformat("%s/%s", bdata(object_file->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
+    bstring path = bformat("%s/%s", bdata(table->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
 
     // If file exists, check its PID and then attempt to remove it.
     if(file_exists(path)) {
@@ -1338,8 +1338,8 @@ int sky_object_file_unlock(sky_object_file *object_file)
         check(unlink(bdata(path)) == 0, "Unable to remove lock: %s", bdata(path));
     }
 
-    // Flag the object file as open.
-    object_file->state = SKY_OBJECT_FILE_STATE_OPEN;
+    // Flag the table as open.
+    table->state = SKY_OBJECT_FILE_STATE_OPEN;
 
     // Clean up.
     bdestroy(path);
@@ -1360,27 +1360,27 @@ error:
 // Determines the number of blocks that a given block spans. This function only
 // works on the starting block of a span of blocks.
 //
-// object_file - The object file containing the blocks.
-// block_index - The index of the block inside the object file's block list.
+// table - The table containing the blocks.
+// block_index - The index of the block inside the table's block list.
 // span_count  - A pointer to where the return value should be stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_get_block_span_count(sky_object_file *object_file, uint32_t block_index, uint32_t *span_count)
+int sky_table_get_block_span_count(sky_table *table, uint32_t block_index, uint32_t *span_count)
 {
-    check(object_file != NULL, "Object file required");
-    check(block_index < object_file->block_count, "Block index out of range");
+    check(table != NULL, "Table required");
+    check(block_index < table->block_count, "Block index out of range");
     check(span_count != NULL, "Span count address required");
     
     // Loop until the ending block of the span is found.
     uint32_t index = block_index;
-    sky_object_id_t object_id = object_file->infos[index]->min_object_id;
+    sky_object_id_t object_id = table->infos[index]->min_object_id;
     while(true) {
         index++;
 
         // If we've reached the end of the blocks or if the object id no longer
         // matches the starting object id then break out of the loop.
-        if(index > object_file->block_count-1 ||
-           object_id != object_file->infos[index]->min_object_id)
+        if(index > table->block_count-1 ||
+           object_id != table->infos[index]->min_object_id)
         {
             break;
         }
@@ -1401,7 +1401,7 @@ error:
 // Event Management
 //======================================
 
-int sky_object_file_add_event(sky_object_file *object_file, sky_event *event)
+int sky_table_add_event(sky_table *table, sky_event *event)
 {
     int rc = 0;
     sky_block_info *info = NULL;
@@ -1411,9 +1411,9 @@ int sky_object_file_add_event(sky_object_file *object_file, sky_event *event)
     int affected_block_count = 0;
     
     // Verify arguments.
-    check(object_file != NULL, "Object file is required");
+    check(table != NULL, "Table is required");
     check(event != NULL, "Event is required");
-    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be locked to add events");
+    check(table->state == SKY_OBJECT_FILE_STATE_LOCKED, "Table must be locked to add events");
     
     // Make a copy of the event.
     sky_event *tmp = NULL;
@@ -1422,11 +1422,11 @@ int sky_object_file_add_event(sky_object_file *object_file, sky_event *event)
     event = tmp;
     
     // Find the appropriate block to insert into.
-    rc = find_insertion_block(object_file, event, &info);
+    rc = find_insertion_block(table, event, &info);
     check(rc == 0, "Unable to find an insertion block");
 
     // Load block to memory and deserialize.
-    rc = load_block(object_file, info, &block);
+    rc = load_block(table, info, &block);
     check(rc == 0, "Unable to load block %d", info->id);
     
     // Add event to block.
@@ -1445,10 +1445,10 @@ int sky_object_file_add_event(sky_object_file *object_file, sky_event *event)
     }
 
     // Re-sort blocks.
-    sort_blocks(object_file->infos, object_file->block_count);
+    sort_blocks(table->infos, table->block_count);
 
     // Save header.
-    save_header(object_file);
+    save_header(table);
 
     // Clean up.
     sky_block_free(block);
@@ -1468,17 +1468,17 @@ error:
 
 // Retrieves the id for an action with a given name.
 //
-// object_file - The object file that the action belongs to.
+// table - The table that the action belongs to.
 // name        - The name of the action.
 // action_id   - A pointer to where the action id should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_file,
+int sky_table_find_or_create_action_id_by_name(sky_table *table,
                                                      bstring name,
                                                      sky_action_id_t *action_id)
 {
-    check(object_file != NULL, "Object file required");
-    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be open to retrieve action");
+    check(table != NULL, "Table required");
+    check(table->state == SKY_OBJECT_FILE_STATE_LOCKED, "Table must be open to retrieve action");
     check(name != NULL, "Action name required");
     check(blength(name) > 0, "Action name cannot be blank");
     
@@ -1486,10 +1486,10 @@ int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_fil
     *action_id = 0;
     
     // Loop over actions to find matching name.
-    sky_object_file_action_count_t i;
-    for(i=0; i<object_file->action_count; i++) {
-        if(biseq(object_file->actions[i]->name, name) == 1) {
-            *action_id = object_file->actions[i]->id;
+    sky_table_action_count_t i;
+    for(i=0; i<table->action_count; i++) {
+        if(biseq(table->actions[i]->name, name) == 1) {
+            *action_id = table->actions[i]->id;
             break;
         }
     }
@@ -1498,16 +1498,16 @@ int sky_object_file_find_or_create_action_id_by_name(sky_object_file *object_fil
     if(*action_id == 0) {
         // Create action.
         sky_action *action = malloc(sizeof(sky_action)); check_mem(action);
-        action->id = object_file->action_count+1;
+        action->id = table->action_count+1;
         action->name = bstrcpy(name);
         
         // Append to actions.
-        object_file->action_count++;
-        object_file->actions = realloc(object_file->actions, sizeof(sky_action*) * object_file->action_count);
-        object_file->actions[object_file->action_count-1] = action;
+        table->action_count++;
+        table->actions = realloc(table->actions, sizeof(sky_action*) * table->action_count);
+        table->actions[table->action_count-1] = action;
         
         // Save actions file.
-        save_actions(object_file);
+        save_actions(table);
         
         // Return action id to caller.
         *action_id = action->id;
@@ -1527,17 +1527,17 @@ error:
 
 // Retrieves the id for a property with a given name.
 //
-// object_file - The object file that the property belongs to.
+// table - The table that the property belongs to.
 // name        - The name of the property.
 // property_id - A pointer to where the property id should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_object_file_find_or_create_property_id_by_name(sky_object_file *object_file,
+int sky_table_find_or_create_property_id_by_name(sky_table *table,
                                                        bstring name,
                                                        sky_property_id_t *property_id)
 {
-    check(object_file != NULL, "Object file required");
-    check(object_file->state == SKY_OBJECT_FILE_STATE_LOCKED, "Object file must be open to retrieve property");
+    check(table != NULL, "Table required");
+    check(table->state == SKY_OBJECT_FILE_STATE_LOCKED, "Table must be open to retrieve property");
     check(name != NULL, "Property name required");
     check(blength(name) > 0, "Property name cannot be blank");
     
@@ -1545,10 +1545,10 @@ int sky_object_file_find_or_create_property_id_by_name(sky_object_file *object_f
     *property_id = 0;
     
     // Loop over properties to find matching name.
-    sky_object_file_property_count_t i;
-    for(i=0; i<object_file->property_count; i++) {
-        if(biseq(object_file->properties[i]->name, name) == 1) {
-            *property_id = object_file->properties[i]->id;
+    sky_table_property_count_t i;
+    for(i=0; i<table->property_count; i++) {
+        if(biseq(table->properties[i]->name, name) == 1) {
+            *property_id = table->properties[i]->id;
             break;
         }
     }
@@ -1557,16 +1557,16 @@ int sky_object_file_find_or_create_property_id_by_name(sky_object_file *object_f
     if(*property_id == 0) {
         // Create property.
         sky_property *property = malloc(sizeof(sky_property)); check_mem(property);
-        property->id = object_file->property_count+1;
+        property->id = table->property_count+1;
         property->name = bstrcpy(name);
         
         // Append to properties.
-        object_file->property_count++;
-        object_file->properties = realloc(object_file->properties, sizeof(sky_property*) * object_file->property_count);
-        object_file->properties[object_file->property_count-1] = property;
+        table->property_count++;
+        table->properties = realloc(table->properties, sizeof(sky_property*) * table->property_count);
+        table->properties[table->property_count-1] = property;
         
         // Save properties file.
-        save_properties(object_file);
+        save_properties(table);
         
         // Return property id to caller.
         *property_id = property->id;

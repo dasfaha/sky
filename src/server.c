@@ -16,21 +16,21 @@
 //==============================================================================
 
 //======================================
-// Object file management
+// Table management
 //======================================
 
-// Opens an object file.
+// Opens an table.
 //
-// server - The server that is opening the object file.
+// server - The server that is opening the table.
 // database_name - The name of the database to open.
-// object_file_name - The name of the object file to open.
+// table_name - The name of the table to open.
 // database - Returns the instance of the database to the caller. 
-// object_file - Returns the instance of the object file to the caller. 
+// table - Returns the instance of the table to the caller. 
 //
 // Returns 0 if successful, otherwise returns -1.
-int open_object_file(sky_server *server, bstring database_name,
-                     bstring object_file_name, sky_database **database,
-                     sky_object_file **object_file)
+int open_table(sky_server *server, bstring database_name,
+                     bstring table_name, sky_database **database,
+                     sky_table **table)
 {
     int rc;
     
@@ -41,53 +41,53 @@ int open_object_file(sky_server *server, bstring database_name,
     *database = sky_database_create(path);
     check_mem(*database);
     
-    // Create the object file.
-    *object_file = sky_object_file_create(*database, object_file_name);
-    check_mem(*object_file);
+    // Create the table.
+    *table = sky_table_create(*database, table_name);
+    check_mem(*table);
     
-    // Open the object file.
-    rc = sky_object_file_open(*object_file);
-    check(rc == 0, "Unable to open object file");
+    // Open the table.
+    rc = sky_table_open(*table);
+    check(rc == 0, "Unable to open table");
     
-    // Lock the object file.
-    rc = sky_object_file_lock(*object_file);
-    check(rc == 0, "Unable to lock object file");
+    // Lock the table.
+    rc = sky_table_lock(*table);
+    check(rc == 0, "Unable to lock table");
     
     return 0;
 
 error:
     sky_database_free(*database);
-    sky_object_file_free(*object_file);
+    sky_table_free(*table);
     *database = NULL;
-    *object_file = NULL;
+    *table = NULL;
     return -1;
 }
 
-// Closes an object file.
+// Closes an table.
 //
-// server - The server that is opening the object file.
-// database - The database that the object file belongs to.
-// object_file - The object file to close.
+// server - The server that is opening the table.
+// database - The database that the table belongs to.
+// table - The table to close.
 //
 // Returns 0 if successful, otherwise returns -1.
-int close_object_file(sky_server *server, sky_database *database,
-                      sky_object_file *object_file)
+int close_table(sky_server *server, sky_database *database,
+                      sky_table *table)
 {
     int rc;
     
     // HACK: Suppress unused "server" variable warning for now.
     server = server;
     
-    // Unlock the object file.
-    rc = sky_object_file_unlock(object_file);
-    check(rc == 0, "Unable to unlock object file");
+    // Unlock the table.
+    rc = sky_table_unlock(table);
+    check(rc == 0, "Unable to unlock table");
 
-    // Close the object file.
-    rc = sky_object_file_close(object_file);
-    check(rc == 0, "Unable to close object file");
+    // Close the table.
+    rc = sky_table_close(table);
+    check(rc == 0, "Unable to close table");
 
-    // Free the object file.
-    sky_object_file_free(object_file);
+    // Free the table.
+    sky_table_free(table);
     
     // Free the database file.
     sky_database_free(database);
@@ -95,7 +95,7 @@ int close_object_file(sky_server *server, sky_database *database,
     return 0;
 
 error:
-    sky_object_file_free(object_file);
+    sky_table_free(table);
     sky_database_free(database);
     return -1;
 }
@@ -297,19 +297,19 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     // Validate message.
     check(server->path != NULL, "Server path is required");
     check(message->database_name != NULL, "Database name is required");
-    check(message->object_file_name != NULL, "Object file name is required");
+    check(message->table_name != NULL, "Table name is required");
     check(message->object_id != 0, "Object ID is required");
     
-    // Open object file.
+    // Open table.
     sky_database *database;
-    sky_object_file *object_file;
-    open_object_file(server, message->database_name, message->object_file_name,
-                     &database, &object_file);
+    sky_table *table;
+    open_table(server, message->database_name, message->table_name,
+                     &database, &table);
 
     // Look up action.
     sky_action_id_t action_id = 0;
     if(message->action_name != NULL) {
-        rc = sky_object_file_find_or_create_action_id_by_name(object_file, message->action_name, &action_id);
+        rc = sky_table_find_or_create_action_id_by_name(table, message->action_name, &action_id);
         check(rc == 0, "Unable to find or create action id: %s", bdata(message->action_name));
     }
 
@@ -321,21 +321,21 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     for(i=0; i<message->data_count; i++) {
         // Look up key.
         sky_property_id_t property_id;
-        rc = sky_object_file_find_or_create_property_id_by_name(object_file, message->data_keys[i], &property_id);
+        rc = sky_table_find_or_create_property_id_by_name(table, message->data_keys[i], &property_id);
         check(rc == 0, "Unable to find or create property id: %s", bdata(message->data_keys[i]));
         
         // Add event data.
         sky_event_set_data(event, property_id, message->data_values[i]);
     }
     
-    // Add event to object file.
-    rc = sky_object_file_add_event(object_file, event);
-    check(rc == 0, "Unable to add event to object file");
+    // Add event to table.
+    rc = sky_table_add_event(table, event);
+    check(rc == 0, "Unable to add event to table");
     
     // TODO: Send respond to socket.
     
-    // Close object file.
-    close_object_file(server, database, object_file);
+    // Close table.
+    close_table(server, database, table);
 
     // Clean up.
     sky_event_free(event);
