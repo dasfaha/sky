@@ -1,12 +1,19 @@
-# Server
-- Tests
-- Daemonize
-
 # EQL
-- flex/bison -> AST
-- AST -> LLVM
-- Integrate LLVM with iterator.
-- Add standalone support
+- AST
+  - var_decl
+  - farg
+  - fproto
+  - function
+  - fcall
+  - method
+  - property
+  - class
+  - module
+  - metadata
+
+- Flex/Bison
+- Codegen
+- Msgpack
 - Add server support
 
 # Client API (hisky)
