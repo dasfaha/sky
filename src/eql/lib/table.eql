@@ -1,0 +1,39 @@
+[Extern("eql_table")]
+
+/**
+ * A table represents a collection of paths.
+ */
+class Table
+{
+    //--------------------------------------------------------------------------
+    // Properties
+    //--------------------------------------------------------------------------
+
+    /**
+     * A pointer to the underlying Sky table.
+     */
+    private var table:Ref;
+
+
+    //--------------------------------------------------------------------------
+    // Methods
+    //--------------------------------------------------------------------------
+
+    [Extern("eql_table_paths")]
+    /**
+     * Retrieves a path iterator used to loop over the paths in the table.
+     */
+    public function paths(PathIterator *iterator):void;
+    
+    /**
+     * Calculates the number of paths in the table.
+     */
+    public function getPathCount():Int
+    {
+        Int count = 0;
+        foreach(Path path in paths) {
+            count++;
+        }
+        return count;
+    }
+}

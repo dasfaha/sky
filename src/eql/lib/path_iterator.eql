@@ -1,0 +1,29 @@
+[Extern("eql_path_iterator")]
+
+[Enumerable]
+/**
+ * A path iterator is analogous to a forward-only database cursor. It allows EQL
+ * to loop over paths sequentially very quickly with a small memory footprint.
+ */
+class PathIterator
+{
+    //--------------------------------------------------------------------------
+    // Properties
+    //--------------------------------------------------------------------------
+
+    /**
+     * A pointer to the underlying Sky path iterator.
+     */
+    private var pathIterator:Ref;
+
+
+    //--------------------------------------------------------------------------
+    // Methods
+    //--------------------------------------------------------------------------
+
+    [Extern("eql_path_iterator_next")]
+    /**
+     * Retrieves a reference to the next path available to the iterator.
+     */
+    public function next(Path *path):void;
+}

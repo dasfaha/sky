@@ -4,11 +4,11 @@
 
 CFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64
 
-SOURCES=$(wildcard src/**/*.c src/*.c)
+SOURCES=$(wildcard src/**/*.c src/**/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES})
 LIB_SOURCES=$(filter-out $(wildcard src/sky_*.c),${SOURCES})
 LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
-TEST_SOURCES=$(wildcard tests/*_tests.c)
+TEST_SOURCES=$(wildcard tests/*_tests.c tests/**/*_tests.c)
 TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 
 
@@ -54,6 +54,7 @@ test: $(TEST_OBJECTS)
 
 build/tests:
 	mkdir -p build/tests
+	mkdir -p build/tests/eql
 
 $(TEST_OBJECTS): %: %.c build/tests build/libsky.a
 	$(CC) $(CFLAGS) -Isrc -o build/$@ $< build/libsky.a
