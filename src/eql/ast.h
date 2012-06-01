@@ -5,6 +5,7 @@
 #include "ast/float_literal.h"
 #include "ast/binary_expr.h"
 #include "ast/var_ref.h"
+#include "ast/var_decl.h"
 #include "ast/node.h"
 
 #endif

@@ -5,6 +5,7 @@
 #include "float_literal.h"
 #include "binary_expr.h"
 #include "var_ref.h"
+#include "var_decl.h"
 
 //==============================================================================
 //
@@ -17,7 +18,8 @@ typedef enum {
     EQL_AST_TYPE_INT_LITERAL,
     EQL_AST_TYPE_FLOAT_LITERAL,
     EQL_AST_TYPE_BINARY_EXPR,
-    EQL_AST_TYPE_VAR_REF
+    EQL_AST_TYPE_VAR_REF,
+    EQL_AST_TYPE_VAR_DECL
 } eql_ast_node_type_e;
 
 // Represents an node in the AST.
@@ -28,6 +30,7 @@ typedef struct eql_ast_node {
         eql_ast_float_literal float_literal;
         eql_ast_binary_expr binary_expr;
         eql_ast_var_ref var_ref;
+        eql_ast_var_decl var_decl;
     };
 } eql_ast_node;
 

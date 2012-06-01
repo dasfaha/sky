@@ -30,6 +30,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_var_ref_free(node);
             break;
         }
+        case EQL_AST_TYPE_VAR_DECL: {
+            eql_ast_var_decl_free(node);
+            break;
+        }
     }
     
     free(node);

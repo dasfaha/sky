@@ -86,6 +86,21 @@ int test_eql_ast_var_ref_create() {
 }
 
 
+//--------------------------------------
+// Variable Declaration
+//--------------------------------------
+
+int test_eql_ast_var_decl_create() {
+    eql_ast_node *node;
+    eql_ast_var_decl_create(&foo, &bar, &node);
+    mu_assert(node->type == EQL_AST_TYPE_VAR_DECL, "");
+    mu_assert(biseqcstr(node->var_decl.type, "foo"), "");
+    mu_assert(biseqcstr(node->var_decl.name, "bar"), "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
 
 //==============================================================================
 //

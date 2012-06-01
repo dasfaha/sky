@@ -1,6 +1,5 @@
 # EQL
 - AST
-  - var_decl
   - farg
   - fproto
   - function
