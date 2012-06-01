@@ -30,6 +30,21 @@ int test_eql_ast_int_literal_create() {
 }
 
 
+//--------------------------------------
+// Float Literal
+//--------------------------------------
+
+int test_eql_ast_float_literal_create() {
+    eql_ast_node *node;
+    int rc = eql_ast_float_literal_create(100.293, &node);
+    mu_assert(rc == 0, "");
+    mu_assert(node != NULL, "");
+    mu_assert(node->float_literal.value == 100.293, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
 
 //==============================================================================
 //
@@ -39,6 +54,7 @@ int test_eql_ast_int_literal_create() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_int_literal_create);
+    mu_run_test(test_eql_ast_float_literal_create);
     return 0;
 }
 
