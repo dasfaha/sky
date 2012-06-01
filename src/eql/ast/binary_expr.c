@@ -36,3 +36,19 @@ error:
     (*ret) = NULL;
     return -1;
 }
+
+// Frees a binary expression AST node from memory.
+//
+// node - The AST node to free.
+void eql_ast_binary_expr_free(struct eql_ast_node *node)
+{
+    if(node->binary_expr.lhs) {
+        eql_ast_node_free(node->binary_expr.lhs);
+    }
+    node->binary_expr.lhs = NULL;
+
+    if(node->binary_expr.rhs) {
+        eql_ast_node_free(node->binary_expr.rhs);
+    }
+    node->binary_expr.rhs = NULL;
+}

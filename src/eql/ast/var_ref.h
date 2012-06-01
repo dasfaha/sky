@@ -27,4 +27,6 @@ typedef struct {
 
 int eql_ast_var_ref_create(bstring name, struct eql_ast_node **node);
 
+void eql_ast_var_ref_free(struct eql_ast_node *node);
+
 #endif

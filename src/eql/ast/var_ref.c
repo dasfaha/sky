@@ -30,3 +30,14 @@ error:
     (*ret) = NULL;
     return -1;
 }
+
+// Frees a variable reference AST node from memory.
+//
+// node - The AST node to free.
+void eql_ast_var_ref_free(struct eql_ast_node *node)
+{
+    if(node->var_ref.name) {
+        bdestroy(node->var_ref.name);
+    }
+    node->var_ref.name = NULL;
+}

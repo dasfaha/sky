@@ -37,4 +37,6 @@ int eql_ast_binary_expr_create(eql_ast_binop_e operator,
     struct eql_ast_node *lhs, struct eql_ast_node *rhs,
     struct eql_ast_node **ret);
 
+void eql_ast_binary_expr_free(struct eql_ast_node *node);
+
 #endif
