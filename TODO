@@ -1,6 +1,5 @@
 # EQL
 - AST
-  - farg
   - fproto
   - function
   - fcall

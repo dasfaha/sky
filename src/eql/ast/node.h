@@ -7,6 +7,7 @@
 #include "var_ref.h"
 #include "var_decl.h"
 #include "farg.h"
+#include "fproto.h"
 
 //==============================================================================
 //
@@ -21,8 +22,15 @@ typedef enum {
     EQL_AST_TYPE_BINARY_EXPR,
     EQL_AST_TYPE_VAR_REF,
     EQL_AST_TYPE_VAR_DECL,
-    EQL_AST_TYPE_FARG
+    EQL_AST_TYPE_FARG,
+    EQL_AST_TYPE_FPROTO
 } eql_ast_node_type_e;
+
+// Defines the types of access modifiers for methods and properties.
+typedef enum {
+    EQL_ACCESS_PRIVATE,
+    EQL_ACCESS_PUBLIC
+} eql_ast_access_e;
 
 // Represents an node in the AST.
 typedef struct eql_ast_node {
@@ -34,6 +42,7 @@ typedef struct eql_ast_node {
         eql_ast_var_ref var_ref;
         eql_ast_var_decl var_decl;
         eql_ast_farg farg;
+        eql_ast_fproto fproto;
     };
 } eql_ast_node;
 

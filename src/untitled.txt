@@ -1,0 +1,9 @@
+window.onbeforeunload = function() {
+    try {
+      var pending = document.getElementById("Main").hasPendingOrders();
+      if(pending) {
+        return "Closing the browser or navigating away from this page will cause current uploads to fail. You will need to re-upload completely again.";
+      }
+    }
+    catch(e) {}
+}

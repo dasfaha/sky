@@ -7,6 +7,7 @@
 #include "ast/var_ref.h"
 #include "ast/var_decl.h"
 #include "ast/farg.h"
+#include "ast/fproto.h"
 #include "ast/node.h"
 
 #endif
