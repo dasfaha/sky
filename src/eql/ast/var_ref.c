@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "../../dbg.h"
 
-#include "float_literal.h"
+#include "var_ref.h"
 #include "node.h"
 
 //==============================================================================
@@ -10,17 +10,18 @@
 //
 //==============================================================================
 
-// Creates an AST node for a literal floating point number.
+// Creates an AST node for a variable reference.
 //
-// value - The floating point value.
-// ret   - A pointer to where the ast node will be returned.
+// name - The name of the variable value.
+// ret  - A pointer to where the ast node will be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int eql_ast_float_literal_create(double value, struct eql_ast_node **ret)
+int eql_ast_var_ref_create(bstring name, eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
-    node->type = EQL_AST_TYPE_FLOAT_LITERAL;
-    node->float_literal.value = value;
+    node->type = EQL_AST_TYPE_VAR_REF;
+    node->var_ref.name = bstrcpy(name);
+    check_mem(node->var_ref.name);
     *ret = node;
     return 0;
 
