@@ -15,7 +15,6 @@
 // node - The node to free.
 void eql_ast_node_free(eql_ast_node *node)
 {
-    unsigned int i;
     if(!node) return;
     
     // Recursively free dependent data.
@@ -44,6 +43,10 @@ void eql_ast_node_free(eql_ast_node *node)
         }
         case EQL_AST_TYPE_FUNCTION: {
             eql_ast_function_free(node);
+            break;
+        }
+        case EQL_AST_TYPE_BLOCK: {
+            eql_ast_block_free(node);
             break;
         }
     }
