@@ -16,6 +16,8 @@
 //==============================================================================
 
 struct tagbstring Foo = bsStatic("Foo");
+struct tagbstring Bar = bsStatic("Bar");
+
 struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
@@ -259,6 +261,31 @@ int test_eql_ast_class_create() {
     mu_assert(node->class.property_count == 2, "");
     mu_assert(node->class.properties[0] == property1, "");
     mu_assert(node->class.properties[1] == property2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
+//--------------------------------------
+// Module
+//--------------------------------------
+
+int test_eql_ast_module_create() {
+    eql_ast_node *classes[2];
+    eql_ast_node *node, *class1, *class2, *block;
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &class1);
+    eql_ast_class_create(&Bar, NULL, 0, NULL, 0, &class2);
+    classes[0] = class1;
+    classes[1] = class2;
+    eql_ast_block_create(NULL, 0, &block);
+    eql_ast_module_create(&bar, classes, 2, block, &node);
+    
+    mu_assert(node->type == EQL_AST_TYPE_MODULE, "");
+    mu_assert(biseqcstr(node->class.name, "bar"), "");
+    mu_assert(node->module.class_count == 1, "");
+    mu_assert(node->module.classes[0] == class1, "");
+    mu_assert(node->module.classes[1] == class2, "");
+    mu_assert(node->module.block == block, "");
     eql_ast_node_free(node);
     return 0;
 }
