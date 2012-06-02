@@ -27,8 +27,10 @@
 }
 
 %token <int_value> TINT
+%token <float_value> TFLOAT
 
-%type <node> block expr int_literal
+%type <node> block expr
+%type <node> number int_literal float_literal
 
 %start module
 
@@ -40,10 +42,16 @@ module : /* empty */
 
 block   : expr      { eql_ast_block_create(&$1, 1, &$$); };
 
+expr    : number
+;
+
+number  : float_literal
+        | int_literal
+;
+
 int_literal  : TINT { eql_ast_int_literal_create($1, &$$); };
 
-expr    : int_literal
-;
+float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
 
 %%
 

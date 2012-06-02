@@ -5,6 +5,7 @@
 #include "parser.h"
 #define SAVE_STRING yylval->string = bfromcstr(yytext)
 #define SAVE_INT yylval->int_value = atoll(yytext)
+#define SAVE_FLOAT yylval->float_value = atof(yytext)
 #define TOKEN(t) (yylval->token = t)
 %}
 
@@ -16,7 +17,8 @@
 %%
 
 [ \t\n]                 ;
-[0-9]*                  SAVE_INT; return TINT;
+[0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;
+[0-9]+                  SAVE_INT; return TINT;
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

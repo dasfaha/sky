@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <eql/ast.h>
+#include <eql/parser.h>
 
 #include "../minunit.h"
 
@@ -26,6 +27,23 @@ int test_eql_ast_float_literal_create() {
 }
 
 
+//--------------------------------------
+// Parser
+//--------------------------------------
+
+int test_eql_parse_float_literal() {
+    eql_ast_node *module = NULL;
+    bstring text = bfromcstr("10.421");
+    eql_parse(NULL, text, &module);
+    eql_ast_node *node = module->module.block->block.exprs[0];
+    mu_assert(node->type == EQL_AST_TYPE_FLOAT_LITERAL, "");
+    mu_assert(node->float_literal.value == 10.421, "");
+    eql_ast_node_free(module);
+    bdestroy(text);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -34,6 +52,7 @@ int test_eql_ast_float_literal_create() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_float_literal_create);
+    mu_run_test(test_eql_parse_float_literal);
     return 0;
 }
 

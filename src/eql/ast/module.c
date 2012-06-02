@@ -27,7 +27,8 @@ int eql_ast_module_create(bstring name,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_MODULE;
-    node->module.name = bstrcpy(name); check_mem(node->module.name);
+    node->module.name = bstrcpy(name);
+    if(name) check_mem(node->module.name);
     node->module.block = block;
 
     // Copy classes.

@@ -9,15 +9,6 @@
 
 //==============================================================================
 //
-// Globals
-//
-//==============================================================================
-
-struct tagbstring foo = bsStatic("foo");
-
-
-//==============================================================================
-//
 // Test Cases
 //
 //==============================================================================
@@ -43,7 +34,7 @@ int test_eql_ast_int_literal_create() {
 int test_eql_parse_int_literal() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("200");
-    eql_parse(&foo, text, &module);
+    eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_INT_LITERAL, "");
     mu_assert(node->int_literal.value == 200, "");
