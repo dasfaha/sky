@@ -1,5 +1,5 @@
-#ifndef _eql_ast_fproto_h
-#define _eql_ast_fproto_h
+#ifndef _eql_ast_metadata_h
+#define _eql_ast_metadata_h
 
 #include "../../bstring.h"
 
@@ -12,13 +12,12 @@
 // Forward declaration of node.
 struct eql_ast_node;
 
-// Represents a function prototype in the AST.
+// Represents a metadata tag in the AST.
 typedef struct {
     bstring name;
-    bstring return_type;
-    struct eql_ast_node **args;
-    unsigned int arg_count;
-} eql_ast_fproto;
+    struct eql_ast_node **items;
+    unsigned int item_count;
+} eql_ast_metadata;
 
 
 //==============================================================================
@@ -27,10 +26,9 @@ typedef struct {
 //
 //==============================================================================
 
-int eql_ast_fproto_create(bstring name, bstring return_type,
-    struct eql_ast_node **args, unsigned int arg_count,
-    struct eql_ast_node **ret);
+int eql_ast_metadata_create(bstring name, struct eql_ast_node **items,
+    unsigned int item_count, struct eql_ast_node **ret);
 
-void eql_ast_fproto_free(struct eql_ast_node *node);
+void eql_ast_metadata_free(struct eql_ast_node *node);
 
 #endif

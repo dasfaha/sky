@@ -59,6 +59,9 @@ void eql_ast_module_free(struct eql_ast_node *node)
     if(node->module.name) bdestroy(node->module.name);
     node->module.name = NULL;
     
+    if(node->module.block) eql_ast_node_free(node->module.block);
+    node->module.block = NULL;
+    
     if(node->module.class_count > 0) {
         unsigned int i;
         for(i=0; i<node->module.class_count; i++) {
