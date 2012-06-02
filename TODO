@@ -1,7 +1,5 @@
 # EQL
 - AST
-  - method
-  - property
   - class
   - module
   - metadata

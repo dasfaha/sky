@@ -12,6 +12,7 @@
 #include "ast/fcall.h"
 #include "ast/block.h"
 #include "ast/method.h"
+#include "ast/property.h"
 #include "ast/node.h"
 
 #endif
