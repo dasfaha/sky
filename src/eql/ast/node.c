@@ -42,6 +42,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_fproto_free(node);
             break;
         }
+        case EQL_AST_TYPE_FUNCTION: {
+            eql_ast_function_free(node);
+            break;
+        }
     }
     
     free(node);

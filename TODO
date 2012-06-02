@@ -1,7 +1,6 @@
 # EQL
 - AST
-  - fproto
-  - function
+  - block
   - fcall
   - method
   - property

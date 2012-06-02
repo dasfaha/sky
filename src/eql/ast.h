@@ -8,6 +8,7 @@
 #include "ast/var_decl.h"
 #include "ast/farg.h"
 #include "ast/fproto.h"
+#include "ast/function.h"
 #include "ast/node.h"
 
 #endif

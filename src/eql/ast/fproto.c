@@ -27,10 +27,15 @@ int eql_ast_fproto_create(bstring name, bstring return_type,
     check_mem(node->fproto.return_type);
 
     // Copy arguments.
-    size_t sz = malloc(sizeof(eql_ast_node*) * arg_count);
-    node->fproto.args = malloc(sz);
-    check_mem(node->fproto.args);
-    memcpy(node->fproto.args, args, sz);
+    if(arg_count > 0) {
+        size_t sz = sizeof(eql_ast_node*) * arg_count;
+        node->fproto.args = malloc(sz);
+        check_mem(node->fproto.args);
+        memcpy(node->fproto.args, args, sz);
+    }
+    else {
+        node->fproto.args = NULL;
+    }
     node->fproto.arg_count = arg_count;
     
     *ret = node;
