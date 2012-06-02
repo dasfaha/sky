@@ -3,6 +3,7 @@
     #include "ast.h"
     #include "parser.h"
     #include "lexer.h"
+    #include "../dbg.h"
     eql_ast_node *root;
     extern int yylex();
     void yyerror(void *scanner, const char *s) { printf("ERROR: %s\n", s); }
@@ -14,7 +15,7 @@
 %parse-param {void *scanner}
 
 %code provides {
-    int eql_parse(char *text, eql_ast_node **module);
+    int eql_parse(bstring name, bstring text, eql_ast_node **module);
 }
 
 %union {
@@ -27,17 +28,19 @@
 
 %token <int_value> TINT
 
-%type <node> expr
+%type <node> block expr int_literal
 
 %start module
 
 %%
 
 module : /* empty */
-        | expr     { root = $1; }
+        | block     { root->module.block = $1; }
 ;
 
-int_literal  : TINT { eql_ast_int_literal_create($1, &$$);};
+block   : expr      { eql_ast_block_create(&$1, 1, &$$); };
+
+int_literal  : TINT { eql_ast_int_literal_create($1, &$$); };
 
 expr    : int_literal
 ;
@@ -53,29 +56,33 @@ expr    : int_literal
 
 // Parses a string that contains EQL program text.
 //
+// name   - The name of the module.
 // text   - The text for the EQL module.
 // module - The pointer where the module AST should be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int eql_parse(char *text, eql_ast_node **module)
+int eql_parse(bstring name, bstring text, eql_ast_node **module)
 {
     // yydebug = 1;
+    
+    // Setup module.
+    int rc = eql_ast_module_create(name, NULL, 0, NULL, &root);
+    check(rc == 0, "Unable to create module");
     
     // Parse using Bison.
     yyscan_t scanner;
     yylex_init(&scanner);
-    YY_BUFFER_STATE buffer = yy_scan_string(text, scanner);
-    int rc = yyparse(scanner);
+    YY_BUFFER_STATE buffer = yy_scan_string(bdata(text), scanner);
+    rc = yyparse(scanner);
     yy_delete_buffer(buffer, scanner);
     yylex_destroy(scanner);
-    
-    // If parse was successful, return root node.
-    if(rc == 0) {
-        *module = root;
-        return 0;
-    }
-    // Otherwise return error.
-    else {
-        return -1;
-    }
+    check(rc == 0, "EQL Syntax error");
+
+    // Return module to caller.
+    *module = root;
+
+    return 0;
+
+error:
+    return -1;
 }

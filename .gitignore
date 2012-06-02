@@ -3,6 +3,10 @@ build/
 src/*.o
 src/**/*.o
 src/**/**/*.o
+src/eql/lexer.c
+src/eql/lexer.h
+src/eql/parser.c
+src/eql/parser.h
 tests/*_tests
 .DS_Store
 **/*.dSYM*

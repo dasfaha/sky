@@ -26,7 +26,7 @@ YFLAGS=-dv
 # Default Target
 ################################################################################
 
-all: build/libsky.a build/skyd build/sky-gen build/sky-bench test
+all: eql build/libsky.a build/skyd build/sky-gen build/sky-bench test
 
 
 ################################################################################
@@ -58,10 +58,13 @@ build:
 # Bison / Flex
 ################################################################################
 
-src/eql/lexer.c: src/eql/parser.c
+.PHONY: eql
+eql: ${LEX_OBJECTS}
+
+src/eql/lexer.c: src/eql/parser.c src/eql/lexer.l
 	${LEX} --header-file=src/eql/lexer.h -o $@ src/eql/lexer.l
 
-src/eql/parser.c: src/eql/parser.y
+src/eql/parser.c: src/eql/parser.y src/eql/parser.y
 	mkdir -p build/bison
 	${YACC} ${YFLAGS} --report-file=build/bison/report.txt -o $@ $^
 
