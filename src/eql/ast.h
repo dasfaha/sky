@@ -9,6 +9,7 @@
 #include "ast/farg.h"
 #include "ast/fproto.h"
 #include "ast/function.h"
+#include "ast/fcall.h"
 #include "ast/block.h"
 #include "ast/node.h"
 

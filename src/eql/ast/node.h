@@ -9,6 +9,7 @@
 #include "farg.h"
 #include "fproto.h"
 #include "function.h"
+#include "fcall.h"
 #include "block.h"
 
 //==============================================================================
@@ -27,6 +28,7 @@ typedef enum {
     EQL_AST_TYPE_FARG,
     EQL_AST_TYPE_FPROTO,
     EQL_AST_TYPE_FUNCTION,
+    EQL_AST_TYPE_FCALL,
     EQL_AST_TYPE_BLOCK
 } eql_ast_node_type_e;
 
@@ -48,6 +50,7 @@ typedef struct eql_ast_node {
         eql_ast_farg farg;
         eql_ast_fproto fproto;
         eql_ast_function function;
+        eql_ast_fcall fcall;
         eql_ast_block block;
     };
 } eql_ast_node;

@@ -1,6 +1,5 @@
 # EQL
 - AST
-  - block
   - fcall
   - method
   - property

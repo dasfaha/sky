@@ -45,6 +45,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_function_free(node);
             break;
         }
+        case EQL_AST_TYPE_FCALL: {
+            eql_ast_fcall_free(node);
+            break;
+        }
         case EQL_AST_TYPE_BLOCK: {
             eql_ast_block_free(node);
             break;
