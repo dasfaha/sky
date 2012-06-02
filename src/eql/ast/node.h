@@ -14,6 +14,7 @@
 #include "block.h"
 #include "method.h"
 #include "property.h"
+#include "class.h"
 
 //==============================================================================
 //
@@ -34,7 +35,8 @@ typedef enum {
     EQL_AST_TYPE_FCALL,
     EQL_AST_TYPE_BLOCK,
     EQL_AST_TYPE_METHOD,
-    EQL_AST_TYPE_PROPERTY
+    EQL_AST_TYPE_PROPERTY,
+    EQL_AST_TYPE_CLASS
 } eql_ast_node_type_e;
 
 // Represents an node in the AST.
@@ -53,6 +55,7 @@ typedef struct eql_ast_node {
         eql_ast_block block;
         eql_ast_method method;
         eql_ast_property property;
+        eql_ast_class class;
     };
 } eql_ast_node;
 

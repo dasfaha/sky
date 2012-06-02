@@ -13,6 +13,7 @@
 #include "ast/block.h"
 #include "ast/method.h"
 #include "ast/property.h"
+#include "ast/class.h"
 #include "ast/node.h"
 
 #endif
