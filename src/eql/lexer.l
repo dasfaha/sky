@@ -17,6 +17,7 @@
 %%
 
 [ \t\n]                 ;
+[a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;
 [0-9]+                  SAVE_INT; return TINT;
 "("                     return TOKEN(TLPAREN);

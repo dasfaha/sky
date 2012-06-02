@@ -1,5 +1,18 @@
 # EQL
 - Flex/Bison
+  - block (multiple expr)
+  - farg
+  - fcall
+  - function
+  - var_decl
+  - var_ref
+
+  - class
+  - method
+  - property
+  - metadata
+  - metadata_item
+
 - Codegen
 - Msgpack
 - Add server support

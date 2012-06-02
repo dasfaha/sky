@@ -26,12 +26,14 @@
     int token;
 }
 
+%token <string> TIDENTIFIER
 %token <int_value> TINT
 %token <float_value> TFLOAT
 %token <token> TLPAREN TRPAREN
 %token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block expr
+%type <node> var_ref
 %type <node> number int_literal float_literal
 
 %left TPLUS TMINUS
@@ -52,8 +54,11 @@ expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3,
         | expr TMUL expr    { eql_ast_binary_expr_create(EQL_BINOP_MUL, $1, $3, &$$); }
         | expr TDIV expr    { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
         | number
+        | var_ref
         | TLPAREN expr TRPAREN { $$ = $2; }
 ;
+
+var_ref : TIDENTIFIER { eql_ast_var_ref_create($1, &$$); bdestroy($1); };
 
 number  : float_literal
         | int_literal

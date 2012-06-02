@@ -8,6 +8,16 @@
 
 //==============================================================================
 //
+// Globals
+//
+//==============================================================================
+
+struct tagbstring foo = bsStatic("foo");
+struct tagbstring bar = bsStatic("bar");
+
+
+//==============================================================================
+//
 // Test Cases
 //
 //==============================================================================
@@ -18,7 +28,7 @@
 
 int test_eql_ast_method_create() {
     eql_ast_node *node, *function;
-    eql_ast_function_create(NULL, NULL, &function);
+    eql_ast_function_create(&foo, &bar, NULL, 0, NULL, &function);
     eql_ast_method_create(EQL_ACCESS_PUBLIC, function, &node);
     mu_assert(node->type == EQL_AST_TYPE_METHOD, "");
     mu_assert(node->method.access == EQL_ACCESS_PUBLIC, "");

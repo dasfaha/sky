@@ -14,7 +14,10 @@ struct eql_ast_node;
 
 // Represents a function in the AST.
 typedef struct {
-    struct eql_ast_node *prototype;
+    bstring name;
+    bstring return_type;
+    struct eql_ast_node **args;
+    unsigned int arg_count;
     struct eql_ast_node *body;
 } eql_ast_function;
 
@@ -25,7 +28,8 @@ typedef struct {
 //
 //==============================================================================
 
-int eql_ast_function_create(struct eql_ast_node *prototype,
+int eql_ast_function_create(bstring name, bstring return_type,
+    struct eql_ast_node **args, unsigned int arg_count,
     struct eql_ast_node *body, struct eql_ast_node **ret);
 
 void eql_ast_function_free(struct eql_ast_node *node);
