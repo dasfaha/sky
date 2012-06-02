@@ -16,6 +16,7 @@
 #include "property.h"
 #include "class.h"
 #include "module.h"
+#include "metadata_item.h"
 
 //==============================================================================
 //
@@ -38,7 +39,8 @@ typedef enum {
     EQL_AST_TYPE_METHOD,
     EQL_AST_TYPE_PROPERTY,
     EQL_AST_TYPE_CLASS,
-    EQL_AST_TYPE_MODULE
+    EQL_AST_TYPE_MODULE,
+    EQL_AST_TYPE_METADATA_ITEM
 } eql_ast_node_type_e;
 
 // Represents an node in the AST.
@@ -59,6 +61,7 @@ typedef struct eql_ast_node {
         eql_ast_property property;
         eql_ast_class class;
         eql_ast_module module;
+        eql_ast_metadata_item metadata_item;
     };
 } eql_ast_node;
 

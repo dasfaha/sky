@@ -70,6 +70,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_module_free(node);
             break;
         }
+        case EQL_AST_TYPE_METADATA_ITEM: {
+            eql_ast_metadata_item_free(node);
+            break;
+        }
     }
     
     free(node);

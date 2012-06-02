@@ -282,10 +282,25 @@ int test_eql_ast_module_create() {
     
     mu_assert(node->type == EQL_AST_TYPE_MODULE, "");
     mu_assert(biseqcstr(node->class.name, "bar"), "");
-    mu_assert(node->module.class_count == 1, "");
+    mu_assert(node->module.class_count == 2, "");
     mu_assert(node->module.classes[0] == class1, "");
     mu_assert(node->module.classes[1] == class2, "");
     mu_assert(node->module.block == block, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
+//--------------------------------------
+// Metadata Item
+//--------------------------------------
+
+int test_eql_ast_metadata_item_create() {
+    eql_ast_node *node;
+    eql_ast_metadata_item_create(&foo, &bar, &node);
+    mu_assert(node->type == EQL_AST_TYPE_METADATA_ITEM, "");
+    mu_assert(biseqcstr(node->metadata_item.key, "foo"), "");
+    mu_assert(biseqcstr(node->metadata_item.value, "bar"), "");
     eql_ast_node_free(node);
     return 0;
 }
@@ -311,6 +326,8 @@ int all_tests() {
     mu_run_test(test_eql_ast_method_create);
     mu_run_test(test_eql_ast_property_create);
     mu_run_test(test_eql_ast_class_create);
+    mu_run_test(test_eql_ast_module_create);
+    mu_run_test(test_eql_ast_metadata_item_create);
     return 0;
 }
 

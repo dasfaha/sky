@@ -1,6 +1,5 @@
 # EQL
 - AST
-  - module
   - metadata
 
 - Flex/Bison
