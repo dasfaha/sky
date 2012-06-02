@@ -4,12 +4,22 @@
 
 CFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64
 
+LEX_SOURCES=$(wildcard src/*.l) $(wildcard src/**/*.l)
+LEX_OBJECTS=$(patsubst %.l,%.c,${LEX_SOURCES}) $(patsubst %.l,%.h,${LEX_SOURCES})
+
+YACC_SOURCES=$(wildcard src/*.y) $(wildcard src/**/*.y)
+YACC_OBJECTS=$(patsubst %.y,%.c,${YACC_SOURCES}) $(patsubst %.y,%.h,${YACC_SOURCES})
+
 SOURCES=$(wildcard src/**/*.c src/**/**/*.c src/*.c)
-OBJECTS=$(patsubst %.c,%.o,${SOURCES})
+OBJECTS=$(patsubst %.c,%.o,${SOURCES}) $(patsubst %.l,%.o,${LEX_SOURCES}) $(patsubst %.y,%.o,${YACC_SOURCES})
 LIB_SOURCES=$(filter-out $(wildcard src/sky_*.c),${SOURCES})
 LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
 TEST_SOURCES=$(wildcard tests/*_tests.c tests/**/*_tests.c)
 TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
+
+LEX=flex
+YACC=bison
+YFLAGS=-dv
 
 
 ################################################################################
@@ -45,6 +55,17 @@ build:
 
 
 ################################################################################
+# Bison / Flex
+################################################################################
+
+src/eql/lexer.c: src/eql/parser.c
+	${LEX} --header-file=src/eql/lexer.h -o $@ src/eql/lexer.l
+
+src/eql/parser.c: src/eql/parser.y
+	mkdir -p build/bison
+	${YACC} ${YFLAGS} --report-file=build/bison/report.txt -o $@ $^
+
+################################################################################
 # Tests
 ################################################################################
 
@@ -65,6 +86,6 @@ $(TEST_OBJECTS): %: %.c build/tests build/libsky.a
 ################################################################################
 
 clean: 
-	rm -rf build ${OBJECTS} ${TEST_OBJECTS}
+	rm -rf build ${OBJECTS} ${TEST_OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}
 	rm -rf tests/*.dSYM
 	rm -rf tmp/*
