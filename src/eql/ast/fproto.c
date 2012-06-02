@@ -59,7 +59,7 @@ void eql_ast_fproto_free(struct eql_ast_node *node)
     node->fproto.return_type = NULL;
     
     if(node->fproto.arg_count > 0) {
-        int i;
+        unsigned int i;
         for(i=0; i<node->fproto.arg_count; i++) {
             eql_ast_node_free(node->fproto.args[i]);
             node->fproto.args[i] = NULL;

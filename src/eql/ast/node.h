@@ -1,6 +1,7 @@
 #ifndef _eql_ast_node_h
 #define _eql_ast_node_h
 
+#include "access.h"
 #include "int_literal.h"
 #include "float_literal.h"
 #include "binary_expr.h"
@@ -11,6 +12,7 @@
 #include "function.h"
 #include "fcall.h"
 #include "block.h"
+#include "method.h"
 
 //==============================================================================
 //
@@ -29,14 +31,9 @@ typedef enum {
     EQL_AST_TYPE_FPROTO,
     EQL_AST_TYPE_FUNCTION,
     EQL_AST_TYPE_FCALL,
-    EQL_AST_TYPE_BLOCK
+    EQL_AST_TYPE_BLOCK,
+    EQL_AST_TYPE_METHOD
 } eql_ast_node_type_e;
-
-// Defines the types of access modifiers for methods and properties.
-typedef enum {
-    EQL_ACCESS_PRIVATE,
-    EQL_ACCESS_PUBLIC
-} eql_ast_access_e;
 
 // Represents an node in the AST.
 typedef struct eql_ast_node {
@@ -52,6 +49,7 @@ typedef struct eql_ast_node {
         eql_ast_function function;
         eql_ast_fcall fcall;
         eql_ast_block block;
+        eql_ast_method method;
     };
 } eql_ast_node;
 

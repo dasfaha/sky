@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "node.h"
 
 //==============================================================================
@@ -51,6 +52,10 @@ void eql_ast_node_free(eql_ast_node *node)
         }
         case EQL_AST_TYPE_BLOCK: {
             eql_ast_block_free(node);
+            break;
+        }
+        case EQL_AST_TYPE_METHOD: {
+            eql_ast_method_free(node);
             break;
         }
     }

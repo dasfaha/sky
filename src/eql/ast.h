@@ -11,6 +11,7 @@
 #include "ast/function.h"
 #include "ast/fcall.h"
 #include "ast/block.h"
+#include "ast/method.h"
 #include "ast/node.h"
 
 #endif

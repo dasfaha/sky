@@ -55,7 +55,7 @@ void eql_ast_fcall_free(struct eql_ast_node *node)
     node->fcall.name = NULL;
     
     if(node->fcall.arg_count > 0) {
-        int i;
+        unsigned int i;
         for(i=0; i<node->fcall.arg_count; i++) {
             eql_ast_node_free(node->fcall.args[i]);
             node->fcall.args[i] = NULL;
