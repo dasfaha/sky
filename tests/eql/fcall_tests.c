@@ -1,0 +1,58 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <eql/ast.h>
+
+#include "../minunit.h"
+
+
+//==============================================================================
+//
+// Globals
+//
+//==============================================================================
+
+struct tagbstring foo = bsStatic("foo");
+
+
+//==============================================================================
+//
+// Test Cases
+//
+//==============================================================================
+
+//--------------------------------------
+// AST
+//--------------------------------------
+
+int test_eql_ast_fcall_create() {
+    eql_ast_node *args[2];
+    eql_ast_node *node, *expr1, *expr2;
+    eql_ast_int_literal_create(10, &expr1);
+    eql_ast_int_literal_create(20, &expr2);
+    args[0] = expr1;
+    args[1] = expr2;
+    eql_ast_fcall_create(&foo, args, 2, &node);
+
+    mu_assert(node->type == EQL_AST_TYPE_FCALL, "");
+    mu_assert(biseqcstr(node->fcall.name, "foo"), "");
+    mu_assert(node->fcall.arg_count == 2, "");
+    mu_assert(node->fcall.args[0] == expr1, "");
+    mu_assert(node->fcall.args[1] == expr2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
+//==============================================================================
+//
+// Setup
+//
+//==============================================================================
+
+int all_tests() {
+    mu_run_test(test_eql_ast_fcall_create);
+    return 0;
+}
+
+RUN_TESTS()

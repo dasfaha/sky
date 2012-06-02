@@ -1,7 +1,4 @@
 # EQL
-- AST
-  - metadata
-
 - Flex/Bison
 - Codegen
 - Msgpack
