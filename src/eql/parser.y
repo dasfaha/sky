@@ -28,9 +28,14 @@
 
 %token <int_value> TINT
 %token <float_value> TFLOAT
+%token <token> TLPAREN TRPAREN
+%token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block expr
 %type <node> number int_literal float_literal
+
+%left TPLUS TMINUS
+%left TMUL TDIV
 
 %start module
 
@@ -42,7 +47,12 @@ module : /* empty */
 
 block   : expr      { eql_ast_block_create(&$1, 1, &$$); };
 
-expr    : number
+expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
+        | expr TMINUS expr  { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }
+        | expr TMUL expr    { eql_ast_binary_expr_create(EQL_BINOP_MUL, $1, $3, &$$); }
+        | expr TDIV expr    { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
+        | number
+        | TLPAREN expr TRPAREN { $$ = $2; }
 ;
 
 number  : float_literal

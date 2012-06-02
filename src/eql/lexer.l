@@ -19,6 +19,12 @@
 [ \t\n]                 ;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;
 [0-9]+                  SAVE_INT; return TINT;
+"("                     return TOKEN(TLPAREN);
+")"                     return TOKEN(TRPAREN);
+"+"                     return TOKEN(TPLUS);
+"-"                     return TOKEN(TMINUS);
+"*"                     return TOKEN(TMUL);
+"/"                     return TOKEN(TDIV);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%
