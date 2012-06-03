@@ -1,12 +1,6 @@
 # EQL
 - Flex/Bison
-  - function
-  - farg
   - fcall
-
-  - class
-  - method
-  - property
   - metadata
   - metadata_item
 

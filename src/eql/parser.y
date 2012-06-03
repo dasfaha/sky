@@ -42,7 +42,7 @@
 
 %type <node> block stmt expr
 %type <node> var_ref var_decl
-%type <node> class method
+%type <node> class method property
 %type <node> function farg
 %type <node> number int_literal float_literal
 %type <array> stmts fargs class_members
@@ -117,11 +117,14 @@ class : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
             bdestroy($2);
         };
 
-class_members : /* empty */           { $$ = eql_array_create(); }
-              | class_members method  { eql_array_push($$, $2); }
+class_members : /* empty */             { $$ = eql_array_create(); }
+              | class_members method    { eql_array_push($$, $2); }
+              | class_members property  { eql_array_push($$, $2); }
 ;
 
 method  : access function { eql_ast_method_create($1, $2, &$$); };
+
+property  : access var_decl TSEMICOLON { eql_ast_property_create($1, $2, &$$); };
         
 
 %%
