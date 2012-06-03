@@ -1,6 +1,5 @@
 # EQL
 - Flex/Bison
-  - block (multiple expr)
   - var_ref
   - var_decl
   - function

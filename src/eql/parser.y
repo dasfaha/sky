@@ -1,6 +1,5 @@
 %{
     #include "stdio.h"
-    #include "ast.h"
     #include "parser.h"
     #include "lexer.h"
     #include "../dbg.h"
@@ -14,6 +13,11 @@
 %lex-param {void *scanner}
 %parse-param {void *scanner}
 
+%code requires {
+    #include "ast.h"
+    #include "array.h"
+}
+
 %code provides {
     int eql_parse(bstring name, bstring text, eql_ast_node **module);
 }
@@ -23,18 +27,20 @@
     int64_t int_value;
     double float_value;
     eql_ast_node *node;
+    eql_array *array;
     int token;
 }
 
 %token <string> TIDENTIFIER
 %token <int_value> TINT
 %token <float_value> TFLOAT
-%token <token> TLPAREN TRPAREN
+%token <token> TLPAREN TRPAREN TSEMICOLON
 %token <token> TPLUS TMINUS TMUL TDIV
 
-%type <node> block expr
+%type <node> block stmt expr
 %type <node> var_ref
 %type <node> number int_literal float_literal
+%type <array> stmts
 
 %left TPLUS TMINUS
 %left TMUL TDIV
@@ -47,7 +53,13 @@ module : /* empty */
         | block     { root->module.block = $1; }
 ;
 
-block   : expr      { eql_ast_block_create(&$1, 1, &$$); };
+block   : /* empty */
+        | stmts      { eql_ast_block_create((eql_ast_node**)$1->elements, $1->length, &$$); eql_array_free($1); };
+
+stmts   : stmt       { $$ = eql_array_create(); eql_array_push($$, $1); }
+        | stmts stmt { eql_array_push($1, $2); }
+
+stmt    : expr TSEMICOLON;
 
 expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
         | expr TMINUS expr  { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }

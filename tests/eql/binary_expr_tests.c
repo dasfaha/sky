@@ -37,7 +37,7 @@ int test_eql_ast_binary_expr_create() {
 
 int test_eql_parse_binary_expr_plus() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("10+3");
+    bstring text = bfromcstr("10+3;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
@@ -51,7 +51,7 @@ int test_eql_parse_binary_expr_plus() {
 
 int test_eql_parse_binary_expr_minus() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("19 - 2");
+    bstring text = bfromcstr("19 - 2;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
@@ -65,7 +65,7 @@ int test_eql_parse_binary_expr_minus() {
 
 int test_eql_parse_binary_expr_mul() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("1 * 2");
+    bstring text = bfromcstr("1 * 2;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
@@ -79,7 +79,7 @@ int test_eql_parse_binary_expr_mul() {
 
 int test_eql_parse_binary_expr_div() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("10.2 / 4");
+    bstring text = bfromcstr("10.2 / 4;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
@@ -93,7 +93,7 @@ int test_eql_parse_binary_expr_div() {
 
 int test_eql_parse_binary_expr_complex() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("1 + 2 * 3");
+    bstring text = bfromcstr("1 + 2 * 3;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
@@ -111,7 +111,7 @@ int test_eql_parse_binary_expr_complex() {
 
 int test_eql_parse_binary_expr_parens() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("(1 + 2) * 3");
+    bstring text = bfromcstr("(1 + 2) * 3;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.block->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");

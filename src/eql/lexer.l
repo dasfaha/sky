@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "../bstring.h"
 #include "ast.h"
+#include "array.h"
 #include "parser.h"
 #define SAVE_STRING yylval->string = bfromcstr(yytext)
 #define SAVE_INT yylval->int_value = atoll(yytext)
@@ -26,6 +27,7 @@
 "-"                     return TOKEN(TMINUS);
 "*"                     return TOKEN(TMUL);
 "/"                     return TOKEN(TDIV);
+";"                     return TOKEN(TSEMICOLON);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%
