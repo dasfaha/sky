@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <eql/ast.h>
+#include <eql/parser.h>
 
 #include "../minunit.h"
 
@@ -48,6 +49,21 @@ int test_eql_ast_metadata_create() {
     return 0;
 }
 
+//--------------------------------------
+// Parser
+//--------------------------------------
+
+int test_eql_parse_metadata() {
+    eql_ast_node *module = NULL;
+    bstring text = bfromcstr("[Baz] [Bat] class Foo { }");
+    eql_parse(NULL, text, &module);
+    eql_ast_node *node = module->module.classes[0];
+    mu_assert(node->type == EQL_AST_TYPE_CLASS, "");
+    mu_assert(biseqcstr(node->class.name, "Foo"), "");
+    eql_ast_node_free(module);
+    bdestroy(text);
+    return 0;
+}
 
 
 //==============================================================================
@@ -58,6 +74,7 @@ int test_eql_ast_metadata_create() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_metadata_create);
+    mu_run_test(test_eql_parse_metadata);
     return 0;
 }
 

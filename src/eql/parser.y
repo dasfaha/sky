@@ -37,7 +37,8 @@
 %token <float_value> TFLOAT
 %token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE
-%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TSEMICOLON TCOLON TCOMMA
+%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
+%token <token> TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block stmt expr
@@ -45,7 +46,8 @@
 %type <node> class method property
 %type <node> function farg fcall
 %type <node> number int_literal float_literal
-%type <array> stmts fcall_args fargs class_members
+%type <node> metadata
+%type <array> stmts fcall_args fargs class_members metadatas
 %type <access> access
 
 %left TPLUS TMINUS
@@ -124,11 +126,11 @@ access : TPUBLIC    { $$ = EQL_ACCESS_PUBLIC; }
        | TPRIVATE   { $$ = EQL_ACCESS_PRIVATE; }
 ;
 
-class : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
+class : metadatas TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
         {
-            eql_ast_class_create($2, NULL, 0, NULL, 0, &$$);
-            eql_ast_class_add_members($$, (eql_ast_node**)$4->elements, $4->length);
-            bdestroy($2);
+            eql_ast_class_create($3, NULL, 0, NULL, 0, &$$);
+            eql_ast_class_add_members($$, (eql_ast_node**)$5->elements, $5->length);
+            bdestroy($3);
         };
 
 class_members : /* empty */             { $$ = eql_array_create(); }
@@ -140,7 +142,12 @@ method  : access function { eql_ast_method_create($1, $2, &$$); };
 
 property  : access var_decl TSEMICOLON { eql_ast_property_create($1, $2, &$$); };
         
+metadatas : /* empty */        { $$ = eql_array_create(); }
+          | metadatas metadata { eql_array_push($$, $2); }
+;
 
+metadata  : TLBRACKET TIDENTIFIER TRBRACKET { eql_ast_metadata_create($2, NULL, 0, &$$); bdestroy($2); };
+    
 %%
 
 

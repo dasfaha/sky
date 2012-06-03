@@ -1,7 +1,6 @@
 # EQL
 - Flex/Bison
-  - fcall
-  - metadata
+  - metadata (Need to add to class/method/property).
   - metadata_item
 
 - Codegen
