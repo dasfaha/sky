@@ -38,7 +38,7 @@
 %token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block stmt expr
-%type <node> var_ref
+%type <node> var_ref var_decl
 %type <node> number int_literal float_literal
 %type <array> stmts
 
@@ -59,7 +59,8 @@ block   : /* empty */ { $$ = NULL; }
 stmts   : stmt       { $$ = eql_array_create(); eql_array_push($$, $1); }
         | stmts stmt { eql_array_push($1, $2); }
 
-stmt    : expr TSEMICOLON;
+stmt    : expr TSEMICOLON
+        | var_decl TSEMICOLON;
 
 expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
         | expr TMINUS expr  { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }
@@ -71,6 +72,8 @@ expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3,
 ;
 
 var_ref : TIDENTIFIER { eql_ast_var_ref_create($1, &$$); bdestroy($1); };
+
+var_decl : TIDENTIFIER TIDENTIFIER { eql_ast_var_decl_create($1, $2, &$$); bdestroy($1); bdestroy($2); };
 
 number  : float_literal
         | int_literal

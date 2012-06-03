@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <eql/ast.h>
+#include <eql/parser.h>
 
 #include "../minunit.h"
 
@@ -37,6 +38,24 @@ int test_eql_ast_var_decl_create() {
 }
 
 
+//--------------------------------------
+// Parser
+//--------------------------------------
+
+int test_eql_parse_var_decl() {
+    eql_ast_node *module = NULL;
+    bstring text = bfromcstr("Int myVar_26;");
+    eql_parse(NULL, text, &module);
+    eql_ast_node *node = module->module.block->block.exprs[0];
+    mu_assert(node->type == EQL_AST_TYPE_VAR_DECL, "");
+    mu_assert(biseqcstr(node->var_decl.type, "Int"), "");
+    mu_assert(biseqcstr(node->var_decl.name, "myVar_26"), "");
+    eql_ast_node_free(module);
+    bdestroy(text);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -45,6 +64,7 @@ int test_eql_ast_var_decl_create() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_var_decl_create);
+    mu_run_test(test_eql_parse_var_decl);
     return 0;
 }
 
