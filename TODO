@@ -1,11 +1,11 @@
 # EQL
 - Flex/Bison
   - block (multiple expr)
+  - var_ref
+  - var_decl
+  - function
   - farg
   - fcall
-  - function
-  - var_decl
-  - var_ref
 
   - class
   - method
