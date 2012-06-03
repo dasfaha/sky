@@ -53,8 +53,8 @@ module : /* empty */
         | block     { root->module.block = $1; }
 ;
 
-block   : /* empty */
-        | stmts      { eql_ast_block_create((eql_ast_node**)$1->elements, $1->length, &$$); eql_array_free($1); };
+block   : /* empty */ { $$ = NULL; }
+        | stmts       { eql_ast_block_create((eql_ast_node**)$1->elements, $1->length, &$$); eql_array_free($1); };
 
 stmts   : stmt       { $$ = eql_array_create(); eql_array_push($$, $1); }
         | stmts stmt { eql_array_push($1, $2); }
