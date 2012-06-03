@@ -18,7 +18,6 @@
 %%
 
 "class"                 return TOKEN(TCLASS);
-"function"              return TOKEN(TFUNCTION);
 "private"               return TOKEN(TPRIVATE);
 "public"                return TOKEN(TPUBLIC);
 [ \t\n]                 ;

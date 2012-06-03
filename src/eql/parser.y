@@ -35,7 +35,7 @@
 %token <string> TIDENTIFIER
 %token <int_value> TINT
 %token <float_value> TFLOAT
-%token <token> TCLASS TFUNCTION
+%token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -43,9 +43,9 @@
 %type <node> block stmt expr
 %type <node> var_ref var_decl
 %type <node> class method property
-%type <node> function farg
+%type <node> function farg fcall
 %type <node> number int_literal float_literal
-%type <array> stmts fargs class_members
+%type <array> stmts fcall_args fargs class_members
 %type <access> access
 
 %left TPLUS TMINUS
@@ -75,6 +75,7 @@ expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3,
         | expr TDIV expr    { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
         | number
         | var_ref
+        | fcall
         | TLPAREN expr TRPAREN { $$ = $2; }
 ;
 
@@ -89,6 +90,19 @@ number  : float_literal
 int_literal  : TINT { eql_ast_int_literal_create($1, &$$); };
 
 float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
+
+fcall : TIDENTIFIER TLPAREN fcall_args TRPAREN
+        {
+            eql_ast_fcall_create($1, (eql_ast_node**)$3->elements, $3->length, &$$);
+            bdestroy($1);
+            eql_array_free($3);
+        }
+;
+
+fcall_args  : /* empty */            { $$ = eql_array_create(); }
+            | expr                   { $$ = eql_array_create(); eql_array_push($$, $1); }
+            | fcall_args TCOMMA expr { eql_array_push($1, $3); }
+;
 
 function : TIDENTIFIER TIDENTIFIER TLPAREN fargs TRPAREN TLBRACE block TRBRACE
            {

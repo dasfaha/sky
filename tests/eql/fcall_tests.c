@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <eql/ast.h>
+#include <eql/parser.h>
 
 #include "../minunit.h"
 
@@ -43,6 +44,23 @@ int test_eql_ast_fcall_create() {
     return 0;
 }
 
+//--------------------------------------
+// Parser
+//--------------------------------------
+
+int test_eql_parse_fcall() {
+    eql_ast_node *module = NULL;
+    bstring text = bfromcstr("foo(20, bar+2);");
+    eql_parse(NULL, text, &module);
+    eql_ast_node *node = module->module.block->block.exprs[0];
+    mu_assert(node->type == EQL_AST_TYPE_FCALL, "");
+    mu_assert(biseqcstr(node->fcall.name, "foo"), "");
+    mu_assert(node->fcall.arg_count == 2, "");
+    eql_ast_node_free(module);
+    bdestroy(text);
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -52,6 +70,7 @@ int test_eql_ast_fcall_create() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_fcall_create);
+    mu_run_test(test_eql_parse_fcall);
     return 0;
 }
 
