@@ -17,17 +17,22 @@
 
 %%
 
+"function"              return TOKEN(TFUNCTION);
 [ \t\n]                 ;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;
 [0-9]+                  SAVE_INT; return TINT;
 "("                     return TOKEN(TLPAREN);
 ")"                     return TOKEN(TRPAREN);
+"{"                     return TOKEN(TLBRACE);
+"}"                     return TOKEN(TRBRACE);
 "+"                     return TOKEN(TPLUS);
 "-"                     return TOKEN(TMINUS);
 "*"                     return TOKEN(TMUL);
 "/"                     return TOKEN(TDIV);
 ";"                     return TOKEN(TSEMICOLON);
+":"                     return TOKEN(TCOLON);
+","                     return TOKEN(TCOMMA);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

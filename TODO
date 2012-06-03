@@ -1,6 +1,5 @@
 # EQL
 - Flex/Bison
-  - var_decl
   - function
   - farg
   - fcall

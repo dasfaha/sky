@@ -33,6 +33,38 @@ int test_eql_ast_block_create() {
     return 0;
 }
 
+int test_eql_ast_block_add_expr() {
+    eql_ast_node *node, *expr1, *expr2;
+    eql_ast_int_literal_create(10, &expr1);
+    eql_ast_int_literal_create(20, &expr2);
+    eql_ast_block_create(NULL, 0, &node);
+    eql_ast_block_add_expr(node, expr1);
+    eql_ast_block_add_expr(node, expr2);
+    mu_assert(node->block.expr_count == 2, "");
+    mu_assert(node->block.exprs[0] == expr1, "");
+    mu_assert(node->block.exprs[1] == expr2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+int test_eql_ast_block_add_exprs() {
+    eql_ast_node *exprs[2];
+    eql_ast_node *node, *expr1, *expr2;
+    eql_ast_int_literal_create(10, &expr1);
+    eql_ast_int_literal_create(20, &expr2);
+    exprs[0] = expr1;
+    exprs[1] = expr2;
+    eql_ast_block_create(NULL, 0, &node);
+    eql_ast_block_add_exprs(node, exprs, 2);
+    mu_assert(node->type == EQL_AST_TYPE_BLOCK, "");
+    mu_assert(node->block.expr_count == 2, "");
+    mu_assert(node->block.exprs[0] == expr1, "");
+    mu_assert(node->block.exprs[1] == expr2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
 
 //--------------------------------------
 // Parser

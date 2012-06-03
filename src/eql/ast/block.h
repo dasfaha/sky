@@ -25,9 +25,23 @@ typedef struct {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 int eql_ast_block_create(struct eql_ast_node **exprs, unsigned int expr_count,
     struct eql_ast_node **ret);
 
 void eql_ast_block_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Expression Management
+//--------------------------------------
+
+int eql_ast_block_add_expr(struct eql_ast_node *block, struct eql_ast_node *expr);
+
+int eql_ast_block_add_exprs(struct eql_ast_node *block,
+    struct eql_ast_node **exprs, unsigned int expr_count);
 
 #endif

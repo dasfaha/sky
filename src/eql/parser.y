@@ -34,13 +34,15 @@
 %token <string> TIDENTIFIER
 %token <int_value> TINT
 %token <float_value> TFLOAT
-%token <token> TLPAREN TRPAREN TSEMICOLON
+%token <token> TFUNCTION
+%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block stmt expr
 %type <node> var_ref var_decl
+%type <node> function farg
 %type <node> number int_literal float_literal
-%type <array> stmts
+%type <array> stmts fargs
 
 %left TPLUS TMINUS
 %left TMUL TDIV
@@ -50,7 +52,7 @@
 %%
 
 module : /* empty */
-        | block     { root->module.block = $1; }
+        | module stmts     { eql_ast_block_add_exprs(root->module.block, (eql_ast_node**)$2->elements, $2->length); }
 ;
 
 block   : /* empty */ { $$ = NULL; }
@@ -83,6 +85,22 @@ int_literal  : TINT { eql_ast_int_literal_create($1, &$$); };
 
 float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
 
+function : TFUNCTION TIDENTIFIER TLPAREN fargs TRPAREN TCOLON TIDENTIFIER TLBRACE block TRBRACE
+           {
+               eql_ast_function_create($2, $7, (eql_ast_node **)$4->elements, $4->length, $9);
+               bdestroy($2);
+               bdestroy($7);
+               bdestroy($9);
+               eql_array_free($4);
+           }
+;
+
+fargs  : farg               { $$ = eql_array_create(); eql_array_push($$, $1); }
+       | fargs TCOMMA farg  { eql_array_push($1, $2); }
+;
+
+farg   : var_decl  { eql_ast_farg_create($1, &$$); };
+
 %%
 
 
@@ -91,6 +109,10 @@ float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
 // Functions
 //
 //==============================================================================
+
+//--------------------------------------
+// Parsing
+//--------------------------------------
 
 // Parses a string that contains EQL program text.
 //
@@ -101,11 +123,16 @@ float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
 // Returns 0 if successful, otherwise returns -1.
 int eql_parse(bstring name, bstring text, eql_ast_node **module)
 {
+    int rc;
     // yydebug = 1;
     
     // Setup module.
-    int rc = eql_ast_module_create(name, NULL, 0, NULL, &root);
+    rc = eql_ast_module_create(name, NULL, 0, NULL, &root);
     check(rc == 0, "Unable to create module");
+    
+    // Setup root block.
+    rc = eql_ast_block_create(NULL, 0, &root->module.block);
+    check(rc == 0, "Unable to create root block");
     
     // Parse using Bison.
     yyscan_t scanner;
