@@ -1,5 +1,4 @@
 [Extern("eql_table")]
-
 /**
  * A table represents a collection of paths.
  */
@@ -12,7 +11,7 @@ class Table
     /**
      * A pointer to the underlying Sky table.
      */
-    private var table:Ref;
+    private Ref table;
 
 
     //--------------------------------------------------------------------------
@@ -23,12 +22,12 @@ class Table
     /**
      * Retrieves a path iterator used to loop over the paths in the table.
      */
-    public function paths(PathIterator *iterator):void;
+    public void paths(PathIterator *iterator);
     
     /**
      * Calculates the number of paths in the table.
      */
-    public function getPathCount():Int
+    public Int getPathCount()
     {
         Int count = 0;
         foreach(Path path in paths) {

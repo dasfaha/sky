@@ -26,6 +26,7 @@
     bstring string;
     int64_t int_value;
     double float_value;
+    eql_ast_access_e access;
     eql_ast_node *node;
     eql_array *array;
     int token;
@@ -35,15 +36,17 @@
 %token <int_value> TINT
 %token <float_value> TFLOAT
 %token <token> TCLASS TFUNCTION
+%token <token> TPUBLIC TPRIVATE
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block stmt expr
 %type <node> var_ref var_decl
-%type <node> class
+%type <node> class method
 %type <node> function farg
 %type <node> number int_literal float_literal
-%type <array> stmts fargs
+%type <array> stmts fargs class_members
+%type <access> access
 
 %left TPLUS TMINUS
 %left TMUL TDIV
@@ -87,23 +90,38 @@ int_literal  : TINT { eql_ast_int_literal_create($1, &$$); };
 
 float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
 
-function : TFUNCTION TIDENTIFIER TLPAREN fargs TRPAREN TCOLON TIDENTIFIER TLBRACE block TRBRACE
+function : TIDENTIFIER TIDENTIFIER TLPAREN fargs TRPAREN TLBRACE block TRBRACE
            {
-               eql_ast_function_create($2, $7, (eql_ast_node **)$4->elements, $4->length, $9);
+               eql_ast_function_create($2, $1, (eql_ast_node **)$4->elements, $4->length, $7, &$$);
+               bdestroy($1);
                bdestroy($2);
-               bdestroy($7);
-               bdestroy($9);
                eql_array_free($4);
            }
 ;
 
-fargs  : farg               { $$ = eql_array_create(); eql_array_push($$, $1); }
-       | fargs TCOMMA farg  { eql_array_push($1, $2); }
+fargs  : /* empty */        { $$ = eql_array_create(); }
+       | farg               { $$ = eql_array_create(); eql_array_push($$, $1); }
+       | fargs TCOMMA farg  { eql_array_push($1, $3); }
 ;
 
 farg   : var_decl  { eql_ast_farg_create($1, &$$); };
 
-class : TCLASS TIDENTIFIER TLBRACE TRBRACE  { eql_ast_class_create($2, NULL, 0, NULL, 0, &$$); bdestroy($2); };
+access : TPUBLIC    { $$ = EQL_ACCESS_PUBLIC; }
+       | TPRIVATE   { $$ = EQL_ACCESS_PRIVATE; }
+;
+
+class : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
+        {
+            eql_ast_class_create($2, NULL, 0, NULL, 0, &$$);
+            eql_ast_class_add_members($$, (eql_ast_node**)$4->elements, $4->length);
+            bdestroy($2);
+        };
+
+class_members : /* empty */           { $$ = eql_array_create(); }
+              | class_members method  { eql_array_push($$, $2); }
+;
+
+method  : access function { eql_ast_method_create($1, $2, &$$); };
         
 
 %%

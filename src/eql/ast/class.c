@@ -10,6 +10,10 @@
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 // Creates an AST node for a class.
 //
 // name           - The name of the class.
@@ -92,3 +96,125 @@ void eql_ast_class_free(struct eql_ast_node *node)
         node->class.property_count = 0;
     }
 }
+
+
+//--------------------------------------
+// Member Management
+//--------------------------------------
+
+// Adds a property to a class.
+//
+// class    - The class to add the property to.
+// property - The property to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_add_property(eql_ast_node *class,
+                               eql_ast_node *property)
+{
+    // Validate.
+    check(class != NULL, "Class is required");
+    check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
+    check(property != NULL, "Property is required");
+    
+    // Append property to class.
+    class->class.property_count++;
+    class->class.properties = realloc(class->class.properties, sizeof(eql_ast_node*) * class->class.property_count);
+    check_mem(class->class.properties);
+    class->class.properties[class->class.property_count-1] = property;
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Adds a method to a class.
+//
+// class  - The class to add the method to.
+// method - The method to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_add_method(eql_ast_node *class,
+                             eql_ast_node *method)
+{
+    // Validate.
+    check(class != NULL, "Class is required");
+    check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
+    check(method != NULL, "Method is required");
+    
+    // Append method to class.
+    class->class.method_count++;
+    class->class.methods = realloc(class->class.methods, sizeof(eql_ast_node*) * class->class.method_count);
+    check_mem(class->class.methods);
+    class->class.methods[class->class.method_count-1] = method;
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Adds either a method or property to a class.
+//
+// class  - The class to add the member to.
+// member - The method or property to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_add_member(eql_ast_node *class,
+                             eql_ast_node *member)
+{
+    int rc;
+    
+    // Validate.
+    check(class != NULL, "Class is required");
+    check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
+    check(member != NULL, "Member is required");
+
+    // Add member via the appropriate function.
+    if(member->type == EQL_AST_TYPE_PROPERTY) {
+        rc = eql_ast_class_add_property(class, member);
+        check(rc == 0, "Unable to add property to class");
+    }
+    else if(member->type == EQL_AST_TYPE_METHOD) {
+        rc = eql_ast_class_add_method(class, member);
+        check(rc == 0, "Unable to add method to class");
+    }
+    else {
+        sentinel("Invalid class member type: %d", member->type);
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Adds a list of methods and properties to a class.
+//
+// class        - The class to add the member to.
+// members      - A list of members to add.
+// member_count - The number of members to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_add_members(eql_ast_node *class,
+                              eql_ast_node **members,
+                              unsigned int member_count)
+{
+    // Validate.
+    check(class != NULL, "Class is required");
+    check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
+    check(members != NULL || member_count == 0, "Members are required");
+
+    // Add each member.
+    unsigned int i;
+    for(i=0; i<member_count; i++) {
+        int rc = eql_ast_class_add_member(class, members[i]);
+        check(rc == 0, "Unable to add member to class");
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+

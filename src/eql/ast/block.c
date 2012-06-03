@@ -114,7 +114,8 @@ int eql_ast_block_add_exprs(struct eql_ast_node *block,
     // Append expressions to block.
     unsigned int i;
     for(i=0; i<expr_count; i++) {
-        eql_ast_block_add_expr(block, exprs[i]);
+        int rc = eql_ast_block_add_expr(block, exprs[i]);
+        check(rc == 0, "Unable to add expression to block");
     }
     
     return 0;

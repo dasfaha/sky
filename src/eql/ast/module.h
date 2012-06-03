@@ -39,7 +39,7 @@ void eql_ast_module_free(struct eql_ast_node *node);
 
 
 //--------------------------------------
-// Expression Management
+// Class Management
 //--------------------------------------
 
 int eql_ast_module_add_class(struct eql_ast_node *module, struct eql_ast_node *class);

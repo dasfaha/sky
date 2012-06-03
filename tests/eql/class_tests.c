@@ -55,6 +55,55 @@ int test_eql_ast_class_create() {
     return 0;
 }
 
+int test_eql_ast_class_add_property() {
+    eql_ast_node *node, *property1, *property2;
+    eql_ast_property_create(EQL_ACCESS_PUBLIC, NULL, &property1);
+    eql_ast_property_create(EQL_ACCESS_PUBLIC, NULL, &property2);
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &node);
+    eql_ast_class_add_property(node, property1);
+    eql_ast_class_add_property(node, property2);
+    mu_assert(node->class.property_count == 2, "");
+    mu_assert(node->class.properties[0] == property1, "");
+    mu_assert(node->class.properties[1] == property2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+int test_eql_ast_class_add_method() {
+    eql_ast_node *node, *method1, *method2;
+    eql_ast_method_create(EQL_ACCESS_PUBLIC, NULL, &method1);
+    eql_ast_method_create(EQL_ACCESS_PUBLIC, NULL, &method2);
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &node);
+    eql_ast_class_add_method(node, method1);
+    eql_ast_class_add_method(node, method2);
+    mu_assert(node->class.method_count == 2, "");
+    mu_assert(node->class.methods[0] == method1, "");
+    mu_assert(node->class.methods[1] == method2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+int test_eql_ast_class_add_members() {
+    eql_ast_node *members[3];
+    eql_ast_node *node, *method1, *property1, *property2;
+    eql_ast_method_create(EQL_ACCESS_PUBLIC, NULL, &method1);
+    eql_ast_property_create(EQL_ACCESS_PUBLIC, NULL, &property1);
+    eql_ast_property_create(EQL_ACCESS_PUBLIC, NULL, &property2);
+    members[0] = method1;
+    members[1] = property1;
+    members[2] = property2;
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &node);
+    eql_ast_class_add_members(node, members, 3);
+    mu_assert(node->class.method_count == 1, "");
+    mu_assert(node->class.methods[0] == method1, "");
+    mu_assert(node->class.property_count == 2, "");
+    mu_assert(node->class.properties[0] == property1, "");
+    mu_assert(node->class.properties[1] == property2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+
 //--------------------------------------
 // Parser
 //--------------------------------------
@@ -81,6 +130,9 @@ int test_eql_parse_class() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_class_create);
+    mu_run_test(test_eql_ast_class_add_property);
+    mu_run_test(test_eql_ast_class_add_method);
+    mu_run_test(test_eql_ast_class_add_members);
     mu_run_test(test_eql_parse_class);
     return 0;
 }

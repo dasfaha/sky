@@ -19,6 +19,8 @@
 
 "class"                 return TOKEN(TCLASS);
 "function"              return TOKEN(TFUNCTION);
+"private"               return TOKEN(TPRIVATE);
+"public"                return TOKEN(TPUBLIC);
 [ \t\n]                 ;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;

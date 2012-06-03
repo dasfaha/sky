@@ -14,7 +14,7 @@ class PathIterator
     /**
      * A pointer to the underlying Sky path iterator.
      */
-    private var pathIterator:Ref;
+    private Ref pathIterator;
 
 
     //--------------------------------------------------------------------------
@@ -25,5 +25,5 @@ class PathIterator
     /**
      * Retrieves a reference to the next path available to the iterator.
      */
-    public function next(Path *path):void;
+    public void next(Path *path);
 }
