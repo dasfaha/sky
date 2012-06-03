@@ -17,6 +17,7 @@
 
 %%
 
+"class"                 return TOKEN(TCLASS);
 "function"              return TOKEN(TFUNCTION);
 [ \t\n]                 ;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;

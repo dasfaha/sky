@@ -34,12 +34,13 @@
 %token <string> TIDENTIFIER
 %token <int_value> TINT
 %token <float_value> TFLOAT
-%token <token> TFUNCTION
+%token <token> TCLASS TFUNCTION
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV
 
 %type <node> block stmt expr
 %type <node> var_ref var_decl
+%type <node> class
 %type <node> function farg
 %type <node> number int_literal float_literal
 %type <array> stmts fargs
@@ -51,8 +52,9 @@
 
 %%
 
-module : /* empty */
-        | module stmts     { eql_ast_block_add_exprs(root->module.block, (eql_ast_node**)$2->elements, $2->length); }
+module  : /* empty */
+        | module class     { eql_ast_module_add_class(root, $2); }
+        | module stmt      { eql_ast_block_add_expr(root->module.block, $2); }
 ;
 
 block   : /* empty */ { $$ = NULL; }
@@ -100,6 +102,9 @@ fargs  : farg               { $$ = eql_array_create(); eql_array_push($$, $1); }
 ;
 
 farg   : var_decl  { eql_ast_farg_create($1, &$$); };
+
+class : TCLASS TIDENTIFIER TLBRACE TRBRACE  { eql_ast_class_create($2, NULL, 0, NULL, 0, &$$); bdestroy($2); };
+        
 
 %%
 

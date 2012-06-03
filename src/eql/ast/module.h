@@ -27,10 +27,22 @@ typedef struct {
 //
 //==============================================================================
 
-int eql_ast_module_create(bstring name, struct eql_ast_node **methods,
-    unsigned int method_count, struct eql_ast_node *block,
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
+int eql_ast_module_create(bstring name, struct eql_ast_node **classes,
+    unsigned int class_count, struct eql_ast_node *block,
     struct eql_ast_node **ret);
 
 void eql_ast_module_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Expression Management
+//--------------------------------------
+
+int eql_ast_module_add_class(struct eql_ast_node *module, struct eql_ast_node *class);
+
 
 #endif

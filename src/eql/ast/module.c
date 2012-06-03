@@ -10,6 +10,10 @@
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 // Creates an AST node for a module.
 //
 // name        - The name of the module.
@@ -72,4 +76,35 @@ void eql_ast_module_free(struct eql_ast_node *node)
         free(node->module.classes);
         node->module.class_count = 0;
     }
+}
+
+
+//--------------------------------------
+// Class Management
+//--------------------------------------
+
+// Adds a class to the module.
+//
+// module - The module to add the class to.
+// class  - The class to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_module_add_class(struct eql_ast_node *module,
+                             struct eql_ast_node *class)
+{
+    // Validate.
+    check(module != NULL, "Module is required");
+    check(module->type == EQL_AST_TYPE_MODULE, "Module node is invalid type: %d", module->type);
+    check(class != NULL, "Class is required");
+    
+    // Append class to module.
+    module->module.class_count++;
+    module->module.classes = realloc(module->module.classes, sizeof(eql_ast_node*) * module->module.class_count);
+    check_mem(module->module.classes);
+    module->module.classes[module->module.class_count-1] = class;
+    
+    return 0;
+
+error:
+    return -1;
 }

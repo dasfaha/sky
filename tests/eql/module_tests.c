@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <eql/ast.h>
+#include <eql/parser.h>
 
 #include "../minunit.h"
 
@@ -51,6 +52,20 @@ int test_eql_ast_module_create() {
     return 0;
 }
 
+int test_eql_ast_module_add_class() {
+    eql_ast_node *node, *class1, *class2;
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &class1);
+    eql_ast_class_create(&Bar, NULL, 0, NULL, 0, &class2);
+    eql_ast_module_create(&bar, NULL, 0, NULL, &node);
+    eql_ast_module_add_class(node, class1);
+    eql_ast_module_add_class(node, class2);
+    mu_assert(node->module.class_count == 2, "");
+    mu_assert(node->module.classes[0] == class1, "");
+    mu_assert(node->module.classes[1] == class2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -60,6 +75,7 @@ int test_eql_ast_module_create() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_module_create);
+    mu_run_test(test_eql_ast_module_add_class);
     return 0;
 }
 
