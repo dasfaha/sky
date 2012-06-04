@@ -14,8 +14,15 @@
 %option reentrant
 %option bison-bridge
 
+%x ML_COMMENT
 
 %%
+
+<INITIAL>"/*"              BEGIN(ML_COMMENT);
+
+<ML_COMMENT>"*/"      BEGIN(INITIAL);
+<ML_COMMENT>[^*\n]+
+<ML_COMMENT>\n        yylineno++;
 
 "class"                 return TOKEN(TCLASS);
 "private"               return TOKEN(TPRIVATE);
