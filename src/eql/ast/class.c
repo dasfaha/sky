@@ -58,6 +58,10 @@ int eql_ast_class_create(bstring name,
         node->class.properties = NULL;
     }
     node->class.property_count = property_count;
+
+    // Clear metadata.
+    node->class.metadata_count = 0;
+    node->class.metadatas = NULL;
     
     *ret = node;
     return 0;
@@ -210,6 +214,67 @@ int eql_ast_class_add_members(eql_ast_node *class,
     for(i=0; i<member_count; i++) {
         int rc = eql_ast_class_add_member(class, members[i]);
         check(rc == 0, "Unable to add member to class");
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+
+//--------------------------------------
+// Metadata Management
+//--------------------------------------
+
+// Adds a metadata tag to a class.
+//
+// class    - The class to add the metadata to.
+// metadata - The metadata to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_add_metadata(struct eql_ast_node *class,
+                               struct eql_ast_node *metadata)
+{
+    // Validate.
+    check(class != NULL, "Class is required");
+    check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
+    check(metadata != NULL, "Metadata is required");
+    
+    // Append metadata to class.
+    class->class.metadata_count++;
+    class->class.metadatas = realloc(class->class.metadatas, sizeof(eql_ast_node*) * class->class.metadata_count);
+    check_mem(class->class.metadatas);
+    class->class.metadatas[class->class.metadata_count-1] = metadata;
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Adds a list of metatdata tags to a class.
+//
+// class           - The class to add the metatdata to.
+// metatdatas      - A list of metatdatas to add.
+// metatdata_count - The number of metatdatas to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_add_metadatas(eql_ast_node *class,
+                                eql_ast_node **metatdatas,
+                                unsigned int metatdata_count)
+{
+    // Validate.
+    check(class != NULL, "Class is required");
+    check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
+    check(metatdatas != NULL || metatdata_count == 0, "Metadata tags are required");
+
+    // Add each metatdata.
+    unsigned int i;
+    for(i=0; i<metatdata_count; i++) {
+        int rc = eql_ast_class_add_metadata(class, metatdatas[i]);
+        check(rc == 0, "Unable to add metatdata to class");
     }
     
     return 0;

@@ -55,6 +55,10 @@ int test_eql_ast_class_create() {
     return 0;
 }
 
+//--------------------------------------
+// Member Management
+//--------------------------------------
+
 int test_eql_ast_class_add_property() {
     eql_ast_node *node, *property1, *property2;
     eql_ast_property_create(EQL_ACCESS_PUBLIC, NULL, &property1);
@@ -105,6 +109,40 @@ int test_eql_ast_class_add_members() {
 
 
 //--------------------------------------
+// Metadata Management
+//--------------------------------------
+
+int test_eql_ast_class_add_metadata() {
+    eql_ast_node *node, *metadata1, *metadata2;
+    eql_ast_metadata_create(&Foo, NULL, 0, &metadata1);
+    eql_ast_metadata_create(&Bar, NULL, 0, &metadata2);
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &node);
+    eql_ast_class_add_metadata(node, metadata1);
+    eql_ast_class_add_metadata(node, metadata2);
+    mu_assert(node->class.metadata_count == 2, "");
+    mu_assert(node->class.metadatas[0] == metadata1, "");
+    mu_assert(node->class.metadatas[1] == metadata2, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+int test_eql_ast_class_add_metadatas() {
+    eql_ast_node *metadatas[3];
+    eql_ast_node *node, *metadata1, *metadata2;
+    eql_ast_metadata_create(&Foo, NULL, 0, &metadata1);
+    eql_ast_metadata_create(&Bar, NULL, 0, &metadata2);
+    metadatas[0] = metadata1;
+    metadatas[1] = metadata2;
+    eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &node);
+    eql_ast_class_add_metadatas(node, metadatas, 2);
+    mu_assert(node->class.metadata_count == 2, "");
+    mu_assert(node->class.metadatas[0] == metadata1, "");
+    mu_assert(node->class.metadatas[0] == metadata1, "");
+    eql_ast_node_free(node);
+    return 0;
+}
+
+//--------------------------------------
 // Parser
 //--------------------------------------
 
@@ -133,6 +171,8 @@ int all_tests() {
     mu_run_test(test_eql_ast_class_add_property);
     mu_run_test(test_eql_ast_class_add_method);
     mu_run_test(test_eql_ast_class_add_members);
+    mu_run_test(test_eql_ast_class_add_metadata);
+    mu_run_test(test_eql_ast_class_add_metadatas);
     mu_run_test(test_eql_parse_class);
     return 0;
 }

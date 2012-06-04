@@ -19,6 +19,8 @@ typedef struct {
     unsigned int method_count;
     struct eql_ast_node **properties;
     unsigned int property_count;
+    struct eql_ast_node **metadatas;
+    unsigned int metadata_count;
 } eql_ast_class;
 
 
@@ -52,6 +54,15 @@ int eql_ast_class_add_member(struct eql_ast_node *class, struct eql_ast_node *me
 int eql_ast_class_add_members(struct eql_ast_node *class,
     struct eql_ast_node **members, unsigned int member_count);
 
+
+//--------------------------------------
+// Metadata Management
+//--------------------------------------
+
+int eql_ast_class_add_metadata(struct eql_ast_node *class, struct eql_ast_node *metadata);
+
+int eql_ast_class_add_metadatas(struct eql_ast_node *class,
+    struct eql_ast_node **metadatas, unsigned int metadata_count);
 
 
 #endif

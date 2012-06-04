@@ -130,7 +130,10 @@ class : metadatas TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
         {
             eql_ast_class_create($3, NULL, 0, NULL, 0, &$$);
             eql_ast_class_add_members($$, (eql_ast_node**)$5->elements, $5->length);
+            eql_ast_class_add_metadatas($$, (eql_ast_node**)$1->elements, $1->length);
             bdestroy($3);
+            free($1);
+            free($5);
         };
 
 class_members : /* empty */             { $$ = eql_array_create(); }

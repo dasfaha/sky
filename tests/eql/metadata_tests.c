@@ -60,6 +60,9 @@ int test_eql_parse_metadata() {
     eql_ast_node *node = module->module.classes[0];
     mu_assert(node->type == EQL_AST_TYPE_CLASS, "");
     mu_assert(biseqcstr(node->class.name, "Foo"), "");
+    mu_assert(node->class.metadata_count == 2, "");
+    mu_assert(biseqcstr(node->class.metadatas[0]->metadata.name, "Baz"), "");
+    mu_assert(biseqcstr(node->class.metadatas[1]->metadata.name, "Bat"), "");
     eql_ast_node_free(module);
     bdestroy(text);
     return 0;

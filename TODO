@@ -2,6 +2,9 @@
 - Flex/Bison
   - metadata (Need to add to class/method/property).
   - metadata_item
+  - if
+  - for each
+  - comments
 
 - Codegen
 - Msgpack
