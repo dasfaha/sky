@@ -30,6 +30,8 @@
 "}"                     return TOKEN(TRBRACE);
 "["                     return TOKEN(TLBRACKET);
 "]"                     return TOKEN(TRBRACKET);
+"'"                     return TOKEN(TQUOTE);
+"\""                    return TOKEN(TDBLQUOTE);
 "+"                     return TOKEN(TPLUS);
 "-"                     return TOKEN(TMINUS);
 "*"                     return TOKEN(TMUL);
@@ -37,6 +39,7 @@
 ";"                     return TOKEN(TSEMICOLON);
 ":"                     return TOKEN(TCOLON);
 ","                     return TOKEN(TCOMMA);
+"="                     return TOKEN(TEQUALS);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

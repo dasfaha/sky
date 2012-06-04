@@ -38,16 +38,18 @@
 %token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
+%token <token> TQUOTE TDBLQUOTE
 %token <token> TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV
+%token <token> TEQUALS
 
 %type <node> block stmt expr
 %type <node> var_ref var_decl
 %type <node> class method property
 %type <node> function farg fcall
 %type <node> number int_literal float_literal
-%type <node> metadata
-%type <array> stmts fcall_args fargs class_members metadatas
+%type <node> metadata metadata_item
+%type <array> stmts fcall_args fargs class_members metadatas metadata_items
 %type <access> access
 
 %left TPLUS TMINUS
@@ -149,8 +151,17 @@ metadatas : /* empty */        { $$ = eql_array_create(); }
           | metadatas metadata { eql_array_push($$, $2); }
 ;
 
-metadata  : TLBRACKET TIDENTIFIER TRBRACKET { eql_ast_metadata_create($2, NULL, 0, &$$); bdestroy($2); };
+metadata  : TLBRACKET TIDENTIFIER TRBRACKET { eql_ast_metadata_create($2, NULL, 0, &$$); bdestroy($2); }
+          | TLBRACKET TIDENTIFIER TLPAREN metadata_items TRPAREN TRBRACKET { eql_ast_metadata_create($2, (eql_ast_node**)$4->elements, $4->length, &$$); bdestroy($2); free($4); }
+;
     
+metadata_items : /* empty */                         { $$ = eql_array_create(); }
+               | metadata_item                       { $$ = eql_array_create(); eql_array_push($$, $1); }
+               | metadata_items TCOMMA metadata_item { eql_array_push($1, $3); }
+;
+
+metadata_item   : TIDENTIFIER TEQUALS TDBLQUOTE TIDENTIFIER TDBLQUOTE { eql_ast_metadata_item_create($1, $4, &$$); bdestroy($1); bdestroy($4); };
+
 %%
 
 
