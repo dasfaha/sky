@@ -17,6 +17,18 @@
 // Parser
 //--------------------------------------
 
+int test_eql_parse_single_line_comment() {
+    eql_ast_node *module = NULL;
+    bstring text = bfromcstr("// This is a single line comment\nclass Foo {\n// Another comment!\n }");
+    int rc = eql_parse(NULL, text, &module);
+    mu_assert(rc == 0, "");
+    mu_assert(module != NULL, "");
+    mu_assert(module->module.class_count == 1, "");
+    eql_ast_node_free(module);
+    bdestroy(text);
+    return 0;
+}
+
 int test_eql_parse_multiline_comment() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("/* this is a\nmultiline comment! */ class Foo { }");
@@ -38,6 +50,7 @@ int test_eql_parse_multiline_comment() {
 //==============================================================================
 
 int all_tests() {
+    mu_run_test(test_eql_parse_single_line_comment);
     mu_run_test(test_eql_parse_multiline_comment);
     return 0;
 }
