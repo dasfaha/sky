@@ -32,7 +32,7 @@
     int token;
 }
 
-%token <string> TIDENTIFIER
+%token <string> TIDENTIFIER TSTRING
 %token <int_value> TINT
 %token <float_value> TFLOAT
 %token <token> TCLASS
@@ -43,6 +43,7 @@
 %token <token> TPLUS TMINUS TMUL TDIV
 %token <token> TEQUALS
 
+%type <string> string
 %type <node> block stmt expr
 %type <node> var_ref var_decl
 %type <node> class method property
@@ -86,6 +87,8 @@ expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3,
 var_ref : TIDENTIFIER { eql_ast_var_ref_create($1, &$$); bdestroy($1); };
 
 var_decl : TIDENTIFIER TIDENTIFIER { eql_ast_var_decl_create($1, $2, &$$); bdestroy($1); bdestroy($2); };
+
+string : TSTRING;
 
 number  : float_literal
         | int_literal
@@ -160,7 +163,7 @@ metadata_items : /* empty */                         { $$ = eql_array_create(); 
                | metadata_items TCOMMA metadata_item { eql_array_push($1, $3); }
 ;
 
-metadata_item   : TIDENTIFIER TEQUALS TDBLQUOTE TIDENTIFIER TDBLQUOTE { eql_ast_metadata_item_create($1, $4, &$$); bdestroy($1); bdestroy($4); };
+metadata_item   : TIDENTIFIER TEQUALS string { eql_ast_metadata_item_create($1, $3, &$$); bdestroy($1); bdestroy($3); };
 
 %%
 

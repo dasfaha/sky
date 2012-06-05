@@ -7,6 +7,9 @@
 #define SAVE_STRING yylval->string = bfromcstr(yytext)
 #define SAVE_INT yylval->int_value = atoll(yytext)
 #define SAVE_FLOAT yylval->float_value = atof(yytext)
+#define INIT_STRING yylval->string = bfromcstr("")
+#define APPEND_STRING_AS(STR) bcatcstr(yylval->string, STR);
+#define APPEND_STRING bcatcstr(yylval->string, yytext);
 #define TOKEN(t) (yylval->token = t)
 %}
 
@@ -16,6 +19,7 @@
 
 %x COMMENT
 %x ML_COMMENT
+%x STRING
 
 %%
 
@@ -27,6 +31,12 @@
 <ML_COMMENT>"*/"        BEGIN(INITIAL);
 <ML_COMMENT>[^*\n]+
 <ML_COMMENT>\n          yylineno++;
+
+<INITIAL>"\""           BEGIN(STRING); INIT_STRING;
+<STRING>"\""            BEGIN(INITIAL); return TSTRING;
+<STRING>"\\\""          APPEND_STRING_AS("\"");
+<STRING>[^"\\]+         APPEND_STRING;
+<STRING>.               printf("Invalid string!\n"); yyterminate();
 
 "class"                 return TOKEN(TCLASS);
 "private"               return TOKEN(TPRIVATE);
@@ -42,7 +52,6 @@
 "["                     return TOKEN(TLBRACKET);
 "]"                     return TOKEN(TRBRACKET);
 "'"                     return TOKEN(TQUOTE);
-"\""                    return TOKEN(TDBLQUOTE);
 "+"                     return TOKEN(TPLUS);
 "-"                     return TOKEN(TMINUS);
 "*"                     return TOKEN(TMUL);
