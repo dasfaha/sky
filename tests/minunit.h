@@ -1,3 +1,5 @@
+#include <bstring.h>
+
 //==============================================================================
 //
 // Minunit
@@ -45,6 +47,9 @@ int tests_run;
 
 // The temporary file used for file operations in the test suite.
 #define TEMPFILE "/tmp/skytemp"
+
+// The dump file for EQL IR.
+struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
 
 
 //==============================================================================
@@ -106,3 +111,16 @@ int tests_run;
 // Asserts the contents of the temp file.
 #define mu_assert_tempfile(EXP_FILENAME) \
     mu_assert_file(TEMPFILE, EXP_FILENAME)
+
+// Asserts the contents of the eql dump file.
+#define mu_assert_eql_compile(QUERY, EXP_FILENAME) \
+    eql_module *module; \
+    bstring text = bfromcstr(QUERY); \
+    eql_compiler *compiler = eql_compiler_create(); \
+    int rc = eql_compiler_compile(compiler, &foo, text, &module); \
+    mu_assert(rc == 0, "Unable to compile"); \
+    eql_module_dump_to_file(module, &DUMPFILE); \
+    mu_assert_file(bdata(&DUMPFILE), EXP_FILENAME); \
+    eql_module_free(module); \
+    eql_compiler_free(compiler); \
+    bdestroy(text);

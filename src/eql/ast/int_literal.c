@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include "../../dbg.h"
 
 #include "int_literal.h"
@@ -9,6 +10,10 @@
 // Functions
 //
 //==============================================================================
+
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
 
 // Creates an AST node for a literal integer.
 //
@@ -30,3 +35,23 @@ error:
     return -1;
 }
 
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for the literal integer AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_int_literal_codegen(struct eql_ast_node *node,
+                                struct eql_module *module,
+                                LLVMValueRef *value)
+{
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    *value = LLVMConstInt(LLVMInt64TypeInContext(context), node->int_literal.value, true);
+    return 0;
+}

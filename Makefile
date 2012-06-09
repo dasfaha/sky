@@ -2,7 +2,8 @@
 # Variables
 ################################################################################
 
-CFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64
+CFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64 `llvm-config --cflags`
+CXXFLAGS=-g -O2 -Wall -Wextra -Wno-self-assign -D_FILE_OFFSET_BITS=64 `llvm-config --libs --cflags --ldflags core analysis executionengine jit interpreter native`
 
 LEX_SOURCES=$(wildcard src/*.l) $(wildcard src/**/*.l)
 LEX_OBJECTS=$(patsubst %.l,%.c,${LEX_SOURCES}) $(patsubst %.l,%.h,${LEX_SOURCES})
@@ -39,15 +40,15 @@ build/libsky.a: build ${LIB_OBJECTS}
 	ranlib $@
 
 build/skyd: build ${OBJECTS}
-	$(CC) $(CFLAGS) src/skyd.o -o $@ build/libsky.a
+	$(CXX) $(CXXFLAGS) src/skyd.o -o $@ build/libsky.a
 	chmod 700 $@
 
 build/sky-gen: build ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_gen.o -o $@ build/libsky.a
+	$(CXX) $(CXXFLAGS) src/sky_gen.o -o $@ build/libsky.a
 	chmod 700 $@
 
 build/sky-bench: build ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_bench.o -o $@ build/libsky.a
+	$(CXX) $(CXXFLAGS) src/sky_bench.o -o $@ build/libsky.a
 	chmod 700 $@
 
 build:
@@ -81,7 +82,8 @@ build/tests:
 	mkdir -p build/tests/eql
 
 $(TEST_OBJECTS): %: %.c build/tests build/libsky.a
-	$(CC) $(CFLAGS) -Isrc -o build/$@ $< build/libsky.a
+	$(CC) $(CFLAGS) -Isrc -c -o build/$@.o $<
+	$(CXX) $(CXXFLAGS) -Isrc -o build/$@ build/$@.o build/libsky.a
 
 
 ################################################################################

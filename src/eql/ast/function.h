@@ -9,9 +9,6 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Represents a function in the AST.
 typedef struct {
     bstring name;
@@ -28,10 +25,22 @@ typedef struct {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 int eql_ast_function_create(bstring name, bstring return_type,
     struct eql_ast_node **args, unsigned int arg_count,
     struct eql_ast_node *body, struct eql_ast_node **ret);
 
 void eql_ast_function_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
+    LLVMValueRef *value);
 
 #endif

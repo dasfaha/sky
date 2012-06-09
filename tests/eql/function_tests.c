@@ -35,7 +35,7 @@ int test_eql_ast_function_create() {
     eql_ast_farg_create(var_decl2, &farg2);
     args[0] = farg1;
     args[1] = farg2;
-    eql_ast_block_create(NULL, 0, &body);
+    eql_ast_block_create(NULL, NULL, 0, &body);
     eql_ast_function_create(&foo, &bar, args, 2, body, &node);
 
     mu_assert(node->type == EQL_AST_TYPE_FUNCTION, "");

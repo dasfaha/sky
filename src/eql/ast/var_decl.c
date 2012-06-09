@@ -1,14 +1,27 @@
 #include <stdlib.h>
 #include "../../dbg.h"
 
-#include "var_decl.h"
 #include "node.h"
+
+//==============================================================================
+//
+// Globals
+//
+//==============================================================================
+
+struct tagbstring intTypeName = bsStatic("Int");
+struct tagbstring floatTypeName = bsStatic("Float");
+
 
 //==============================================================================
 //
 // Functions
 //
 //==============================================================================
+
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
 
 // Creates an AST node for a variable declaration.
 //
@@ -49,4 +62,37 @@ void eql_ast_var_decl_free(struct eql_ast_node *node)
         bdestroy(node->var_decl.name);
     }
     node->var_decl.name = NULL;
+}
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_var_decl_typegen(eql_ast_node *node, eql_module *module,
+                             LLVMTypeRef *type)
+{
+    check(node != NULL, "Node is required");
+    check(node->type == EQL_AST_TYPE_VAR_DECL, "Node must be a variable declaration");
+    
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+
+    // Check the variable declaration type against built-in types.
+    bstring type_name = node->var_decl.type;
+    
+    if(biseq(type_name, &intTypeName)) {
+        *type = LLVMInt64TypeInContext(context);
+    }
+    else if(biseq(type_name, &floatTypeName)) {
+        *type = LLVMDoubleTypeInContext(context);
+    }
+    else {
+        sentinel("Invalid type: %s", bdata(type_name));
+    }
+
+    return 0;
+
+error:
+    *type = NULL;
+    return -1;
 }

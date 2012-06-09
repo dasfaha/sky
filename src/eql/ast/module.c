@@ -16,24 +16,24 @@
 
 // Creates an AST node for a module.
 //
-// name        - The name of the module.
-// classes     - An array of classes attached to the module.
-// class_count - The number of classes.
-// block       - A block of any AST nodes outside class definitions.
-// ret         - A pointer to where the ast node will be returned.
+// name          - The name of the module.
+// classes       - An array of classes attached to the module.
+// class_count   - The number of classes.
+// main_function - A function containing the AST nodes outside any class.
+// ret           - A pointer to where the ast node will be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_module_create(bstring name,
                          struct eql_ast_node **classes,
                          unsigned int class_count, 
-                         struct eql_ast_node *block,
+                         struct eql_ast_node *main_function,
                          struct eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_MODULE;
     node->module.name = bstrcpy(name);
     if(name) check_mem(node->module.name);
-    node->module.block = block;
+    node->module.main_function = main_function;
 
     // Copy classes.
     if(class_count > 0) {
@@ -64,8 +64,8 @@ void eql_ast_module_free(struct eql_ast_node *node)
     if(node->module.name) bdestroy(node->module.name);
     node->module.name = NULL;
     
-    if(node->module.block) eql_ast_node_free(node->module.block);
-    node->module.block = NULL;
+    if(node->module.main_function) eql_ast_node_free(node->module.main_function);
+    node->module.main_function = NULL;
     
     if(node->module.class_count > 0) {
         unsigned int i;

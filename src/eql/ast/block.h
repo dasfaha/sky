@@ -9,14 +9,14 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
+typedef struct eql_ast_block eql_ast_block;
 
 // Represents a block in the AST.
-typedef struct {
+struct eql_ast_block {
+    bstring name;
     struct eql_ast_node **exprs;
     unsigned int expr_count;
-} eql_ast_block;
+};
 
 
 //==============================================================================
@@ -29,19 +29,27 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-int eql_ast_block_create(struct eql_ast_node **exprs, unsigned int expr_count,
-    struct eql_ast_node **ret);
+int eql_ast_block_create(bstring name, eql_ast_node **exprs, unsigned int expr_count,
+    eql_ast_node **ret);
 
-void eql_ast_block_free(struct eql_ast_node *node);
+void eql_ast_block_free(eql_ast_node *node);
 
 
 //--------------------------------------
 // Expression Management
 //--------------------------------------
 
-int eql_ast_block_add_expr(struct eql_ast_node *block, struct eql_ast_node *expr);
+int eql_ast_block_add_expr(eql_ast_node *block, eql_ast_node *expr);
 
-int eql_ast_block_add_exprs(struct eql_ast_node *block,
-    struct eql_ast_node **exprs, unsigned int expr_count);
+int eql_ast_block_add_exprs(eql_ast_node *block,
+    eql_ast_node **exprs, unsigned int expr_count);
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
+    LLVMValueRef *value);
 
 #endif

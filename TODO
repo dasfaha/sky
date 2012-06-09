@@ -1,12 +1,12 @@
 # EQL
-- Flex/Bison
-  - metadata (Need to add to class/method/property).
-  - metadata_item
-  - if
-  - for each
-  - comments
-
-- Codegen
+- Compiler
+  - eql_compile
+    - Create module
+    - Parse text into AST
+    - Link modules
+    - Validate AST
+    - Codegen
+    - Return module
 - Msgpack
 - Add server support
 

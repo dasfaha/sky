@@ -35,7 +35,7 @@ int test_eql_parse_float_literal() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("10.421;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_FLOAT_LITERAL, "");
     mu_assert(node->float_literal.value == 10.421, "");
     eql_ast_node_free(module);

@@ -39,7 +39,7 @@ int test_eql_parse_binary_expr_plus() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("10+3;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_PLUS, "");
     mu_assert(node->binary_expr.lhs->int_literal.value == 10, "");
@@ -53,7 +53,7 @@ int test_eql_parse_binary_expr_minus() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("19 - 2;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_MINUS, "");
     mu_assert(node->binary_expr.lhs->int_literal.value == 19, "");
@@ -67,7 +67,7 @@ int test_eql_parse_binary_expr_mul() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("1 * 2;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_MUL, "");
     mu_assert(node->binary_expr.lhs->int_literal.value == 1, "");
@@ -81,7 +81,7 @@ int test_eql_parse_binary_expr_div() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("10.2 / 4;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_DIV, "");
     mu_assert(node->binary_expr.lhs->float_literal.value == 10.2, "");
@@ -95,7 +95,7 @@ int test_eql_parse_binary_expr_complex() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("1 + 2 * 3;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_PLUS, "");
     mu_assert(node->binary_expr.lhs->type == EQL_AST_TYPE_INT_LITERAL, "");
@@ -113,7 +113,7 @@ int test_eql_parse_binary_expr_parens() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("(1 + 2) * 3;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_MUL, "");
     mu_assert(node->binary_expr.lhs->type == EQL_AST_TYPE_BINARY_EXPR, "");

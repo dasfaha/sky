@@ -1,10 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <dbg.h>
 #include <eql/ast.h>
 #include <eql/parser.h>
+#include <eql/module.h>
 
 #include "../minunit.h"
+
+
+//==============================================================================
+//
+// Globals
+//
+//==============================================================================
+
+struct tagbstring foo = bsStatic("foo");
 
 
 //==============================================================================
@@ -35,13 +46,15 @@ int test_eql_parse_int_literal() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("200;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_INT_LITERAL, "");
     mu_assert(node->int_literal.value == 200, "");
     eql_ast_node_free(module);
     bdestroy(text);
     return 0;
 }
+
+
 
 
 //==============================================================================

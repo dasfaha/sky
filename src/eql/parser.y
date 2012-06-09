@@ -36,7 +36,7 @@
 %token <int_value> TINT
 %token <float_value> TFLOAT
 %token <token> TCLASS
-%token <token> TPUBLIC TPRIVATE
+%token <token> TPUBLIC TPRIVATE TRETURN
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
 %token <token> TQUOTE TDBLQUOTE
 %token <token> TSEMICOLON TCOLON TCOMMA
@@ -62,17 +62,19 @@
 
 module  : /* empty */
         | module class     { eql_ast_module_add_class(root, $2); }
-        | module stmt      { eql_ast_block_add_expr(root->module.block, $2); }
+        | module stmt      { eql_ast_block_add_expr(root->module.main_function->function.body, $2); }
 ;
 
 block   : /* empty */ { $$ = NULL; }
-        | stmts       { eql_ast_block_create((eql_ast_node**)$1->elements, $1->length, &$$); eql_array_free($1); };
+        | stmts       { eql_ast_block_create(NULL, (eql_ast_node**)$1->elements, $1->length, &$$); eql_array_free($1); };
 
 stmts   : stmt       { $$ = eql_array_create(); eql_array_push($$, $1); }
         | stmts stmt { eql_array_push($1, $2); }
 
 stmt    : expr TSEMICOLON
-        | var_decl TSEMICOLON;
+        | var_decl TSEMICOLON
+        | TRETURN expr TSEMICOLON { eql_ast_freturn_create($2, &$$); }
+        | TRETURN TSEMICOLON { eql_ast_freturn_create(NULL, &$$); };
 
 expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
         | expr TMINUS expr  { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }
@@ -170,6 +172,15 @@ metadata_item   : TIDENTIFIER TEQUALS string { eql_ast_metadata_item_create($1, 
 
 //==============================================================================
 //
+// Globals
+//
+//==============================================================================
+
+struct tagbstring mainFunctionName = bsStatic("main");
+
+
+//==============================================================================
+//
 // Functions
 //
 //==============================================================================
@@ -194,9 +205,11 @@ int eql_parse(bstring name, bstring text, eql_ast_node **module)
     rc = eql_ast_module_create(name, NULL, 0, NULL, &root);
     check(rc == 0, "Unable to create module");
     
-    // Setup root block.
-    rc = eql_ast_block_create(NULL, 0, &root->module.block);
-    check(rc == 0, "Unable to create root block");
+    // Setup main function.
+    rc = eql_ast_function_create(&mainFunctionName, NULL, NULL, 0, NULL, &root->module.main_function);
+    check(rc == 0, "Unable to create main function");
+    rc = eql_ast_block_create(NULL, NULL, 0, &root->module.main_function->function.body);
+    check(rc == 0, "Unable to create root block for main function");
     
     // Parse using Bison.
     yyscan_t scanner;

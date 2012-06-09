@@ -46,7 +46,7 @@ int test_eql_parse_var_decl() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("Int myVar_26;");
     eql_parse(NULL, text, &module);
-    eql_ast_node *node = module->module.block->block.exprs[0];
+    eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
     mu_assert(node->type == EQL_AST_TYPE_VAR_DECL, "");
     mu_assert(biseqcstr(node->var_decl.type, "Int"), "");
     mu_assert(biseqcstr(node->var_decl.name, "myVar_26"), "");

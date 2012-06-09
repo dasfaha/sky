@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "../../dbg.h"
 #include "node.h"
 
 //==============================================================================
@@ -36,6 +37,10 @@ void eql_ast_node_free(eql_ast_node *node)
         }
         case EQL_AST_TYPE_FARG: {
             eql_ast_farg_free(node);
+            break;
+        }
+        case EQL_AST_TYPE_FRETURN: {
+            eql_ast_freturn_free(node);
             break;
         }
         case EQL_AST_TYPE_FUNCTION: {
@@ -77,5 +82,59 @@ void eql_ast_node_free(eql_ast_node *node)
     }
     
     free(node);
+}
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for an AST node.
+//
+// node    - The node to generate LLVM values for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
+                         LLVMValueRef *value)
+{
+    int rc;
+    
+    check(node != NULL, "Node is required");
+    check(module != NULL, "Module is required");
+    check(module->llvm_module != NULL, "LLVM Module is required");
+    check(module->compiler != NULL, "Module compiler is required");
+    check(module->compiler->llvm_builder != NULL, "LLVM Builder is required");
+
+    // Delegate codegen to AST nodes.
+    switch(node->type) {
+        case EQL_AST_TYPE_INT_LITERAL: {
+            rc = eql_ast_int_literal_codegen(node, module, value);
+            check(rc == 0, "Unable to codegen literal integer");
+            break;
+        }
+        case EQL_AST_TYPE_FRETURN: {
+            rc = eql_ast_freturn_codegen(node, module, value);
+            check(rc == 0, "Unable to codegen function return");
+            break;
+        }
+        case EQL_AST_TYPE_FUNCTION: {
+            rc = eql_ast_function_codegen(node, module, value);
+            check(rc == 0, "Unable to codegen function");
+            break;
+        }
+        case EQL_AST_TYPE_BLOCK: {
+            rc = eql_ast_block_codegen(node, module, value);
+            check(rc == 0, "Unable to codegen block");
+            break;
+        }
+    }
+    
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
 }
 

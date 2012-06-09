@@ -34,20 +34,20 @@ struct tagbstring bat = bsStatic("bat");
 
 int test_eql_ast_module_create() {
     eql_ast_node *classes[2];
-    eql_ast_node *node, *class1, *class2, *block;
+    eql_ast_node *node, *class1, *class2, *main_function;
     eql_ast_class_create(&Foo, NULL, 0, NULL, 0, &class1);
     eql_ast_class_create(&Bar, NULL, 0, NULL, 0, &class2);
     classes[0] = class1;
     classes[1] = class2;
-    eql_ast_block_create(NULL, 0, &block);
-    eql_ast_module_create(&bar, classes, 2, block, &node);
+    eql_ast_function_create(NULL, NULL, NULL, 0, NULL, &main_function);
+    eql_ast_module_create(&bar, classes, 2, main_function, &node);
     
     mu_assert(node->type == EQL_AST_TYPE_MODULE, "");
     mu_assert(biseqcstr(node->class.name, "bar"), "");
     mu_assert(node->module.class_count == 2, "");
     mu_assert(node->module.classes[0] == class1, "");
     mu_assert(node->module.classes[1] == class2, "");
-    mu_assert(node->module.block == block, "");
+    mu_assert(node->module.main_function == main_function, "");
     eql_ast_node_free(node);
     return 0;
 }

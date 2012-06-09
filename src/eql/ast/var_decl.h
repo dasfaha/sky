@@ -9,9 +9,6 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Represents a variable declaration in the AST.
 typedef struct {
     bstring type;
@@ -25,8 +22,20 @@ typedef struct {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 int eql_ast_var_decl_create(bstring type, bstring name, struct eql_ast_node **node);
 
 void eql_ast_var_decl_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_var_decl_typegen(eql_ast_node *node, eql_module *module,
+    LLVMTypeRef *type);
 
 #endif

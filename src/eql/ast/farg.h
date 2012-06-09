@@ -9,12 +9,9 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Represents a variable declaration in the AST.
-typedef struct {
-    struct eql_ast_node *var_decl;
+typedef struct eql_ast_farg {
+    eql_ast_node *var_decl;
 } eql_ast_farg;
 
 
@@ -24,8 +21,20 @@ typedef struct {
 //
 //==============================================================================
 
-int eql_ast_farg_create(struct eql_ast_node *var_decl, struct eql_ast_node **node);
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
 
-void eql_ast_farg_free(struct eql_ast_node *node);
+int eql_ast_farg_create(eql_ast_node *var_decl, eql_ast_node **node);
+
+void eql_ast_farg_free(eql_ast_node *node);
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_farg_typegen(eql_ast_node *node, eql_module *module,
+    LLVMTypeRef *type);
 
 #endif

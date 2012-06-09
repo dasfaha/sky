@@ -1,6 +1,18 @@
 #ifndef _eql_ast_node_h
 #define _eql_ast_node_h
 
+#include <llvm-c/Core.h>
+
+
+//==============================================================================
+//
+// Definitions
+//
+//==============================================================================
+
+typedef enum eql_ast_node_type_e eql_ast_node_type_e;
+typedef struct eql_ast_node eql_ast_node;
+
 #include "access.h"
 #include "int_literal.h"
 #include "float_literal.h"
@@ -8,6 +20,7 @@
 #include "var_ref.h"
 #include "var_decl.h"
 #include "farg.h"
+#include "freturn.h"
 #include "function.h"
 #include "fcall.h"
 #include "block.h"
@@ -17,21 +30,17 @@
 #include "module.h"
 #include "metadata.h"
 #include "metadata_item.h"
-
-//==============================================================================
-//
-// Definitions
-//
-//==============================================================================
+#include "../module.h"
 
 // Defines the types of expressions available.
-typedef enum {
+enum eql_ast_node_type_e {
     EQL_AST_TYPE_INT_LITERAL,
     EQL_AST_TYPE_FLOAT_LITERAL,
     EQL_AST_TYPE_BINARY_EXPR,
     EQL_AST_TYPE_VAR_REF,
     EQL_AST_TYPE_VAR_DECL,
     EQL_AST_TYPE_FARG,
+    EQL_AST_TYPE_FRETURN,
     EQL_AST_TYPE_FUNCTION,
     EQL_AST_TYPE_FCALL,
     EQL_AST_TYPE_BLOCK,
@@ -41,10 +50,10 @@ typedef enum {
     EQL_AST_TYPE_MODULE,
     EQL_AST_TYPE_METADATA,
     EQL_AST_TYPE_METADATA_ITEM
-} eql_ast_node_type_e;
+};
 
 // Represents an node in the AST.
-typedef struct eql_ast_node {
+struct eql_ast_node {
     eql_ast_node_type_e type;
     union {
         eql_ast_int_literal int_literal;
@@ -53,6 +62,7 @@ typedef struct eql_ast_node {
         eql_ast_var_ref var_ref;
         eql_ast_var_decl var_decl;
         eql_ast_farg farg;
+        eql_ast_freturn freturn;
         eql_ast_function function;
         eql_ast_fcall fcall;
         eql_ast_block block;
@@ -63,7 +73,7 @@ typedef struct eql_ast_node {
         eql_ast_metadata metadata;
         eql_ast_metadata_item metadata_item;
     };
-} eql_ast_node;
+};
 
 
 //==============================================================================
@@ -72,6 +82,19 @@ typedef struct eql_ast_node {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 void eql_ast_node_free(eql_ast_node *node);
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
+    LLVMValueRef *value);
+
 
 #endif

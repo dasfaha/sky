@@ -1,10 +1,7 @@
-#ifndef _eql_ast_int_literal_h
-#define _eql_ast_int_literal_h
+#ifndef _eql_ast_freturn_h
+#define _eql_ast_freturn_h
 
-#include <inttypes.h>
-
-#include "../module.h"
-
+#include "../../bstring.h"
 
 //==============================================================================
 //
@@ -12,13 +9,10 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
-// Represents a literal integer in the AST.
-typedef struct {
-    int64_t value;
-} eql_ast_int_literal;
+// Represents a function return in the AST.
+typedef struct eql_ast_freturn {
+    eql_ast_node *value;
+} eql_ast_freturn;
 
 
 //==============================================================================
@@ -31,14 +25,16 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-int eql_ast_int_literal_create(int64_t value, struct eql_ast_node **node);
+int eql_ast_freturn_create(eql_ast_node *value, eql_ast_node **node);
+
+void eql_ast_freturn_free(eql_ast_node *node);
 
 
 //--------------------------------------
 // Codegen
 //--------------------------------------
 
-int eql_ast_int_literal_codegen(struct eql_ast_node *node,
-    struct eql_module *module, LLVMValueRef *value);
+int eql_ast_freturn_codegen(eql_ast_node *node, eql_module *module,
+    LLVMValueRef *type);
 
 #endif
