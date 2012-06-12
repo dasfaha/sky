@@ -138,3 +138,56 @@ error:
     return -1;
 }
 
+
+
+//--------------------------------------
+// types
+//--------------------------------------
+
+// Recursively determines the type name of a node.
+//
+// node - The node to determine the type for.
+// type - A pointer to where the type name should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_node_get_type(eql_ast_node *node, bstring *type)
+{
+    check(node != NULL, "Node required");
+
+    // Delegate to each type.
+    switch(node->type) {
+        case EQL_AST_TYPE_INT_LITERAL: {
+            eql_ast_int_literal_get_type(node, type);
+            break;
+        }
+        /*
+        case EQL_AST_TYPE_FLOAT_LITERAL: {
+            eql_ast_float_literal_get_type(node, type);
+            break;
+        }
+        case EQL_AST_TYPE_BINARY_EXPR: {
+            eql_ast_binary_expr_get_type(node, type);
+            break;
+        }
+        case EQL_AST_TYPE_VAR_REF: {
+            eql_ast_var_ref_get_type(node, type);
+            break;
+        }
+        case EQL_AST_TYPE_FCALL: {
+            eql_ast_fcall_get_type(node, type);
+            break;
+        }
+        */
+        default:
+        {
+            sentinel("AST node does not have a type");
+            break;
+        }
+    }
+    
+    return 0;
+
+error:
+    *type = NULL;
+    return -1;
+}

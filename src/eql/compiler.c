@@ -72,6 +72,8 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
     rc = eql_parse(name, text, &ast);
     check(rc == 0, "Unable to parse EQL query");
     
+    // TODO: Generate classes.
+    
     // Generate the main function if a block exists.
     rc = eql_ast_node_codegen(ast->module.main_function, *module, &value);
     check(rc == 0, "Unable to generate main function");

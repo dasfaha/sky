@@ -160,3 +160,62 @@ error:
     *value = NULL;
     return -1;
 }
+
+
+//--------------------------------------
+// Misc
+//--------------------------------------
+
+// Updates the return type of the function based on the last return statement
+// of the function. This is used for implicit functions like the main function
+// of a module.
+//
+// node - The function ast node to generate a type for.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_function_generate_return_type(eql_ast_node *node)
+{
+    int rc;
+    bstring type;
+    
+    check(node != NULL, "Function required");
+    check(node->type == EQL_AST_TYPE_FUNCTION, "Node type must be 'function'");
+    
+    // If function has no body then its return type is void.
+    eql_ast_node *body = node->function.body;
+    if(body == NULL) {
+        type = bfromcstr("void");
+    }
+    // Otherwise find the last return statement and determine its type.
+    else {
+        eql_ast_node *freturn = NULL;
+        
+        // Loop over all returns and save the last one.
+        unsigned int i;
+        for(i=0; i<body->block.expr_count; i++) {
+            if(body->block.exprs[i]->type == EQL_AST_TYPE_FRETURN) {
+                freturn = body->block.exprs[i];
+            }
+        }
+        
+        // If there is no return statement or it's a void return then the type
+        // is void.
+        if(freturn == NULL || freturn->freturn.value == NULL) {
+            type = bfromcstr("void");
+        }
+        // Otherwise check the last return value to determine its type.
+        else {
+            rc = eql_ast_node_get_type(freturn->freturn.value, &type);
+            check(rc == 0, "Unable to determine return type");
+        }
+    }
+    
+    // Assign type to return type.
+    node->function.return_type = type;
+    
+    return 0;
+    
+error:
+    bdestroy(type);
+    return -1;
+}

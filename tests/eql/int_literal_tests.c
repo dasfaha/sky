@@ -54,6 +54,20 @@ int test_eql_parse_int_literal() {
     return 0;
 }
 
+//--------------------------------------
+// Type
+//--------------------------------------
+
+int test_eql_int_literal_get_type() {
+    eql_ast_node *node;
+    bstring type;
+    eql_ast_int_literal_create(20, &node);
+    eql_ast_node_get_type(node, &type);
+    mu_assert(biseqcstr(type, "Int"), "");
+    eql_ast_node_free(node);
+    bdestroy(type);
+    return 0;
+}
 
 
 
@@ -66,6 +80,7 @@ int test_eql_parse_int_literal() {
 int all_tests() {
     mu_run_test(test_eql_ast_int_literal_create);
     mu_run_test(test_eql_parse_int_literal);
+    mu_run_test(test_eql_int_literal_get_type);
     return 0;
 }
 

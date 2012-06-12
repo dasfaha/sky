@@ -97,4 +97,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
 
+//--------------------------------------
+// Types
+//--------------------------------------
+
+int eql_ast_node_get_type(eql_ast_node *node, bstring *type);
+
+
 #endif

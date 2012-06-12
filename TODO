@@ -1,8 +1,8 @@
 # EQL
 - Compiler
   - eql_compile
-    - Create module
-    - Parse text into AST
+    - Create module (DONE)
+    - Parse text into AST (DONE)
     - Link modules
     - Validate AST
     - Codegen

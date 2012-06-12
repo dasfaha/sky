@@ -43,4 +43,11 @@ void eql_ast_function_free(struct eql_ast_node *node);
 int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
+
+//--------------------------------------
+// Misc
+//--------------------------------------
+
+int eql_ast_function_generate_return_type(eql_ast_node *node);
+
 #endif

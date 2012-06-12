@@ -220,6 +220,12 @@ int eql_parse(bstring name, bstring text, eql_ast_node **module)
     yylex_destroy(scanner);
     check(rc == 0, "EQL Syntax error");
 
+    // Determine the return type of the main function dynamically.
+    if(root->module.main_function != NULL) {
+        rc = eql_ast_function_generate_return_type(root->module.main_function);
+        check(rc == 0, "Unable to generate return type for main function");
+    }
+
     // Return module to caller.
     *module = root;
 
