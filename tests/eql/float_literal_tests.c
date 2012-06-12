@@ -31,7 +31,7 @@ int test_eql_ast_float_literal_create() {
 // Parser
 //--------------------------------------
 
-int test_eql_parse_float_literal() {
+int test_eql_float_literal_parse() {
     eql_ast_node *module = NULL;
     bstring text = bfromcstr("10.421;");
     eql_parse(NULL, text, &module);
@@ -44,6 +44,22 @@ int test_eql_parse_float_literal() {
 }
 
 
+//--------------------------------------
+// Type
+//--------------------------------------
+
+int test_eql_float_literal_get_type() {
+    eql_ast_node *node;
+    bstring type;
+    eql_ast_float_literal_create(100.1, &node);
+    eql_ast_node_get_type(node, &type);
+    mu_assert(biseqcstr(type, "Float"), "");
+    eql_ast_node_free(node);
+    bdestroy(type);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -52,7 +68,8 @@ int test_eql_parse_float_literal() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_float_literal_create);
-    mu_run_test(test_eql_parse_float_literal);
+    mu_run_test(test_eql_float_literal_parse);
+    mu_run_test(test_eql_float_literal_get_type);
     return 0;
 }
 

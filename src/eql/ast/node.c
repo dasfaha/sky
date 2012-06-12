@@ -160,11 +160,11 @@ int eql_ast_node_get_type(eql_ast_node *node, bstring *type)
             eql_ast_int_literal_get_type(node, type);
             break;
         }
-        /*
         case EQL_AST_TYPE_FLOAT_LITERAL: {
             eql_ast_float_literal_get_type(node, type);
             break;
         }
+        /*
         case EQL_AST_TYPE_BINARY_EXPR: {
             eql_ast_binary_expr_get_type(node, type);
             break;

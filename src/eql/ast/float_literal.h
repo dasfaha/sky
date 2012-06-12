@@ -7,9 +7,6 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Represents a literal floating point number in the AST.
 typedef struct {
     double value;
@@ -22,6 +19,17 @@ typedef struct {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 int eql_ast_float_literal_create(double value, struct eql_ast_node **node);
+
+
+//--------------------------------------
+// Type
+//--------------------------------------
+
+int eql_ast_float_literal_get_type(eql_ast_node *node, bstring *type);
 
 #endif
