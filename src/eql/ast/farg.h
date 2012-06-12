@@ -30,11 +30,4 @@ int eql_ast_farg_create(eql_ast_node *var_decl, eql_ast_node **node);
 void eql_ast_farg_free(eql_ast_node *node);
 
 
-//--------------------------------------
-// Codegen
-//--------------------------------------
-
-int eql_ast_farg_typegen(eql_ast_node *node, eql_module *module,
-    LLVMTypeRef *type);
-
 #endif

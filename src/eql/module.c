@@ -8,6 +8,17 @@
 
 //==============================================================================
 //
+// Globals
+//
+//==============================================================================
+
+struct tagbstring TYPE_NAME_INT   = bsStatic("Int");
+struct tagbstring TYPE_NAME_FLOAT = bsStatic("Float");
+struct tagbstring TYPE_NAME_VOID  = bsStatic("void");
+
+
+//==============================================================================
+//
 // Functions
 //
 //==============================================================================
@@ -52,6 +63,40 @@ void eql_module_free(eql_module *module)
 
         free(module);
     }
+}
+
+
+//--------------------------------------
+// Types
+//--------------------------------------
+
+int eql_module_get_type_ref(eql_module *module, bstring name,
+                            LLVMTypeRef *type)
+{
+    check(module != NULL, "Module is required");
+    check(name != NULL, "Type name is required");
+    
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    
+    // Compare to built-in types.
+    if(biseq(name, &TYPE_NAME_INT)) {
+        *type = LLVMInt64TypeInContext(context);
+    }
+    else if(biseq(name, &TYPE_NAME_FLOAT)) {
+        *type = LLVMDoubleTypeInContext(context);
+    }
+    else if(biseq(name, &TYPE_NAME_VOID)) {
+        *type = LLVMVoidTypeInContext(context);
+    }
+    else {
+        sentinel("Invalid type in module: %s", bdata(name));
+    }
+
+    return 0;
+
+error:
+    *type = NULL;
+    return -1;
 }
 
 

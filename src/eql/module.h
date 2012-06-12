@@ -49,6 +49,14 @@ struct eql_module *eql_module_create(bstring name,
 void eql_module_free(struct eql_module *module);
 
 
+//--------------------------------------
+// Types
+//--------------------------------------
+
+int eql_module_get_type_ref(eql_module *module, bstring name,
+    LLVMTypeRef *type);
+
+
 //======================================
 // Debugging
 //======================================

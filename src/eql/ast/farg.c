@@ -45,21 +45,3 @@ void eql_ast_farg_free(struct eql_ast_node *node)
 }
 
 
-//--------------------------------------
-// Codegen
-//--------------------------------------
-
-int eql_ast_farg_typegen(eql_ast_node *node, eql_module *module,
-                         LLVMTypeRef *type)
-{
-    check(node != NULL, "Node is required");
-    check(node->type == EQL_AST_TYPE_FARG, "Node must be a function argument");
-    
-    int rc = eql_ast_var_decl_typegen(node->farg.var_decl, module, type);
-    check(rc == 0, "Unable to generate type for function argument");
-
-    return 0;
-
-error:
-    return -1;
-}
