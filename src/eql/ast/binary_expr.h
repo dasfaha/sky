@@ -8,9 +8,6 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Defines the types of binary expressions.
 typedef enum {
     EQL_BINOP_PLUS,
@@ -22,8 +19,8 @@ typedef enum {
 // Represents a binary expression in the AST.
 typedef struct {
     eql_ast_binop_e operator;
-    struct eql_ast_node *lhs;
-    struct eql_ast_node *rhs;
+    eql_ast_node *lhs;
+    eql_ast_node *rhs;
 } eql_ast_binary_expr;
 
 
@@ -33,10 +30,20 @@ typedef struct {
 //
 //==============================================================================
 
-int eql_ast_binary_expr_create(eql_ast_binop_e operator,
-    struct eql_ast_node *lhs, struct eql_ast_node *rhs,
-    struct eql_ast_node **ret);
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
 
-void eql_ast_binary_expr_free(struct eql_ast_node *node);
+int eql_ast_binary_expr_create(eql_ast_binop_e operator,
+    eql_ast_node *lhs, eql_ast_node *rhs, eql_ast_node **ret);
+
+void eql_ast_binary_expr_free(eql_ast_node *node);
+
+
+//--------------------------------------
+// Type
+//--------------------------------------
+
+int eql_ast_binary_expr_get_type(eql_ast_node *node, bstring *type);
 
 #endif

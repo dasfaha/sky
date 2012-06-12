@@ -128,6 +128,24 @@ int test_eql_parse_binary_expr_parens() {
 }
 
 
+//--------------------------------------
+// Type
+//--------------------------------------
+
+int test_eql_binary_expr_get_type() {
+    bstring type;
+    eql_ast_node *node, *lhs, *rhs;
+    eql_ast_int_literal_create(10, &lhs);
+    eql_ast_float_literal_create(10, &rhs);
+    eql_ast_binary_expr_create(EQL_BINOP_MUL, lhs, rhs, &node);
+    eql_ast_node_get_type(node, &type);
+    mu_assert(biseqcstr(type, "Int"), "");
+    eql_ast_node_free(node);
+    bdestroy(type);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
