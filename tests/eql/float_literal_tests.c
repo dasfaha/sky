@@ -3,6 +3,7 @@
 
 #include <eql/ast.h>
 #include <eql/parser.h>
+#include <eql/compiler.h>
 
 #include "../minunit.h"
 
@@ -60,6 +61,16 @@ int test_eql_float_literal_get_type() {
 }
 
 
+//--------------------------------------
+// Compile
+//--------------------------------------
+
+int test_eql_compile_float_literal() {
+    mu_assert_eql_compile("return 10.25;", "tests/fixtures/eql/ir/float_literal")
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -70,6 +81,7 @@ int all_tests() {
     mu_run_test(test_eql_ast_float_literal_create);
     mu_run_test(test_eql_float_literal_parse);
     mu_run_test(test_eql_float_literal_get_type);
+    mu_run_test(test_eql_compile_float_literal);
     return 0;
 }
 

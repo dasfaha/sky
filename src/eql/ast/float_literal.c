@@ -35,6 +35,27 @@ error:
 
 
 //--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for the literal float AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_float_literal_codegen(eql_ast_node *node,
+                                  eql_module *module,
+                                  LLVMValueRef *value)
+{
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    *value = LLVMConstReal(LLVMDoubleTypeInContext(context), node->float_literal.value);
+    return 0;
+}
+
+
+//--------------------------------------
 // Type
 //--------------------------------------
 

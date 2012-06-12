@@ -27,6 +27,14 @@ int eql_ast_float_literal_create(double value, struct eql_ast_node **node);
 
 
 //--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_float_literal_codegen(struct eql_ast_node *node,
+    eql_module *module, LLVMValueRef *value);
+
+
+//--------------------------------------
 // Type
 //--------------------------------------
 

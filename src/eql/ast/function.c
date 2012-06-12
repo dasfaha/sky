@@ -102,8 +102,6 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     int rc;
     unsigned int i;
     
-    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
-    
     // Create a list of function argument types.
     eql_ast_node *arg;
     unsigned int arg_count = node->function.arg_count;
