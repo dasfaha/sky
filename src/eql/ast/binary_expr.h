@@ -41,6 +41,14 @@ void eql_ast_binary_expr_free(eql_ast_node *node);
 
 
 //--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_binary_expr_codegen(struct eql_ast_node *node, eql_module *module,
+    LLVMValueRef *value);
+
+
+//--------------------------------------
 // Type
 //--------------------------------------
 

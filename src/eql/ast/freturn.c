@@ -57,9 +57,10 @@ int eql_ast_freturn_codegen(eql_ast_node *node, eql_module *module,
 
     // Return value if specified.
     if(node->freturn.value) {
-        LLVMValueRef return_value;
+        LLVMValueRef return_value = NULL;
         int rc = eql_ast_node_codegen(node->freturn.value, module, &return_value);
         check(rc == 0, "Unable to codegen function return value");
+        check(return_value != NULL, "Missing return value");
         *value = LLVMBuildRet(builder, return_value);
         check(*value != NULL, "Unable to generate function return");
     }

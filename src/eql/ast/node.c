@@ -119,6 +119,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
             check(rc == 0, "Unable to codegen literal float");
             break;
         }
+        case EQL_AST_TYPE_BINARY_EXPR: {
+            rc = eql_ast_binary_expr_codegen(node, module, value);
+            check(rc == 0, "Unable to codegen binary expression");
+            break;
+        }
         case EQL_AST_TYPE_FRETURN: {
             rc = eql_ast_freturn_codegen(node, module, value);
             check(rc == 0, "Unable to codegen function return");

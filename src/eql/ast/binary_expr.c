@@ -58,6 +58,113 @@ void eql_ast_binary_expr_free(eql_ast_node *node)
 
 
 //--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for the binary expression AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_binary_expr_codegen(eql_ast_node *node,
+                                eql_module *module,
+                                LLVMValueRef *value)
+{
+    int rc;
+    
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_BINARY_EXPR, "Node type must be 'binary expression'");
+    check(module != NULL, "Module required");
+    
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+    // Evaluate left and right hand values.
+    LLVMValueRef lhs, rhs;
+    rc = eql_ast_node_codegen(node->binary_expr.lhs, module, &lhs);
+    check(rc == 0 && lhs != NULL, "Unable to codegen lhs");
+    rc = eql_ast_node_codegen(node->binary_expr.rhs, module, &rhs);
+    check(rc == 0 && rhs != NULL, "Unable to codegen rhs");
+
+    // If values are different types then cast RHS to LHS.
+    LLVMTypeRef lhs_type = LLVMTypeOf(lhs);
+    LLVMTypeKind lhs_type_kind = LLVMGetTypeKind(lhs_type);
+    LLVMTypeRef rhs_type = LLVMTypeOf(rhs);
+    LLVMTypeKind rhs_type_kind = LLVMGetTypeKind(rhs_type);
+    
+    if(lhs_type != rhs_type) {
+        // Cast int to float.
+        if(lhs_type_kind == LLVMDoubleTypeKind && rhs_type_kind == LLVMIntegerTypeKind)
+        {
+            rhs = LLVMBuildSIToFP(builder, rhs, lhs_type, "sitofptmp");
+        }
+        // Cast float to int.
+        else if(lhs_type_kind == LLVMIntegerTypeKind && rhs_type_kind == LLVMDoubleTypeKind)
+        {
+            rhs = LLVMBuildFPToSI(builder, rhs, lhs_type, "fptositmp");
+        }
+        // Throw error if it's any other conversion.
+        else {
+            sentinel("Unable to cast types");
+        }
+    }
+
+    // Generate Float operations.
+    if(lhs_type_kind == LLVMDoubleTypeKind) {
+        switch(node->binary_expr.operator) {
+            case EQL_BINOP_PLUS: {
+                *value = LLVMBuildFAdd(builder, lhs, rhs, "faddtmp");
+                break;
+            }
+            case EQL_BINOP_MINUS: {
+                *value = LLVMBuildFSub(builder, lhs, rhs, "fsubtmp");
+                break;
+            }
+            case EQL_BINOP_MUL: {
+                *value = LLVMBuildFMul(builder, lhs, rhs, "fmultmp");
+                break;
+            }
+            case EQL_BINOP_DIV: {
+                *value = LLVMBuildFDiv(builder, lhs, rhs, "fdivtmp");
+                break;
+            }
+        }
+    }
+    // Generate Integer operations.
+    else {
+        switch(node->binary_expr.operator) {
+            case EQL_BINOP_PLUS: {
+                *value = LLVMBuildAdd(builder, lhs, rhs, "addtmp");
+                break;
+            }
+            case EQL_BINOP_MINUS: {
+                *value = LLVMBuildSub(builder, lhs, rhs, "subtmp");
+                break;
+            }
+            case EQL_BINOP_MUL: {
+                *value = LLVMBuildMul(builder, lhs, rhs, "multmp");
+                break;
+            }
+            case EQL_BINOP_DIV: {
+                *value = LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
+                break;
+            }
+        }
+    }
+
+    check(*value != NULL, "Unable to codegen binary expression");
+    
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
+
+//--------------------------------------
 // Type
 //--------------------------------------
 
