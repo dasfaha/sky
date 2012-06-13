@@ -31,33 +31,24 @@ int eql_ast_class_create(bstring name,
                          unsigned int property_count, 
                          struct eql_ast_node **ret)
 {
+    int rc;
+    
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_CLASS;
+    node->parent = NULL;
     node->class.name = bstrcpy(name); check_mem(node->class.name);
+    node->class.methods = NULL;
+    node->class.method_count = 0;
+    node->class.properties = NULL;
+    node->class.property_count = 0;
 
-    // Copy methods.
-    if(method_count > 0) {
-        size_t sz = sizeof(eql_ast_node*) * method_count;
-        node->class.methods = malloc(sz);
-        check_mem(node->class.methods);
-        memcpy(node->class.methods, methods, sz);
-    }
-    else {
-        node->class.methods = NULL;
-    }
-    node->class.method_count = method_count;
+    // Add methods.
+    rc = eql_ast_class_add_members(node, methods, method_count);
+    check(rc == 0, "Unable to add methods to class");
 
-    // Copy properties.
-    if(property_count > 0) {
-        size_t sz = sizeof(eql_ast_node*) * property_count;
-        node->class.properties = malloc(sz);
-        check_mem(node->class.properties);
-        memcpy(node->class.properties, properties, sz);
-    }
-    else {
-        node->class.properties = NULL;
-    }
-    node->class.property_count = property_count;
+    // Add properties
+    rc = eql_ast_class_add_members(node, properties, property_count);
+    check(rc == 0, "Unable to add properties to class");
 
     // Clear metadata.
     node->class.metadata_count = 0;
@@ -99,6 +90,16 @@ void eql_ast_class_free(struct eql_ast_node *node)
         free(node->class.properties);
         node->class.property_count = 0;
     }
+
+    if(node->class.metadata_count > 0) {
+        unsigned int i;
+        for(i=0; i<node->class.metadata_count; i++) {
+            eql_ast_node_free(node->class.metadatas[i]);
+            node->class.metadatas[i] = NULL;
+        }
+        free(node->class.metadatas);
+        node->class.metadata_count = 0;
+    }
 }
 
 
@@ -126,6 +127,9 @@ int eql_ast_class_add_property(eql_ast_node *class,
     check_mem(class->class.properties);
     class->class.properties[class->class.property_count-1] = property;
     
+    // Link property to class.
+    property->parent = class;
+    
     return 0;
 
 error:
@@ -151,6 +155,9 @@ int eql_ast_class_add_method(eql_ast_node *class,
     class->class.methods = realloc(class->class.methods, sizeof(eql_ast_node*) * class->class.method_count);
     check_mem(class->class.methods);
     class->class.methods[class->class.method_count-1] = method;
+    
+    // Link method to class.
+    method->parent = class;
     
     return 0;
 
@@ -247,6 +254,9 @@ int eql_ast_class_add_metadata(struct eql_ast_node *class,
     class->class.metadatas = realloc(class->class.metadatas, sizeof(eql_ast_node*) * class->class.metadata_count);
     check_mem(class->class.metadatas);
     class->class.metadatas[class->class.metadata_count-1] = metadata;
+    
+    // Link metadata to class.
+    metadata->parent = class;
     
     return 0;
 

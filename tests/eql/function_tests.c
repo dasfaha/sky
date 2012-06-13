@@ -43,8 +43,11 @@ int test_eql_ast_function_create() {
     mu_assert(biseqcstr(node->function.return_type, "bar"), "");
     mu_assert(node->function.arg_count == 2, "");
     mu_assert(node->function.args[0] == farg1, "");
+    mu_assert(node->function.args[0]->parent == node, "");
     mu_assert(node->function.args[1] == farg2, "");
+    mu_assert(node->function.args[1]->parent == node, "");
     mu_assert(node->function.body == body, "");
+    mu_assert(node->function.body->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

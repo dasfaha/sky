@@ -25,7 +25,9 @@ int test_eql_ast_binary_expr_create() {
     mu_assert(node->type == EQL_AST_TYPE_BINARY_EXPR, "");
     mu_assert(node->binary_expr.operator == EQL_BINOP_MUL, "");
     mu_assert(node->binary_expr.lhs == lhs, "");
+    mu_assert(node->binary_expr.lhs->parent == node, "");
     mu_assert(node->binary_expr.rhs == rhs, "");
+    mu_assert(node->binary_expr.rhs->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

@@ -80,6 +80,7 @@ void eql_ast_node_free(eql_ast_node *node)
             break;
         }
     }
+    node->parent = NULL;
     
     free(node);
 }

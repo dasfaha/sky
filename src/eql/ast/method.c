@@ -22,8 +22,13 @@ int eql_ast_method_create(eql_ast_access_e access,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_METHOD;
+    node->parent = NULL;
     node->method.access = access;
     node->method.function = function;
+    if(function != NULL) {
+        function->parent = node;
+    }
+
     *ret = node;
     return 0;
 

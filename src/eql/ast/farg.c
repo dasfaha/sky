@@ -23,6 +23,7 @@ int eql_ast_farg_create(struct eql_ast_node *var_decl, struct eql_ast_node **ret
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_FARG;
+    node->parent = NULL;
     node->farg.var_decl = var_decl;
     *ret = node;
     return 0;

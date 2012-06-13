@@ -28,9 +28,19 @@ int eql_ast_binary_expr_create(eql_ast_binop_e operator,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_BINARY_EXPR;
+    node->parent = NULL;
     node->binary_expr.operator = operator;
+
     node->binary_expr.lhs = lhs;
+    if(lhs != NULL) {
+        lhs->parent = node;
+    }
+
     node->binary_expr.rhs = rhs;
+    if(rhs != NULL) {
+        rhs->parent = node;
+    }
+
     *ret = node;
     return 0;
 

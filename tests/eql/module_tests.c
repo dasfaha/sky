@@ -46,8 +46,11 @@ int test_eql_ast_module_create() {
     mu_assert(biseqcstr(node->class.name, "bar"), "");
     mu_assert(node->module.class_count == 2, "");
     mu_assert(node->module.classes[0] == class1, "");
+    mu_assert(node->module.classes[0]->parent == node, "");
     mu_assert(node->module.classes[1] == class2, "");
+    mu_assert(node->module.classes[1]->parent == node, "");
     mu_assert(node->module.main_function == main_function, "");
+    mu_assert(node->module.main_function->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }
@@ -61,7 +64,9 @@ int test_eql_ast_module_add_class() {
     eql_ast_module_add_class(node, class2);
     mu_assert(node->module.class_count == 2, "");
     mu_assert(node->module.classes[0] == class1, "");
+    mu_assert(node->module.classes[0]->parent == node, "");
     mu_assert(node->module.classes[1] == class2, "");
+    mu_assert(node->module.classes[1]->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

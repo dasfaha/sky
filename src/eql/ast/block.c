@@ -27,21 +27,14 @@ int eql_ast_block_create(bstring name, struct eql_ast_node **exprs,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_BLOCK;
-    
-    // Assign name.
+    node->parent = NULL;
     node->block.name = bstrcpy(name);
+    node->block.exprs = NULL;
+    node->block.expr_count = 0;
     
-    // Copy expressions.
-    if(expr_count > 0) {
-        size_t sz = sizeof(eql_ast_node*) * expr_count;
-        node->block.exprs = malloc(sz);
-        check_mem(node->block.exprs);
-        memcpy(node->block.exprs, exprs, sz);
-    }
-    else {
-        node->block.exprs = NULL;
-    }
-    node->block.expr_count = expr_count;
+    // Add expressions.
+    int rc = eql_ast_block_add_exprs(node, exprs, expr_count);
+    check(rc == 0, "Unable to add expressions to block");
     
     *ret = node;
     return 0;
@@ -95,6 +88,9 @@ int eql_ast_block_add_expr(struct eql_ast_node *block, struct eql_ast_node *expr
     block->block.exprs = realloc(block->block.exprs, sizeof(eql_ast_node*) * block->block.expr_count);
     check_mem(block->block.exprs);
     block->block.exprs[block->block.expr_count-1] = expr;
+    
+    // Assign parent reference to expression.
+    expr->parent = block;
     
     return 0;
 

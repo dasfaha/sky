@@ -31,16 +31,26 @@ int eql_ast_module_create(bstring name,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_MODULE;
+    node->parent = NULL;
     node->module.name = bstrcpy(name);
     if(name) check_mem(node->module.name);
+    
     node->module.main_function = main_function;
+    if(main_function != NULL) {
+        main_function->parent = node;
+    }
 
     // Copy classes.
     if(class_count > 0) {
         size_t sz = sizeof(eql_ast_node*) * class_count;
         node->module.classes = malloc(sz);
         check_mem(node->module.classes);
-        memcpy(node->module.classes, classes, sz);
+        
+        unsigned int i;
+        for(i=0; i<class_count; i++) {
+            node->module.classes[i] = classes[i];
+            classes[i]->parent = node;
+        }
     }
     else {
         node->module.classes = NULL;
@@ -102,6 +112,9 @@ int eql_ast_module_add_class(struct eql_ast_node *module,
     module->module.classes = realloc(module->module.classes, sizeof(eql_ast_node*) * module->module.class_count);
     check_mem(module->module.classes);
     module->module.classes[module->module.class_count-1] = class;
+    
+    // Assign class parent.
+    class->parent = module;
     
     return 0;
 

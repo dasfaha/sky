@@ -48,9 +48,12 @@ int test_eql_ast_class_create() {
     mu_assert(biseqcstr(node->class.name, "Foo"), "");
     mu_assert(node->class.method_count == 1, "");
     mu_assert(node->class.methods[0] == method1, "");
+    mu_assert(node->class.methods[0]->parent == node, "");
     mu_assert(node->class.property_count == 2, "");
     mu_assert(node->class.properties[0] == property1, "");
+    mu_assert(node->class.properties[0]->parent == node, "");
     mu_assert(node->class.properties[1] == property2, "");
+    mu_assert(node->class.properties[1]->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }
@@ -121,7 +124,9 @@ int test_eql_ast_class_add_metadata() {
     eql_ast_class_add_metadata(node, metadata2);
     mu_assert(node->class.metadata_count == 2, "");
     mu_assert(node->class.metadatas[0] == metadata1, "");
+    mu_assert(node->class.metadatas[0]->parent == node, "");
     mu_assert(node->class.metadatas[1] == metadata2, "");
+    mu_assert(node->class.metadatas[1]->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

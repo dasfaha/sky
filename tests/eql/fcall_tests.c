@@ -39,7 +39,9 @@ int test_eql_ast_fcall_create() {
     mu_assert(biseqcstr(node->fcall.name, "foo"), "");
     mu_assert(node->fcall.arg_count == 2, "");
     mu_assert(node->fcall.args[0] == expr1, "");
+    mu_assert(node->fcall.args[0]->parent == node, "");
     mu_assert(node->fcall.args[1] == expr2, "");
+    mu_assert(node->fcall.args[1]->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

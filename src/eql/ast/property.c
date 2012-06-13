@@ -22,8 +22,12 @@ int eql_ast_property_create(eql_ast_access_e access,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_PROPERTY;
+    node->parent = NULL;
     node->property.access   = access;
     node->property.var_decl = var_decl;
+    if(var_decl != NULL) {
+        var_decl->parent = node;
+    }
     *ret = node;
     return 0;
 

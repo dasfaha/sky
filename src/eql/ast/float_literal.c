@@ -23,6 +23,7 @@ int eql_ast_float_literal_create(double value, eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_FLOAT_LITERAL;
+    node->parent = NULL;
     node->float_literal.value = value;
     *ret = node;
     return 0;

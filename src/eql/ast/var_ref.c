@@ -20,6 +20,7 @@ int eql_ast_var_ref_create(bstring name, eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_VAR_REF;
+    node->parent = NULL;
     node->var_ref.name = bstrcpy(name);
     check_mem(node->var_ref.name);
     *ret = node;

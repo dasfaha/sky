@@ -23,7 +23,12 @@ int eql_ast_freturn_create(struct eql_ast_node *value, struct eql_ast_node **ret
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_FRETURN;
+    node->parent = NULL;
     node->freturn.value = value;
+    if(value) {
+        value->parent = node;
+    }
+
     *ret = node;
     return 0;
 

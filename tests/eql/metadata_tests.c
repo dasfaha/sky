@@ -44,7 +44,9 @@ int test_eql_ast_metadata_create() {
     mu_assert(biseqcstr(node->metadata.name, "Foo"), "");
     mu_assert(node->metadata.item_count == 2, "");
     mu_assert(node->metadata.items[0] == item1, "");
+    mu_assert(node->metadata.items[0]->parent == node, "");
     mu_assert(node->metadata.items[1] == item2, "");
+    mu_assert(node->metadata.items[1]->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

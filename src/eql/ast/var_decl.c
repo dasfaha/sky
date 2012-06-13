@@ -26,6 +26,7 @@ int eql_ast_var_decl_create(bstring type, bstring name,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_VAR_DECL;
+    node->parent = NULL;
     node->var_decl.type = bstrcpy(type);
     check_mem(node->var_decl.type);
     node->var_decl.name = bstrcpy(name);

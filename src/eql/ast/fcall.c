@@ -23,6 +23,7 @@ int eql_ast_fcall_create(bstring name, struct eql_ast_node **args,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_FCALL;
+    node->parent = NULL;
     node->fcall.name = bstrcpy(name); check_mem(node->fcall.name);
 
     // Copy arguments.
@@ -30,7 +31,12 @@ int eql_ast_fcall_create(bstring name, struct eql_ast_node **args,
         size_t sz = sizeof(eql_ast_node*) * arg_count;
         node->fcall.args = malloc(sz);
         check_mem(node->fcall.args);
-        memcpy(node->fcall.args, args, sz);
+        
+        unsigned int i;
+        for(i=0; i<arg_count; i++) {
+            node->fcall.args[i] = args[i];
+            args[i]->parent = node;
+        }
     }
     else {
         node->fcall.args = NULL;

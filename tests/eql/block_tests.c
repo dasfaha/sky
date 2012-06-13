@@ -38,7 +38,9 @@ int test_eql_ast_block_create() {
     mu_assert(biseqcstr(node->block.name, "foo"), "");
     mu_assert(node->block.expr_count == 2, "");
     mu_assert(node->block.exprs[0] == expr1, "");
+    mu_assert(node->block.exprs[0]->parent == node, "");
     mu_assert(node->block.exprs[1] == expr2, "");
+    mu_assert(node->block.exprs[1]->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

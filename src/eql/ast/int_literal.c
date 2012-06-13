@@ -24,6 +24,7 @@ int eql_ast_int_literal_create(int64_t value, eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_INT_LITERAL;
+    node->parent = NULL;
     node->int_literal.value = value;
     *ret = node;
     return 0;

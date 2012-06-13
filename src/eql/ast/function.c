@@ -30,6 +30,7 @@ int eql_ast_function_create(bstring name, bstring return_type,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_FUNCTION;
+    node->parent = NULL;
     node->function.name = bstrcpy(name);
     if(name) check_mem(node->function.name);
     node->function.return_type = bstrcpy(return_type);
@@ -40,7 +41,12 @@ int eql_ast_function_create(bstring name, bstring return_type,
         size_t sz = sizeof(eql_ast_node*) * arg_count;
         node->function.args = malloc(sz);
         check_mem(node->function.args);
-        memcpy(node->function.args, args, sz);
+        
+        unsigned int i;
+        for(i=0; i<arg_count; i++) {
+            node->function.args[i] = args[i];
+            args[i]->parent = node;
+        }
     }
     else {
         node->function.args = NULL;
@@ -49,6 +55,9 @@ int eql_ast_function_create(bstring name, bstring return_type,
     
     // Assign function body.
     node->function.body = body;
+    if(body != NULL) {
+        body->parent = node;
+    }
 
     *ret = node;
     return 0;

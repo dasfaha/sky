@@ -25,6 +25,7 @@ int eql_ast_metadata_create(bstring name,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_METADATA;
+    node->parent = NULL;
     node->metadata.name = bstrcpy(name); check_mem(node->metadata.name);
 
     // Copy items.
@@ -32,7 +33,12 @@ int eql_ast_metadata_create(bstring name,
         size_t sz = sizeof(eql_ast_node*) * item_count;
         node->metadata.items = malloc(sz);
         check_mem(node->metadata.items);
-        memcpy(node->metadata.items, items, sz);
+        
+        unsigned int i;
+        for(i=0; i<item_count; i++) {
+            node->metadata.items[i] = items[i];
+            items[i]->parent = node;
+        }
     }
     else {
         node->metadata.items = NULL;

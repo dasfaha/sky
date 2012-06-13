@@ -34,6 +34,7 @@ int test_eql_ast_method_create() {
     mu_assert(node->type == EQL_AST_TYPE_METHOD, "");
     mu_assert(node->method.access == EQL_ACCESS_PUBLIC, "");
     mu_assert(node->method.function == function, "");
+    mu_assert(node->method.function->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

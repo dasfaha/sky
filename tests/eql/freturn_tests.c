@@ -34,6 +34,7 @@ int test_eql_ast_freturn_create() {
     eql_ast_freturn_create(value, &node);
     mu_assert(node->type == EQL_AST_TYPE_FRETURN, "");
     mu_assert(node->freturn.value == value, "");
+    mu_assert(node->freturn.value->parent == node, "");
     eql_ast_node_free(node);
     return 0;
 }

@@ -55,6 +55,7 @@ enum eql_ast_node_type_e {
 // Represents an node in the AST.
 struct eql_ast_node {
     eql_ast_node_type_e type;
+    eql_ast_node *parent;
     union {
         eql_ast_int_literal int_literal;
         eql_ast_float_literal float_literal;

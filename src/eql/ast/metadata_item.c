@@ -22,6 +22,7 @@ int eql_ast_metadata_item_create(bstring key, bstring value,
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_METADATA_ITEM;
+    node->parent = NULL;
     node->metadata_item.key = bstrcpy(key);
     check_mem(node->metadata_item.key);
     node->metadata_item.value = bstrcpy(value);
