@@ -56,6 +56,16 @@ int test_eql_parse_var_decl() {
 }
 
 
+//--------------------------------------
+// Compile
+//--------------------------------------
+
+int test_eql_compile_var_decl() {
+    mu_assert_eql_compile("Int foo; return 200;", "tests/fixtures/eql/ir/var_decl")
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -65,6 +75,7 @@ int test_eql_parse_var_decl() {
 int all_tests() {
     mu_run_test(test_eql_ast_var_decl_create);
     mu_run_test(test_eql_parse_var_decl);
+    // mu_run_test(test_eql_compile_var_decl);
     return 0;
 }
 

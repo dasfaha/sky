@@ -28,7 +28,7 @@ struct tagbstring TYPE_NAME_VOID  = bsStatic("void");
 //======================================
 
 // Creates a module.
-eql_module *eql_module_create(bstring name, struct eql_compiler *compiler)
+eql_module *eql_module_create(bstring name, eql_compiler *compiler)
 {
     eql_module *module = malloc(sizeof(eql_module));
     check_mem(module);
@@ -37,7 +37,9 @@ eql_module *eql_module_create(bstring name, struct eql_compiler *compiler)
     module->llvm_function = NULL;
     module->llvm_engine = NULL;
     module->llvm_pass_manager = NULL;
-    
+	module->scopes = NULL;
+	module->scope_count = 0;
+	
     return module;
     
 error:
@@ -60,6 +62,10 @@ void eql_module_free(eql_module *module)
         module->llvm_module = NULL;
 
         module->llvm_function = NULL;
+
+		if(module->scopes != NULL) free(module->scopes);
+		module->scopes = NULL;
+		module->scope_count = 0;
 
         free(module);
     }
@@ -98,6 +104,165 @@ error:
     *type = NULL;
     return -1;
 }
+
+
+//--------------------------------------
+// Scope
+//--------------------------------------
+
+// Adds a scope associated with an AST node to the scope stack of the module.
+//
+// module - The module to add the scope to.
+// node   - The AST node to associate the scope with.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_push_scope(eql_module *module, eql_ast_node *node)
+{
+	check(module != NULL, "Module is required");
+	check(node != NULL, "Node is required");
+	
+	// Create scope.
+	eql_module_scope *scope = malloc(sizeof(eql_module_scope));
+	check_mem(scope);
+	scope->node = node;
+	scope->var_values = NULL;
+	scope->var_decls = NULL;
+	scope->var_count = 0;
+	
+	// Resize scope stack and append.
+    module->scope_count++;
+    module->scopes = realloc(module->scopes, sizeof(eql_module_scope*) * module->scope_count);
+    check_mem(module->scopes);
+    module->scopes[module->scope_count-1] = scope;
+
+	return 0;
+	
+error:
+	if(scope) free(scope);
+	return -1;
+}
+
+// Removes the current scope from the stack of the module. If the current
+// scope is not associated with the given AST node then an error is returned.
+//
+// module - The module to remove the scope from.
+// node   - The AST node associated with the scope being removed.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_pop_scope(eql_module *module, eql_ast_node *node)
+{
+	check(module != NULL, "Module is required");
+	check(module->scope_count > 0, "Module has no more scopes");
+	check(node != NULL, "Node is required");
+	check(module->scopes[module->scope_count-1]->node == node, "Current scope does not match node");
+
+	// Destroy current scope.
+	eql_module_scope *scope = module->scopes[module->scope_count-1];
+	scope->node = NULL;
+	if(scope->var_values) free(scope->var_values);
+	scope->var_values = NULL;
+	if(scope->var_decls) free(scope->var_decls);
+	scope->var_decls = NULL;
+	scope->var_count = 0;
+	free(scope);
+	
+	// Resize scope stack.
+    module->scope_count--;
+
+	return 0;
+	
+error:
+	return -1;
+	
+}
+
+// Searches the module scope stack for variables declared with the given name.
+//
+// module    - The module containing the variable declaration.
+// name      - The name of the variable to search for.
+// var_decl  - A pointer to where the variable declaration should be returned
+//             to.
+// value     - A pointer to where the LLVM value should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_get_variable(eql_module *module, bstring name,
+    eql_ast_node **var_decl, LLVMValueRef *value)
+{
+	check(module != NULL, "Module is required");
+	check(module->scope_count > 0, "Module has no scope");
+	check(name != NULL, "Variable name is required");
+	check(var_decl != NULL, "Variable declaration return pointer is required");
+	check(value != NULL, "LLVM value return pointer is required");
+
+	// Loop over scopes from the top down.
+	int32_t i, j;
+	for(i=module->scope_count-1; i>=0; i--) {
+		eql_module_scope *scope = module->scopes[i];
+		
+		// Search scope for a variable with the given name.
+		for(j=0; j<scope->var_count; j++) {
+			if(biseq(scope->var_decls[j]->var_decl.name, name)) {
+				*var_decl = scope->var_decls[j];
+				*value    = scope->var_values[j];
+				return 0;
+			}
+		}
+	}
+
+	// If we reach here then we couldn't find the variable in any scope.
+	*var_decl = NULL;
+	*value    = NULL;
+	return 0;
+
+error:
+	*var_decl = NULL;
+	*value    = NULL;
+	return -1;
+}
+
+// Adds a variable declaration to the current scope of the module.
+//
+// module    - The module containing the variable declaration.
+// var_decl  - The AST variable declaration to add.
+// value     - The LLVM value associated with the declaration.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_add_variable(eql_module *module, eql_ast_node *var_decl,
+	LLVMValueRef value)
+{
+	check(module != NULL, "Module is required");
+	check(module->scope_count > 0, "Module has no scope");
+	check(var_decl != NULL, "Variable declaration is required");
+	check(var_decl->var_decl.name != NULL, "Variable declaration name is required");
+	check(value != NULL, "LLVM value is required");
+
+	// Find current scope.
+	eql_module_scope *scope = module->scopes[module->scope_count-1];
+
+	// Search for existing variable in scope.
+	int32_t i;
+	for(i=0; i<scope->var_count; i++) {
+		if(biseq(scope->var_decls[i]->var_decl.name, var_decl->var_decl.name)) {
+			sentinel("Variable already exists in scope: %s", bdata(var_decl->var_decl.name));
+		}
+	}
+
+	// Append variable declaration & LLVM value to scope.
+    scope->var_count++;
+    scope->var_decls = realloc(scope->var_decls, sizeof(eql_ast_node*) * scope->var_count);
+    check_mem(scope->var_decls);
+    scope->var_decls[scope->var_count-1] = var_decl;
+
+    scope->var_values = realloc(scope->var_values, sizeof(LLVMValueRef) * scope->var_count);
+    check_mem(scope->var_values);
+    scope->var_values[scope->var_count-1] = value;
+
+	return 0;
+
+error:
+	return -1;
+}
+
 
 
 //======================================

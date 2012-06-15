@@ -8,6 +8,7 @@ src/eql/lexer.h
 src/eql/parser.c
 src/eql/parser.h
 tests/*_tests
+tmp
 .DS_Store
 **/*.dSYM*
 valgrind.log
