@@ -52,4 +52,12 @@ int eql_ast_block_add_exprs(eql_ast_node *block,
 int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
+
+//--------------------------------------
+// Types
+//--------------------------------------
+
+int eql_ast_block_get_var_decl(eql_ast_node *node, bstring name,
+	eql_ast_node **var_decl);
+
 #endif

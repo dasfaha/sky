@@ -60,7 +60,7 @@
 ";"                     return TOKEN(TSEMICOLON);
 ":"                     return TOKEN(TCOLON);
 ","                     return TOKEN(TCOMMA);
-"="                     return TOKEN(TEQUALS);
+"="                     return TOKEN(TASSIGN);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

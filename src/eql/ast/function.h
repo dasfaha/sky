@@ -50,4 +50,8 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 
 int eql_ast_function_generate_return_type(eql_ast_node *node);
 
+int eql_ast_function_get_var_decl(eql_ast_node *node, bstring name,
+	eql_ast_node **var_decl);
+
+
 #endif

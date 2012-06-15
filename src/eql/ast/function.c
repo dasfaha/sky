@@ -235,3 +235,34 @@ error:
     bdestroy(type);
     return -1;
 }
+
+// Searches for variable declarations within the function's argument list.
+//
+// node     - The node to search within.
+// name     - The name of the variable to search for.
+// var_decl - A pointer to where the variable declaration should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_function_get_var_decl(eql_ast_node *node, bstring name,
+								  eql_ast_node **var_decl)
+{
+	unsigned int i;
+	
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_FUNCTION, "Node type must be 'function'");
+
+    // Search argument list for variable declaration.
+	*var_decl = NULL;
+    for(i=0; i<node->function.arg_count; i++) {
+        if(biseq(node->function.args[i]->farg.var_decl->var_decl.name, name)) {
+			*var_decl = node->function.args[i]->farg.var_decl;
+			break;
+		}
+    }
+
+	return 0;
+	
+error:
+	*var_decl = NULL;
+	return -1;	
+}

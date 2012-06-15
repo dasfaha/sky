@@ -3,6 +3,7 @@
 
 #include <eql/ast.h>
 #include <eql/parser.h>
+#include <eql/compiler.h>
 
 #include "../minunit.h"
 
@@ -53,6 +54,16 @@ int test_eql_parse_var_ref() {
 }
 
 
+//--------------------------------------
+// Compile
+//--------------------------------------
+
+int test_eql_compile_var_decl() {
+    mu_assert_eql_compile("Int foo; Float bar; foo = 200; return foo;", "tests/fixtures/eql/ir/var_ref")
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -62,6 +73,7 @@ int test_eql_parse_var_ref() {
 int all_tests() {
     mu_run_test(test_eql_ast_var_ref_create);
     mu_run_test(test_eql_parse_var_ref);
+    mu_run_test(test_eql_compile_var_decl);
     return 0;
 }
 

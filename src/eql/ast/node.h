@@ -104,5 +104,8 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
 
 int eql_ast_node_get_type(eql_ast_node *node, bstring *type);
 
+int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
+	eql_ast_node **var_decl);
+
 
 #endif

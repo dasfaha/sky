@@ -130,6 +130,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
             check(rc == 0, "Unable to codegen variable declaration");
             break;
         }
+        case EQL_AST_TYPE_VAR_REF: {
+            rc = eql_ast_var_ref_codegen(node, module, value);
+            check(rc == 0, "Unable to codegen variable reference");
+            break;
+        }
         case EQL_AST_TYPE_FRETURN: {
             rc = eql_ast_freturn_codegen(node, module, value);
             check(rc == 0, "Unable to codegen function return");
@@ -157,7 +162,7 @@ error:
 
 
 //--------------------------------------
-// types
+// Types
 //--------------------------------------
 
 // Recursively determines the type name of a node.
@@ -184,11 +189,11 @@ int eql_ast_node_get_type(eql_ast_node *node, bstring *type)
             eql_ast_binary_expr_get_type(node, type);
             break;
         }
-        /*
         case EQL_AST_TYPE_VAR_REF: {
             eql_ast_var_ref_get_type(node, type);
             break;
         }
+        /*
         case EQL_AST_TYPE_FCALL: {
             eql_ast_fcall_get_type(node, type);
             break;
@@ -205,5 +210,42 @@ int eql_ast_node_get_type(eql_ast_node *node, bstring *type)
 
 error:
     *type = NULL;
+    return -1;
+}
+
+
+// Performs a non-recursive search for variable declarations of a given name.
+//
+// node     - The node to search within.
+// name     - The name of the variable to search for.
+// var_decl - A pointer to where the variable declaration should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
+							 eql_ast_node **var_decl)
+{
+    check(node != NULL, "Node required");
+
+    // Delegate to each type.
+    switch(node->type) {
+        case EQL_AST_TYPE_FUNCTION: {
+            eql_ast_function_get_var_decl(node, name, var_decl);
+            break;
+        }
+        case EQL_AST_TYPE_BLOCK: {
+            eql_ast_block_get_var_decl(node, name, var_decl);
+            break;
+        }
+        default:
+        {
+			*var_decl = NULL;
+            break;
+        }
+    }
+    
+    return 0;
+
+error:
+    *var_decl = NULL;
     return -1;
 }

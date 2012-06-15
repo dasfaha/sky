@@ -176,3 +176,41 @@ error:
     *value = NULL;
     return -1;
 }
+
+
+//--------------------------------------
+// Misc
+//--------------------------------------
+
+// Searches for variable declarations within the block.
+//
+// node     - The node to search within.
+// name     - The name of the variable to search for.
+// var_decl - A pointer to where the variable declaration should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_block_get_var_decl(eql_ast_node *node, bstring name,
+							   eql_ast_node **var_decl)
+{
+    unsigned int i;
+
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_BLOCK, "Node type must be 'block'");
+
+    // Search expressions for variable declaration.
+	*var_decl = NULL;
+    for(i=0; i<node->block.expr_count; i++) {
+		if(node->block.exprs[i]->type == EQL_AST_TYPE_VAR_DECL) {
+			if(biseq(node->block.exprs[i]->var_decl.name, name)) {
+				*var_decl = node->block.exprs[i];
+				break;
+			}
+		}
+    }
+
+	return 0;
+	
+error:
+	*var_decl = NULL;
+	return -1;	
+}

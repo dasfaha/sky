@@ -40,8 +40,7 @@
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
 %token <token> TQUOTE TDBLQUOTE
 %token <token> TSEMICOLON TCOLON TCOMMA
-%token <token> TPLUS TMINUS TMUL TDIV
-%token <token> TEQUALS
+%token <token> TPLUS TMINUS TMUL TDIV TASSIGN
 
 %type <string> string
 %type <node> block stmt expr
@@ -80,6 +79,7 @@ expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3,
         | expr TMINUS expr  { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }
         | expr TMUL expr    { eql_ast_binary_expr_create(EQL_BINOP_MUL, $1, $3, &$$); }
         | expr TDIV expr    { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
+        | expr TASSIGN expr { eql_ast_binary_expr_create(EQL_BINOP_ASSIGN, $1, $3, &$$); }
         | number
         | var_ref
         | fcall
@@ -165,7 +165,7 @@ metadata_items : /* empty */                         { $$ = eql_array_create(); 
                | metadata_items TCOMMA metadata_item { eql_array_push($1, $3); }
 ;
 
-metadata_item   : TIDENTIFIER TEQUALS string { eql_ast_metadata_item_create($1, $3, &$$); bdestroy($1); bdestroy($3); };
+metadata_item   : TIDENTIFIER TASSIGN string { eql_ast_metadata_item_create($1, $3, &$$); bdestroy($1); bdestroy($3); };
 
 %%
 
