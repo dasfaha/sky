@@ -31,4 +31,11 @@ int eql_ast_var_decl_create(bstring type, bstring name, struct eql_ast_node **no
 void eql_ast_var_decl_free(struct eql_ast_node *node);
 
 
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_var_decl_codegen(struct eql_ast_node *node, eql_module *module,
+	LLVMValueRef *value);
+
 #endif

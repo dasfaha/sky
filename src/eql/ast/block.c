@@ -142,14 +142,19 @@ error:
 int eql_ast_block_codegen(eql_ast_node *node, eql_module *module, 
                           LLVMValueRef *value)
 {
-    LLVMBuilderRef builder = module->compiler->llvm_builder;
+	int rc;
 
     // The current function should already be set.
     check(module->llvm_function != NULL, "Unable to add a block without a function");
-    
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
     LLVMBasicBlockRef block = LLVMAppendBasicBlock(module->llvm_function, "entry");  // bdata(node->block.name)
     LLVMPositionBuilderAtEnd(builder, block);
-    
+   
+	// Add block scope.
+	rc = eql_module_push_scope(module, node);
+	check(rc == 0, "Unable to add block scope");
+
     // Codegen expressions in block.
     unsigned int i;
     for(i=0; i<node->block.expr_count; i++) {
@@ -157,6 +162,10 @@ int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
         int rc = eql_ast_node_codegen(node->block.exprs[i], module, &expression_value);
         check(rc == 0, "Unable to codegen block expression");
     }
+
+	// Remove block scope.
+	rc = eql_module_pop_scope(module, node);
+	check(rc == 0, "Unable to remove block scope");
 
     // Return block as a value.
     *value = LLVMBasicBlockAsValue(block);

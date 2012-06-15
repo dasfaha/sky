@@ -57,3 +57,50 @@ void eql_ast_var_decl_free(struct eql_ast_node *node)
 }
 
 
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for the variable declaration AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
+                             LLVMValueRef *value)
+{
+    int rc;
+
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_VAR_DECL, "Node type expected to be 'variable declaration'");
+	check(module != NULL, "Module required");
+	check(module->llvm_function != NULL, "Not currently in a function");
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+	// Save position;
+	LLVMBasicBlockRef originalBlock = LLVMGetInsertBlock(builder);
+
+	// Position builder at the beginning of function.
+	LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(module->llvm_function);
+	LLVMPositionBuilder(builder, entryBlock, LLVMGetFirstInstruction(entryBlock));
+	
+	// Add alloca.
+	LLVMTypeRef type;
+	rc = eql_module_get_type_ref(module, node->var_decl.type, &type);
+	*value = LLVMBuildAlloca(builder, type, bdata(node->var_decl.name));
+	
+	// Store variable location in the current scope.
+	eql_module_add_variable(module, node, *value);
+	
+	// Reposition builder at end of original block.
+	LLVMPositionBuilderAtEnd(builder, originalBlock);
+
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}

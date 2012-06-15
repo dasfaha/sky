@@ -125,13 +125,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
             check(rc == 0, "Unable to codegen binary expression");
             break;
         }
-		/*
         case EQL_AST_TYPE_VAR_DECL: {
             rc = eql_ast_var_decl_codegen(node, module, value);
             check(rc == 0, "Unable to codegen variable declaration");
             break;
         }
-		*/
         case EQL_AST_TYPE_FRETURN: {
             rc = eql_ast_freturn_codegen(node, module, value);
             check(rc == 0, "Unable to codegen function return");
