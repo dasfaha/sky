@@ -3,6 +3,7 @@
 
 #include <eql/ast.h>
 #include <eql/parser.h>
+#include <eql/compiler.h>
 
 #include "../minunit.h"
 
@@ -164,6 +165,16 @@ int test_eql_parse_class() {
 }
 
 
+//--------------------------------------
+// Compile
+//--------------------------------------
+
+int test_eql_compile_class() {
+    mu_assert_eql_compile("class Foo { public Int bar; private Float baz; private Float bat; } Foo myVar; return;", "tests/fixtures/eql/ir/class")
+    return 0;
+}
+
+
 
 //==============================================================================
 //
@@ -179,6 +190,7 @@ int all_tests() {
     mu_run_test(test_eql_ast_class_add_metadata);
     mu_run_test(test_eql_ast_class_add_metadatas);
     mu_run_test(test_eql_parse_class);
+    mu_run_test(test_eql_compile_class);
     return 0;
 }
 

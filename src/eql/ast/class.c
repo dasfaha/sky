@@ -1,7 +1,7 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include "../../dbg.h"
 
-#include "class.h"
 #include "node.h"
 
 //==============================================================================
@@ -293,3 +293,52 @@ error:
     return -1;
 }
 
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Generates and registers an LLVM struct for a given AST class. This struct
+// can then be referenced within the module as the class' type.
+//
+// module - The compilation unit that contains the class.
+// node   - The class AST node.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_codegen_type(eql_module *module, eql_ast_node *node)
+{
+	int rc;
+	unsigned int i;
+	
+	check(module != NULL, "Module required");
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
+
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+	// Generate struct for class and properties.
+	LLVMTypeRef llvm_struct = LLVMStructCreateNamed(context, bdata(node->class.name));
+
+	// Generate the properties of the struct.
+	unsigned int property_count = node->class.property_count;
+	LLVMTypeRef *elements = malloc(sizeof(LLVMTypeRef) * property_count);
+	for(i=0; i<property_count; i++) {
+		eql_ast_node *property = node->class.properties[i];
+		bstring property_type = property->property.var_decl->var_decl.type;
+		rc = eql_module_get_type_ref(module, property_type, NULL, &elements[i]);
+		check(rc == 0, "Unable to retrieve type: %s", bdata(property_type));
+	}
+
+	// Set the struct body.
+	LLVMStructSetBody(llvm_struct, elements, property_count, false);
+
+	// Add type to the module.
+	rc = eql_module_add_type_ref(module, node, llvm_struct);	
+	check(rc == 0, "Unable to add type to module");
+	
+	return 0;
+	
+error:
+	return -1;
+}

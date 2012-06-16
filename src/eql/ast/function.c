@@ -117,13 +117,13 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * arg_count);
     for(i=0; i<arg_count; i++) {
         arg = node->function.args[i];
-        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, &params[i]);
+        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i]);
         check(rc == 0, "Unable to determine function argument type");
     }
 
     // Determine return type.
     LLVMTypeRef return_type;
-    rc = eql_module_get_type_ref(module, node->function.return_type, &return_type);
+    rc = eql_module_get_type_ref(module, node->function.return_type, NULL, &return_type);
     check(rc == 0, "Unable to determine function return type");
 
     // Create function type.

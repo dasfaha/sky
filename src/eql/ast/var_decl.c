@@ -89,7 +89,7 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
 	
 	// Add alloca.
 	LLVMTypeRef type;
-	rc = eql_module_get_type_ref(module, node->var_decl.type, &type);
+	rc = eql_module_get_type_ref(module, node->var_decl.type, NULL, &type);
 	*value = LLVMBuildAlloca(builder, type, bdata(node->var_decl.name));
 	
 	// Store variable location in the current scope.

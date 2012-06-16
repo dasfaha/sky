@@ -9,9 +9,6 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Represents a class in the AST.
 typedef struct {
     bstring name;
@@ -64,5 +61,11 @@ int eql_ast_class_add_metadata(struct eql_ast_node *class, struct eql_ast_node *
 int eql_ast_class_add_metadatas(struct eql_ast_node *class,
     struct eql_ast_node **metadatas, unsigned int metadata_count);
 
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_class_codegen_type(eql_module *module, eql_ast_node *node);
 
 #endif

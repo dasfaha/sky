@@ -60,6 +60,8 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
                          bstring text, eql_module **module)
 {
     int rc;
+	unsigned int i;
+	
     LLVMValueRef value;
     check(compiler != NULL, "Compiler is required");
     
@@ -67,15 +69,22 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
     *module = eql_module_create(name, compiler);
     check_mem(*module);
     
-    // Parse the text into an AST.
-    eql_ast_node *ast;
-    rc = eql_parse(name, text, &ast);
+    // Parse the text into an module AST.
+    eql_ast_node *module_ast;
+    rc = eql_parse(name, text, &module_ast);
     check(rc == 0, "Unable to parse EQL query");
     
-    // TODO: Generate classes.
+	// Generate class type structures.
+	for(i=0; i<module_ast->module.class_count; i++) {
+		eql_ast_node *class_ast = module_ast->module.classes[i];
+		rc = eql_ast_class_codegen_type(*module, class_ast);
+		check(rc == 0, "Unable to generate type for class: %s", bdata(class_ast->class.name));
+	}
+	
+    // TODO: Codegen classes.
     
     // Generate the main function if a block exists.
-    rc = eql_ast_node_codegen(ast->module.main_function, *module, &value);
+    rc = eql_ast_node_codegen(module_ast->module.main_function, *module, &value);
     check(rc == 0, "Unable to generate main function");
     
     return 0;

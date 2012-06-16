@@ -41,6 +41,9 @@ struct eql_module {
     LLVMPassManagerRef llvm_pass_manager;
 	eql_module_scope **scopes;
 	int32_t scope_count;
+	LLVMTypeRef *types;
+	eql_ast_node **type_nodes;
+	int32_t type_count;
 };
 
 
@@ -64,7 +67,10 @@ void eql_module_free(eql_module *module);
 //--------------------------------------
 
 int eql_module_get_type_ref(eql_module *module, bstring name,
-    LLVMTypeRef *type);
+	eql_ast_node **node, LLVMTypeRef *type);
+
+int eql_module_add_type_ref(eql_module *module, eql_ast_node *class,
+	LLVMTypeRef type);
 
 
 //--------------------------------------

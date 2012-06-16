@@ -39,6 +39,8 @@ eql_module *eql_module_create(bstring name, eql_compiler *compiler)
     module->llvm_pass_manager = NULL;
 	module->scopes = NULL;
 	module->scope_count = 0;
+	module->types = NULL;
+	module->type_count = 0;
 	
     return module;
     
@@ -67,6 +69,10 @@ void eql_module_free(eql_module *module)
 		module->scopes = NULL;
 		module->scope_count = 0;
 
+		if(module->types != NULL) free(module->types);
+		module->types = NULL;
+		module->type_count = 0;
+
         free(module);
     }
 }
@@ -76,33 +82,92 @@ void eql_module_free(eql_module *module)
 // Types
 //--------------------------------------
 
+// Retrieves an LLVM type definition for a given type name. Optionally returns
+// the associated AST node if the type is user-defined.
+//
+// module - The module that contains the type.
+// name   - The name of the type to search for.
+// node   - A pointer to where the AST node should be returned to. This is
+//          optional.
+// type   - A pointer to where the LLVM type should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
 int eql_module_get_type_ref(eql_module *module, bstring name,
-                            LLVMTypeRef *type)
+                            eql_ast_node **node, LLVMTypeRef *type)
 {
+	unsigned int i;
+	
     check(module != NULL, "Module is required");
     check(name != NULL, "Type name is required");
     
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
-    
+
     // Compare to built-in types.
     if(biseq(name, &TYPE_NAME_INT)) {
         *type = LLVMInt64TypeInContext(context);
+		if(node != NULL) *node = NULL;
     }
     else if(biseq(name, &TYPE_NAME_FLOAT)) {
         *type = LLVMDoubleTypeInContext(context);
+		if(node != NULL) *node = NULL;
     }
     else if(biseq(name, &TYPE_NAME_VOID)) {
         *type = LLVMVoidTypeInContext(context);
+		if(node != NULL) *node = NULL;
     }
-    else {
-        sentinel("Invalid type in module: %s", bdata(name));
+	// Find user-defined type.
+	else {
+		for(i=0; i<module->type_count; i++) {
+			if(biseq(module->type_nodes[i]->class.name, name)) {
+				*type = module->types[i];
+				if(node != NULL) *node = module->type_nodes[i];
+				break;
+			}
+		}
     }
+
+    check(*type != NULL, "Invalid type in module: %s", bdata(name));
 
     return 0;
 
 error:
     *type = NULL;
     return -1;
+}
+
+// Adds a type for a given class to the module.
+//
+// module - The compilation unit that contains the class.
+// node   - The AST node associated with this type.
+// type   - The LLVM type.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_add_type_ref(eql_module *module, eql_ast_node *node,
+							LLVMTypeRef type)
+{
+	int rc;
+	
+	check(module != NULL, "Module required");
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
+	check(type != NULL, "LLVM type required");
+
+    module->type_count++;
+
+	// Append to the list of types.
+    module->types = realloc(module->types, sizeof(LLVMTypeRef) * module->type_count);
+    check_mem(module->types);
+    module->types[module->type_count-1] = type;
+
+	// Append to the list of AST nodes.
+    module->type_nodes = realloc(module->type_nodes, sizeof(eql_ast_node*) * module->type_count);
+    check_mem(module->type_nodes);
+    module->type_nodes[module->type_count-1] = node;
+	
+	return 0;
+	
+error:
+	return -1;
 }
 
 
