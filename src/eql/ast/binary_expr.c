@@ -89,7 +89,6 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
     check(node->type == EQL_AST_TYPE_BINARY_EXPR, "Node type must be 'binary expression'");
     check(module != NULL, "Module required");
     
-    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
 	// If this is an assignment then treat it differently.

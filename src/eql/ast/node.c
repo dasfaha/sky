@@ -108,48 +108,67 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
     check(module->compiler != NULL, "Module compiler is required");
     check(module->compiler->llvm_builder != NULL, "LLVM Builder is required");
 
+    // Create an intermediate return value so that callers can optionally
+    // pass in NULL for the return value.
+    LLVMValueRef ret_value = NULL;
+
     // Delegate codegen to AST nodes.
     switch(node->type) {
         case EQL_AST_TYPE_INT_LITERAL: {
-            rc = eql_ast_int_literal_codegen(node, module, value);
+            rc = eql_ast_int_literal_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen literal integer");
             break;
         }
         case EQL_AST_TYPE_FLOAT_LITERAL: {
-            rc = eql_ast_float_literal_codegen(node, module, value);
+            rc = eql_ast_float_literal_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen literal float");
             break;
         }
         case EQL_AST_TYPE_BINARY_EXPR: {
-            rc = eql_ast_binary_expr_codegen(node, module, value);
+            rc = eql_ast_binary_expr_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen binary expression");
             break;
         }
         case EQL_AST_TYPE_VAR_DECL: {
-            rc = eql_ast_var_decl_codegen(node, module, value);
+            rc = eql_ast_var_decl_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen variable declaration");
             break;
         }
         case EQL_AST_TYPE_VAR_REF: {
-            rc = eql_ast_var_ref_codegen(node, module, value);
+            rc = eql_ast_var_ref_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen variable reference");
             break;
         }
         case EQL_AST_TYPE_FRETURN: {
-            rc = eql_ast_freturn_codegen(node, module, value);
+            rc = eql_ast_freturn_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen function return");
             break;
         }
         case EQL_AST_TYPE_FUNCTION: {
-            rc = eql_ast_function_codegen(node, module, value);
+            rc = eql_ast_function_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen function");
             break;
         }
         case EQL_AST_TYPE_BLOCK: {
-            rc = eql_ast_block_codegen(node, module, value);
+            rc = eql_ast_block_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen block");
             break;
         }
+        case EQL_AST_TYPE_CLASS: {
+            rc = eql_ast_class_codegen(node, module);
+            check(rc == 0, "Unable to codegen class");
+            break;
+        }
+        case EQL_AST_TYPE_METHOD: {
+            rc = eql_ast_method_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen method");
+            break;
+        }
+    }
+    
+    // If a return value is requested then set it.
+    if(value != NULL) {
+        *value = ret_value;
     }
     
     return 0;

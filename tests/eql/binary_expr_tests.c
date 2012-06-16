@@ -134,37 +134,37 @@ int test_eql_parse_binary_expr_parens() {
 //--------------------------------------
 
 int test_eql_compile_binary_expr_int() {
-    mu_assert_eql_compile("return 1 + 2;", "tests/fixtures/eql/ir/binary_expr_int")
+    mu_assert_eql_compile("return 1 + 2;", "tests/fixtures/eql/ir/binary_expr_int.ll");
     return 0;
 }
 
 int test_eql_compile_binary_expr_float() {
-    mu_assert_eql_compile("return 1.5 + 2.2;", "tests/fixtures/eql/ir/binary_expr_float")
+    mu_assert_eql_compile("return 1.5 + 2.2;", "tests/fixtures/eql/ir/binary_expr_float.ll");
     return 0;
 }
 
 int test_eql_compile_binary_expr_int_cast() {
-    mu_assert_eql_compile("return 1 + 2.5;", "tests/fixtures/eql/ir/binary_expr_int_cast")
+    mu_assert_eql_compile("return 1 + 2.5;", "tests/fixtures/eql/ir/binary_expr_int_cast.ll");
     return 0;
 }
 
 int test_eql_compile_binary_expr_float_cast() {
-    mu_assert_eql_compile("return 2.5 + 1;", "tests/fixtures/eql/ir/binary_expr_float_cast")
+    mu_assert_eql_compile("return 2.5 + 1;", "tests/fixtures/eql/ir/binary_expr_float_cast.ll");
     return 0;
 }
 
 int test_eql_compile_binary_expr_sub() {
-    mu_assert_eql_compile("return 10 - 5;", "tests/fixtures/eql/ir/binary_expr_sub")
+    mu_assert_eql_compile("return 10 - 5;", "tests/fixtures/eql/ir/binary_expr_sub.ll");
     return 0;
 }
 
 int test_eql_compile_binary_expr_mul() {
-    mu_assert_eql_compile("return 10 * 5;", "tests/fixtures/eql/ir/binary_expr_mul")
+    mu_assert_eql_compile("return 10 * 5;", "tests/fixtures/eql/ir/binary_expr_mul.ll");
     return 0;
 }
 
 int test_eql_compile_binary_expr_div() {
-    mu_assert_eql_compile("return 100 / 5;", "tests/fixtures/eql/ir/binary_expr_div")
+    mu_assert_eql_compile("return 100 / 5;", "tests/fixtures/eql/ir/binary_expr_div.ll");
     return 0;
 }
 

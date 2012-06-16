@@ -75,7 +75,7 @@ int test_eql_int_literal_get_type() {
 //--------------------------------------
 
 int test_eql_compile_int_literal() {
-    mu_assert_eql_compile("return 200;", "tests/fixtures/eql/ir/int_literal")
+    mu_assert_eql_compile("return 200;", "tests/fixtures/eql/ir/int_literal.ll");
     return 0;
 }
 

@@ -66,7 +66,7 @@ int test_eql_float_literal_get_type() {
 //--------------------------------------
 
 int test_eql_compile_float_literal() {
-    mu_assert_eql_compile("return 10.25;", "tests/fixtures/eql/ir/float_literal")
+    mu_assert_eql_compile("return 10.25;", "tests/fixtures/eql/ir/float_literal.ll");
     return 0;
 }
 

@@ -81,7 +81,12 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
 		check(rc == 0, "Unable to generate type for class: %s", bdata(class_ast->class.name));
 	}
 	
-    // TODO: Codegen classes.
+    // Codegen classes.
+	for(i=0; i<module_ast->module.class_count; i++) {
+		eql_ast_node *class_ast = module_ast->module.classes[i];
+		rc = eql_ast_node_codegen(class_ast, *module, NULL);
+		check(rc == 0, "Unable to codegen class: %s", bdata(class_ast->class.name));
+	}
     
     // Generate the main function if a block exists.
     rc = eql_ast_node_codegen(module_ast->module.main_function, *module, &value);

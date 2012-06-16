@@ -59,7 +59,7 @@ int test_eql_parse_var_ref() {
 //--------------------------------------
 
 int test_eql_compile_var_decl() {
-    mu_assert_eql_compile("Int foo; Float bar; foo = 200; return foo;", "tests/fixtures/eql/ir/var_ref")
+    mu_assert_eql_compile("Int foo; Float bar; foo = 200; return foo;", "tests/fixtures/eql/ir/var_ref.ll");
     return 0;
 }
 

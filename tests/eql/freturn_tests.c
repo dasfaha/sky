@@ -73,7 +73,7 @@ int test_eql_parse_freturn_void() {
 //--------------------------------------
 
 int test_eql_compile_freturn_void() {
-    mu_assert_eql_compile("return;", "tests/fixtures/eql/ir/freturn_void")
+    mu_assert_eql_compile("return;", "tests/fixtures/eql/ir/freturn_void.ll");
     return 0;
 }
 

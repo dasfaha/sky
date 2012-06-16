@@ -66,6 +66,8 @@ int eql_ast_class_add_metadatas(struct eql_ast_node *class,
 // Codegen
 //--------------------------------------
 
+int eql_ast_class_codegen(eql_ast_node *node, eql_module *module);
+
 int eql_ast_class_codegen_type(eql_module *module, eql_ast_node *node);
 
 #endif

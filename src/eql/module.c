@@ -12,9 +12,11 @@
 //
 //==============================================================================
 
-struct tagbstring TYPE_NAME_INT   = bsStatic("Int");
-struct tagbstring TYPE_NAME_FLOAT = bsStatic("Float");
-struct tagbstring TYPE_NAME_VOID  = bsStatic("void");
+struct tagbstring EQL_TYPE_NAME_INT   = bsStatic("Int");
+
+struct tagbstring EQL_TYPE_NAME_FLOAT = bsStatic("Float");
+
+struct tagbstring EQL_TYPE_NAME_VOID  = bsStatic("void");
 
 
 //==============================================================================
@@ -95,7 +97,7 @@ void eql_module_free(eql_module *module)
 int eql_module_get_type_ref(eql_module *module, bstring name,
                             eql_ast_node **node, LLVMTypeRef *type)
 {
-	unsigned int i;
+	int i;
 	
     check(module != NULL, "Module is required");
     check(name != NULL, "Type name is required");
@@ -103,15 +105,15 @@ int eql_module_get_type_ref(eql_module *module, bstring name,
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
     // Compare to built-in types.
-    if(biseq(name, &TYPE_NAME_INT)) {
+    if(biseq(name, &EQL_TYPE_NAME_INT)) {
         *type = LLVMInt64TypeInContext(context);
 		if(node != NULL) *node = NULL;
     }
-    else if(biseq(name, &TYPE_NAME_FLOAT)) {
+    else if(biseq(name, &EQL_TYPE_NAME_FLOAT)) {
         *type = LLVMDoubleTypeInContext(context);
 		if(node != NULL) *node = NULL;
     }
-    else if(biseq(name, &TYPE_NAME_VOID)) {
+    else if(biseq(name, &EQL_TYPE_NAME_VOID)) {
         *type = LLVMVoidTypeInContext(context);
 		if(node != NULL) *node = NULL;
     }
@@ -145,8 +147,6 @@ error:
 int eql_module_add_type_ref(eql_module *module, eql_ast_node *node,
 							LLVMTypeRef type)
 {
-	int rc;
-	
 	check(module != NULL, "Module required");
 	check(node != NULL, "Node required");
 	check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");

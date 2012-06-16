@@ -61,7 +61,7 @@ int test_eql_parse_var_decl() {
 //--------------------------------------
 
 int test_eql_compile_var_decl() {
-    mu_assert_eql_compile("Int foo; Float bar; return 200;", "tests/fixtures/eql/ir/var_decl")
+    mu_assert_eql_compile("Int foo; Float bar; return 200;", "tests/fixtures/eql/ir/var_decl.ll");
     return 0;
 }
 

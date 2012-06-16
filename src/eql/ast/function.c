@@ -110,14 +110,45 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 {
     int rc;
     unsigned int i;
-    
+
+    // Find the class this function belongs to, if any.
+	eql_ast_node *class_ast = NULL;
+	rc = eql_ast_function_get_class(node, &class_ast);
+	check(rc == 0, "Unable to retrieve parent class for function");
+
+	// Function name should be prepended with the class name if this is a method.
+	bool is_method = (class_ast != NULL);
+	bstring function_name;
+	if(is_method) {
+		check(blength(class_ast->class.name) > 0, "Class name required for method");
+		function_name = bformat("%s___%s", bdata(class_ast->class.name), bdata(node->function.name));
+		check_mem(function_name);
+	}
+	else {
+		function_name = bstrcpy(node->function.name);
+		check_mem(function_name);
+	}
+
+	// Create a parameter offset if this is a method since the first argument
+	// will always be the class instance.
+	unsigned int offset = (is_method ? 1 : 0);
+
     // Create a list of function argument types.
     eql_ast_node *arg;
     unsigned int arg_count = node->function.arg_count;
-    LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * arg_count);
+    LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * (arg_count + offset));
+
+	// Create first argument for class instance.
+	if(is_method) {
+        rc = eql_module_get_type_ref(module, class_ast->class.name, NULL, &params[0]);
+        check(rc == 0, "Unable to determine function class instance type");
+        check(params[0] != NULL, "Type not found: %s", bdata(class_ast->class.name));
+	}
+	
+	// Create remaining arguments.
     for(i=0; i<arg_count; i++) {
         arg = node->function.args[i];
-        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i]);
+        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i+offset]);
         check(rc == 0, "Unable to determine function argument type");
     }
 
@@ -127,11 +158,11 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0, "Unable to determine function return type");
 
     // Create function type.
-    LLVMTypeRef funcType = LLVMFunctionType(return_type, params, arg_count, false);
+    LLVMTypeRef funcType = LLVMFunctionType(return_type, params, arg_count+offset, false);
     check(funcType != NULL, "Unable to create function type");
 
     // Create function.
-    LLVMValueRef func = LLVMAddFunction(module->llvm_module, bdata(node->function.name), funcType);
+    LLVMValueRef func = LLVMAddFunction(module->llvm_module, bdata(function_name), funcType);
     check(func != NULL, "Unable to create function");
     
     // Store the current function on the module.
@@ -139,10 +170,16 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 	rc = eql_module_push_scope(module, node);
 	check(rc == 0, "Unable to add function scope");
 
+	// The first parameter for a method is always the class instance.
+    LLVMValueRef param;
+	if(is_method) {
+        LLVMSetValueName(LLVMGetParam(func, 0), "this");
+	}
+	
     // Assign names to function arguments.
     for(i=0; i<arg_count; i++) {
         arg = node->function.args[i];
-        LLVMValueRef param = LLVMGetParam(func, i);
+        param = LLVMGetParam(func, i+offset);
         LLVMSetValueName(param, bdata(arg->farg.var_decl->var_decl.name));
     }
 
@@ -166,12 +203,14 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     // Return function as a value.
     *value = func;
     
+	bdestroy(function_name);
     return 0;
 
 error:
+	bdestroy(function_name);
+
     // Unset the current function.
     module->llvm_function = NULL;
-
     if(func) LLVMDeleteFunction(func);
     *value = NULL;
     return -1;
@@ -181,6 +220,39 @@ error:
 //--------------------------------------
 // Misc
 //--------------------------------------
+
+// Retrieves the class that this function belongs to (if it is a method).
+// Otherwise it returns NULL as the class.
+//
+// node      - The function AST node.
+// class_ast - A pointer to where the class AST node should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_function_get_class(eql_ast_node *node, eql_ast_node **class_ast)
+{
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_FUNCTION, "Node type must be 'function'");
+	check(class_ast != NULL, "Class return pointer must not be null");
+	
+	*class_ast = NULL;
+
+	// Check if there is a parent method.
+	if(node->parent != NULL && node->parent->type == EQL_AST_TYPE_METHOD) {
+		eql_ast_node *method = node->parent;
+
+		// Check if the method has a class.
+		if(method->parent != NULL && method->parent->type == EQL_AST_TYPE_CLASS) {
+			*class_ast = method->parent;
+		}
+	}
+	
+	return 0;
+	
+error:
+	*class_ast = NULL;
+	return -1;
+}
+
 
 // Updates the return type of the function based on the last return statement
 // of the function. This is used for implicit functions like the main function
