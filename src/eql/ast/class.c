@@ -145,6 +145,8 @@ error:
 int eql_ast_class_add_method(eql_ast_node *class,
                              eql_ast_node *method)
 {
+    int rc;
+    
     // Validate.
     check(class != NULL, "Class is required");
     check(class->type == EQL_AST_TYPE_CLASS, "Class node is invalid type: %d", class->type);
@@ -158,6 +160,10 @@ int eql_ast_class_add_method(eql_ast_node *class,
     
     // Link method to class.
     method->parent = class;
+    
+    // Generate the "this" argument for the method's function.
+    rc = eql_ast_method_generate_this_farg(method);
+    check(rc == 0, "Unable to generate 'this' argument for method: %s", bdata(method->method.function->function.name));
     
     return 0;
 

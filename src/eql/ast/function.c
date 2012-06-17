@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "../../dbg.h"
+#include "../../mem.h"
 
 #include "node.h"
 
@@ -129,26 +130,15 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 		check_mem(function_name);
 	}
 
-	// Create a parameter offset if this is a method since the first argument
-	// will always be the class instance.
-	unsigned int offset = (is_method ? 1 : 0);
-
     // Create a list of function argument types.
     eql_ast_node *arg;
     unsigned int arg_count = node->function.arg_count;
-    LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * (arg_count + offset));
+    LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * arg_count);
 
-	// Create first argument for class instance.
-	if(is_method) {
-        rc = eql_module_get_type_ref(module, class_ast->class.name, NULL, &params[0]);
-        check(rc == 0, "Unable to determine function class instance type");
-        check(params[0] != NULL, "Type not found: %s", bdata(class_ast->class.name));
-	}
-	
-	// Create remaining arguments.
+	// Create arguments.
     for(i=0; i<arg_count; i++) {
         arg = node->function.args[i];
-        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i+offset]);
+        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i]);
         check(rc == 0, "Unable to determine function argument type");
     }
 
@@ -158,7 +148,7 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0, "Unable to determine function return type");
 
     // Create function type.
-    LLVMTypeRef funcType = LLVMFunctionType(return_type, params, arg_count+offset, false);
+    LLVMTypeRef funcType = LLVMFunctionType(return_type, params, arg_count, false);
     check(funcType != NULL, "Unable to create function type");
 
     // Create function.
@@ -170,16 +160,10 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 	rc = eql_module_push_scope(module, node);
 	check(rc == 0, "Unable to add function scope");
 
-	// The first parameter for a method is always the class instance.
-    LLVMValueRef param;
-	if(is_method) {
-        LLVMSetValueName(LLVMGetParam(func, 0), "this");
-	}
-	
     // Assign names to function arguments.
     for(i=0; i<arg_count; i++) {
         arg = node->function.args[i];
-        param = LLVMGetParam(func, i+offset);
+        LLVMValueRef param = LLVMGetParam(func, i);
         LLVMSetValueName(param, bdata(arg->farg.var_decl->var_decl.name));
     }
 
@@ -216,6 +200,47 @@ error:
     return -1;
 }
 
+// Generates the allocas for the function arguments. This has to be called
+// from the block since that is where the entry block is created.
+//
+// node    - The function node.
+// module  - The compilation unit this node is a part of.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_function_codegen_args(eql_ast_node *node, eql_module *module)
+{
+    int rc;
+    unsigned int i;
+    
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_FUNCTION, "Node type expected to be 'function'");
+	check(module != NULL, "Module required");
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+	// Codegen allocas.
+    LLVMValueRef *values = malloc(sizeof(LLVMValueRef) * node->function.arg_count);
+    check_mem(values);
+    
+    for(i=0; i<node->function.arg_count; i++) {
+        rc = eql_ast_node_codegen(node->function.args[i], module, &values[i]);
+        check(rc == 0, "Unable to determine function argument type");
+    }
+    
+	// Codegen store instructions.
+    for(i=0; i<node->function.arg_count; i++) {
+        LLVMValueRef build_value = LLVMBuildStore(builder, LLVMGetParam(module->llvm_function, i), values[i]);
+        check(build_value != NULL, "Unable to create build instruction");
+    }
+    
+    free(values);
+
+    return 0;
+    
+error:
+    if(values) free(values);
+    return -1;
+}
 
 //--------------------------------------
 // Misc

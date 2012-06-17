@@ -144,12 +144,22 @@ int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
 {
 	int rc;
 
-    // The current function should already be set.
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+	check(node->parent != NULL, "Node parent required");
+	check(module != NULL, "Module required");
     check(module->llvm_function != NULL, "Unable to add a block without a function");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
     LLVMBasicBlockRef block = LLVMAppendBasicBlock(module->llvm_function, "entry");  // bdata(node->block.name)
     LLVMPositionBuilderAtEnd(builder, block);
+   
+    // HACK: If the parent is a function then insert the allocas here now that
+    //       we have an entry block.
+    if(node->parent->type == EQL_AST_TYPE_FUNCTION) {
+        rc = eql_ast_function_codegen_args(node->parent, module);
+        check(rc == 0, "Unable to codegen function arguments");
+    }
    
 	// Add block scope.
 	rc = eql_module_push_scope(module, node);

@@ -66,12 +66,19 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
     // Create the module.
     *module = eql_module_create(name, compiler);
     check_mem(*module);
+
+    // TODO: Convert to use parser.
+    // TODO: Continuously loop and parse EQL files until there are no more dependencies.
     
     // Parse the text into an module AST.
     eql_ast_node *module_ast;
     rc = eql_parse(name, text, &module_ast);
     check(rc == 0, "Unable to parse EQL query");
 
+    // TODO: Append each AST to module.
+
+    // TODO: Validate all ASTs.
+    
     // Generate module types.
     rc = eql_ast_module_codegen_type(*module, module_ast);
     check(rc == 0, "Unable to generate types for module");

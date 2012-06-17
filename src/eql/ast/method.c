@@ -81,3 +81,55 @@ int eql_ast_method_codegen(eql_ast_node *node, eql_module *module,
 error:
     return -1;
 }
+
+
+//--------------------------------------
+// Misc
+//--------------------------------------
+
+// Generates the 'this' argument for the function the method is attached to.
+// This is called after the method is attached to a class.
+//
+// node - The method AST node.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_method_generate_this_farg(eql_ast_node *node)
+{
+	int rc;
+    eql_ast_node *farg, *var_decl;
+
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_METHOD, "Node type must be 'method'");
+	check(node->parent != NULL, "Method parent required");
+	check(node->parent->type == EQL_AST_TYPE_CLASS, "Node parent type must be 'class'");
+
+    eql_ast_node *function = node->method.function;
+
+    // Only generate 'this' arg if the function exists.
+    if(function != NULL) {
+        // Retrieve class name for type.
+        bstring type = node->parent->class.name;
+        check(type != NULL, "Method's class name is required");
+    
+        // Create 'this' variable declaration.
+        struct tagbstring THIS = bsStatic("this");
+        rc = eql_ast_var_decl_create(type, &THIS, &var_decl);
+        check(rc == 0, "Unable to create 'this' variable declaration");
+
+        // Link to function argument.
+        rc = eql_ast_farg_create(var_decl, &farg);
+        check(rc == 0, "Unable to create 'this' function argument");
+    
+        // Prepend argument to function.
+        function->function.arg_count++;
+        function->function.args = realloc(function->function.args, sizeof(eql_ast_node*) * function->function.arg_count);
+        check_mem(function->function.args);
+        memmove(function->function.args+1, function->function.args, sizeof(eql_ast_node*) * (function->function.arg_count-1));
+        function->function.args[0] = farg;
+    }
+
+    return 0;
+    
+error:
+    return -1;
+}

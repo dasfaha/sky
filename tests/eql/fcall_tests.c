@@ -64,6 +64,16 @@ int test_eql_parse_fcall() {
 }
 
 
+//--------------------------------------
+// Compile
+//--------------------------------------
+
+int test_eql_compile_fcall() {
+    mu_assert_eql_compile("class Foo { public Int foo() {return 20;} public Int bar() {return foo();} } Foo x; return x;", "tests/fixtures/eql/ir/fcall.ll");
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -73,6 +83,7 @@ int test_eql_parse_fcall() {
 int all_tests() {
     mu_run_test(test_eql_ast_fcall_create);
     mu_run_test(test_eql_parse_fcall);
+    mu_run_test(test_eql_compile_fcall);
     return 0;
 }
 

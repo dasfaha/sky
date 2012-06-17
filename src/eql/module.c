@@ -4,6 +4,7 @@
 
 #include "module.h"
 #include "../dbg.h"
+#include "../mem.h"
 
 
 //==============================================================================
@@ -42,6 +43,7 @@ eql_module *eql_module_create(bstring name, eql_compiler *compiler)
 	module->scopes = NULL;
 	module->scope_count = 0;
 	module->types = NULL;
+	module->type_nodes = NULL;
 	module->type_count = 0;
 	
     return module;

@@ -1,12 +1,17 @@
 # EQL
+- Parser
+  - Maintain a listing of referenced classes.
+
+- Member Access (dot operator)
+
 - Compiler
   - eql_compile
     - Create module (DONE)
     - Parse text into AST (DONE)
     - Link modules
     - Validate AST
-    - Codegen
-    - Return module
+    - Codegen (DONE)
+    - Return module (DONE)
 - Msgpack
 - Add server support
 

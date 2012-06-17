@@ -44,4 +44,10 @@ int eql_ast_method_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
 
+//--------------------------------------
+// Misc
+//--------------------------------------
+
+int eql_ast_method_generate_this_farg(eql_ast_node *node);
+
 #endif

@@ -144,9 +144,19 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
             check(rc == 0, "Unable to codegen function return");
             break;
         }
+        case EQL_AST_TYPE_FARG: {
+            rc = eql_ast_farg_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen function argument");
+            break;
+        }
         case EQL_AST_TYPE_FUNCTION: {
             rc = eql_ast_function_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen function");
+            break;
+        }
+        case EQL_AST_TYPE_FCALL: {
+            rc = eql_ast_fcall_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen function call");
             break;
         }
         case EQL_AST_TYPE_BLOCK: {
@@ -174,7 +184,7 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
     return 0;
 
 error:
-    *value = NULL;
+    if(value != NULL) *value = NULL;
     return -1;
 }
 
@@ -212,12 +222,10 @@ int eql_ast_node_get_type(eql_ast_node *node, bstring *type)
             eql_ast_var_ref_get_type(node, type);
             break;
         }
-        /*
         case EQL_AST_TYPE_FCALL: {
             eql_ast_fcall_get_type(node, type);
             break;
         }
-        */
         default:
         {
             sentinel("AST node does not have a type");

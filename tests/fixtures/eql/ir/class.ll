@@ -4,6 +4,8 @@
 
 define i64 @Foo___baz(%Foo.0 %this) {
 entry:
+  %this1 = alloca %Foo.0
+  store %Foo.0 %this, %Foo.0* %this1
   ret i64 20
 }
 

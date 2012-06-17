@@ -206,10 +206,11 @@ int eql_parse(bstring name, bstring text, eql_ast_node **module)
     check(rc == 0, "Unable to create module");
     
     // Setup main function.
-    rc = eql_ast_function_create(&mainFunctionName, NULL, NULL, 0, NULL, &root->module.main_function);
-    check(rc == 0, "Unable to create main function");
-    rc = eql_ast_block_create(NULL, NULL, 0, &root->module.main_function->function.body);
+	eql_ast_node *main_block = NULL;
+    rc = eql_ast_block_create(NULL, NULL, 0, &main_block);
     check(rc == 0, "Unable to create root block for main function");
+    rc = eql_ast_function_create(&mainFunctionName, NULL, NULL, 0, main_block, &root->module.main_function);
+    check(rc == 0, "Unable to create main function");
     
     // Parse using Bison.
     yyscan_t scanner;
