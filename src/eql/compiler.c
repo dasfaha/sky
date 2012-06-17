@@ -60,9 +60,7 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
                          bstring text, eql_module **module)
 {
     int rc;
-	unsigned int i;
 	
-    LLVMValueRef value;
     check(compiler != NULL, "Compiler is required");
     
     // Create the module.
@@ -73,25 +71,15 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
     eql_ast_node *module_ast;
     rc = eql_parse(name, text, &module_ast);
     check(rc == 0, "Unable to parse EQL query");
+
+    // Generate module types.
+    rc = eql_ast_module_codegen_type(*module, module_ast);
+    check(rc == 0, "Unable to generate types for module");
     
-	// Generate class type structures.
-	for(i=0; i<module_ast->module.class_count; i++) {
-		eql_ast_node *class_ast = module_ast->module.classes[i];
-		rc = eql_ast_class_codegen_type(*module, class_ast);
-		check(rc == 0, "Unable to generate type for class: %s", bdata(class_ast->class.name));
-	}
+    // Generate module code.
+    rc = eql_ast_module_codegen(module_ast, *module);
+    check(rc == 0, "Unable to codegen module");
 	
-    // Codegen classes.
-	for(i=0; i<module_ast->module.class_count; i++) {
-		eql_ast_node *class_ast = module_ast->module.classes[i];
-		rc = eql_ast_node_codegen(class_ast, *module, NULL);
-		check(rc == 0, "Unable to codegen class: %s", bdata(class_ast->class.name));
-	}
-    
-    // Generate the main function if a block exists.
-    rc = eql_ast_node_codegen(module_ast->module.main_function, *module, &value);
-    check(rc == 0, "Unable to generate main function");
-    
     return 0;
 
 error:

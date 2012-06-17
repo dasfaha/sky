@@ -9,9 +9,6 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct eql_ast_node;
-
 // Represents a module in the AST.
 typedef struct {
     bstring name;
@@ -36,6 +33,15 @@ int eql_ast_module_create(bstring name, struct eql_ast_node **classes,
     struct eql_ast_node **ret);
 
 void eql_ast_module_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+int eql_ast_module_codegen(eql_ast_node *node, eql_module *module);
+
+int eql_ast_module_codegen_type(eql_module *module, eql_ast_node *node);
 
 
 //--------------------------------------

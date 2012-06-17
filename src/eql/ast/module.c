@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "../../dbg.h"
 
-#include "module.h"
 #include "node.h"
 
 //==============================================================================
@@ -86,6 +85,72 @@ void eql_ast_module_free(struct eql_ast_node *node)
         free(node->module.classes);
         node->module.class_count = 0;
     }
+}
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for the module AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_module_codegen(eql_ast_node *node, eql_module *module)
+{
+	int rc;
+    unsigned int i;
+
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_MODULE, "Node type must be 'module'");
+	check(module != NULL, "Module required");
+
+    // Codegen classes.
+	for(i=0; i<node->module.class_count; i++) {
+		eql_ast_node *class_ast = node->module.classes[i];
+		rc = eql_ast_node_codegen(class_ast, module, NULL);
+		check(rc == 0, "Unable to codegen class: %s", bdata(class_ast->class.name));
+	}
+    
+    // Generate the main function if a block exists.
+    rc = eql_ast_node_codegen(node->module.main_function, module, NULL);
+    check(rc == 0, "Unable to generate main function");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Generates and registers an LLVM struct for a given AST class. This struct
+// can then be referenced within the module as the class' type.
+//
+// module - The compilation unit that contains the class.
+// node   - The class AST node.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_module_codegen_type(eql_module *module, eql_ast_node *node)
+{
+	int rc;
+	unsigned int i;
+	
+	check(module != NULL, "Module required");
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_MODULE, "Node type must be 'module'");
+
+ 	// Generate class type structures.
+	for(i=0; i<node->module.class_count; i++) {
+		eql_ast_node *class_ast = node->module.classes[i];
+		rc = eql_ast_class_codegen_type(module, class_ast);
+		check(rc == 0, "Unable to generate type for class: %s", bdata(class_ast->class.name));
+	}
+	
+	return 0;
+	
+error:
+	return -1;
 }
 
 
