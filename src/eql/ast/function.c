@@ -324,7 +324,7 @@ int eql_ast_function_generate_return_type(eql_ast_node *node)
     }
     
     // Assign type to return type.
-    node->function.return_type = type;
+    node->function.return_type = bstrcpy(type);
     
     return 0;
     

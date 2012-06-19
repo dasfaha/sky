@@ -114,7 +114,7 @@ int eql_ast_var_ref_get_type(eql_ast_node *node, bstring *type)
 		
 		// If a declaration was found then return its type.
 		if(var_decl != NULL) {
-			*type = var_decl->var_decl.type;
+            *type = var_decl->var_decl.type;
 			return 0;
 		}
 		

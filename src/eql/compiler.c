@@ -86,10 +86,15 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
     // Generate module code.
     rc = eql_ast_module_codegen(module_ast, *module);
     check(rc == 0, "Unable to codegen module");
+
+    // Unload the AST.
+    eql_ast_node_free(module_ast);
 	
     return 0;
 
 error:
+    eql_ast_node_free(module_ast);
     eql_module_free(*module);
+    *module = NULL;
     return -1;
 }
