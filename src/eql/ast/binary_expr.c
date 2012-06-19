@@ -91,105 +91,83 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
     
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-	// If this is an assignment then treat it differently.
-	if(node->binary_expr.operator == EQL_BINOP_ASSIGN) {
-		// Make sure LHS is a variable reference.
-		check(node->binary_expr.lhs->type == EQL_AST_TYPE_VAR_REF, "LHS must be a variable for assignment");
-		
-		// Generate RHS.
-	    rc = eql_ast_node_codegen(node->binary_expr.rhs, module, &rhs);
-	    check(rc == 0 && rhs != NULL, "Unable to codegen rhs");
-		
-		// Lookup variable in scope.
-		eql_ast_node *var_decl;
-		rc = eql_module_get_variable(module, node->binary_expr.lhs->var_ref.name, &var_decl, &lhs);
-		check(rc == 0, "Unable to retrieve variable: %s", bdata(node->binary_expr.lhs->var_ref.name));
-		check(var_decl != NULL && lhs != NULL, "Variable declaration is incomplete: %s", bdata(node->binary_expr.lhs->var_ref.name));
-		
-		// Create a store instruction.
-		*value = LLVMBuildStore(builder, rhs, lhs);
-    	check(*value != NULL, "Unable to generate store instruction");
-	}
-	// Otherwise evaluate LHS and RHS and apply the operator.
-	else {
-	    // Evaluate left and right hand values.
-	    rc = eql_ast_node_codegen(node->binary_expr.lhs, module, &lhs);
-	    check(rc == 0 && lhs != NULL, "Unable to codegen lhs");
-	    rc = eql_ast_node_codegen(node->binary_expr.rhs, module, &rhs);
-	    check(rc == 0 && rhs != NULL, "Unable to codegen rhs");
+    // Evaluate left and right hand values.
+    rc = eql_ast_node_codegen(node->binary_expr.lhs, module, &lhs);
+    check(rc == 0 && lhs != NULL, "Unable to codegen lhs");
+    rc = eql_ast_node_codegen(node->binary_expr.rhs, module, &rhs);
+    check(rc == 0 && rhs != NULL, "Unable to codegen rhs");
 
-	    // If values are different types then cast RHS to LHS.
-	    LLVMTypeRef lhs_type = LLVMTypeOf(lhs);
-	    LLVMTypeKind lhs_type_kind = LLVMGetTypeKind(lhs_type);
-	    LLVMTypeRef rhs_type = LLVMTypeOf(rhs);
-	    LLVMTypeKind rhs_type_kind = LLVMGetTypeKind(rhs_type);
-    
-	    if(lhs_type != rhs_type) {
-	        // Cast int to float.
-	        if(lhs_type_kind == LLVMDoubleTypeKind && rhs_type_kind == LLVMIntegerTypeKind)
-	        {
-	            rhs = LLVMBuildSIToFP(builder, rhs, lhs_type, "sitofptmp");
-	        }
-	        // Cast float to int.
-	        else if(lhs_type_kind == LLVMIntegerTypeKind && rhs_type_kind == LLVMDoubleTypeKind)
-	        {
-	            rhs = LLVMBuildFPToSI(builder, rhs, lhs_type, "fptositmp");
-	        }
-	        // Throw error if it's any other conversion.
-	        else {
-	            sentinel("Unable to cast types");
-	        }
-	    }
+    // If values are different types then cast RHS to LHS.
+    LLVMTypeRef lhs_type = LLVMTypeOf(lhs);
+    LLVMTypeKind lhs_type_kind = LLVMGetTypeKind(lhs_type);
+    LLVMTypeRef rhs_type = LLVMTypeOf(rhs);
+    LLVMTypeKind rhs_type_kind = LLVMGetTypeKind(rhs_type);
 
-	    // Generate Float operations.
-	    if(lhs_type_kind == LLVMDoubleTypeKind) {
-	        switch(node->binary_expr.operator) {
-	            case EQL_BINOP_PLUS: {
-	                *value = LLVMBuildFAdd(builder, lhs, rhs, "faddtmp");
-	                break;
-	            }
-	            case EQL_BINOP_MINUS: {
-	                *value = LLVMBuildFSub(builder, lhs, rhs, "fsubtmp");
-	                break;
-	            }
-	            case EQL_BINOP_MUL: {
-	                *value = LLVMBuildFMul(builder, lhs, rhs, "fmultmp");
-	                break;
-	            }
-	            case EQL_BINOP_DIV: {
-	                *value = LLVMBuildFDiv(builder, lhs, rhs, "fdivtmp");
-	                break;
-	            }
-				default: {
-					sentinel("Invalid float binary operator");
-				}
-	        }
-	    }
-	    // Generate Integer operations.
-	    else {
-	        switch(node->binary_expr.operator) {
-	            case EQL_BINOP_PLUS: {
-	                *value = LLVMBuildAdd(builder, lhs, rhs, "addtmp");
-	                break;
-	            }
-	            case EQL_BINOP_MINUS: {
-	                *value = LLVMBuildSub(builder, lhs, rhs, "subtmp");
-	                break;
-	            }
-	            case EQL_BINOP_MUL: {
-	                *value = LLVMBuildMul(builder, lhs, rhs, "multmp");
-	                break;
-	            }
-	            case EQL_BINOP_DIV: {
-	                *value = LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
-	                break;
-	            }
-				default: {
-					sentinel("Invalid int binary operator");
-				}
-	        }
-	    }
-	}
+    if(lhs_type != rhs_type) {
+        // Cast int to float.
+        if(lhs_type_kind == LLVMDoubleTypeKind && rhs_type_kind == LLVMIntegerTypeKind)
+        {
+            rhs = LLVMBuildSIToFP(builder, rhs, lhs_type, "sitofptmp");
+        }
+        // Cast float to int.
+        else if(lhs_type_kind == LLVMIntegerTypeKind && rhs_type_kind == LLVMDoubleTypeKind)
+        {
+            rhs = LLVMBuildFPToSI(builder, rhs, lhs_type, "fptositmp");
+        }
+        // Throw error if it's any other conversion.
+        else {
+            sentinel("Unable to cast types");
+        }
+    }
+
+    // Generate Float operations.
+    if(lhs_type_kind == LLVMDoubleTypeKind) {
+        switch(node->binary_expr.operator) {
+            case EQL_BINOP_PLUS: {
+                *value = LLVMBuildFAdd(builder, lhs, rhs, "faddtmp");
+                break;
+            }
+            case EQL_BINOP_MINUS: {
+                *value = LLVMBuildFSub(builder, lhs, rhs, "fsubtmp");
+                break;
+            }
+            case EQL_BINOP_MUL: {
+                *value = LLVMBuildFMul(builder, lhs, rhs, "fmultmp");
+                break;
+            }
+            case EQL_BINOP_DIV: {
+                *value = LLVMBuildFDiv(builder, lhs, rhs, "fdivtmp");
+                break;
+            }
+			default: {
+				sentinel("Invalid float binary operator");
+			}
+        }
+    }
+    // Generate Integer operations.
+    else {
+        switch(node->binary_expr.operator) {
+            case EQL_BINOP_PLUS: {
+                *value = LLVMBuildAdd(builder, lhs, rhs, "addtmp");
+                break;
+            }
+            case EQL_BINOP_MINUS: {
+                *value = LLVMBuildSub(builder, lhs, rhs, "subtmp");
+                break;
+            }
+            case EQL_BINOP_MUL: {
+                *value = LLVMBuildMul(builder, lhs, rhs, "multmp");
+                break;
+            }
+            case EQL_BINOP_DIV: {
+                *value = LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
+                break;
+            }
+			default: {
+				sentinel("Invalid int binary operator");
+			}
+        }
+    }
 	
     check(*value != NULL, "Unable to codegen binary expression");
     

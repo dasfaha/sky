@@ -1,8 +1,8 @@
 # EQL
+- Member Access (dot operator)
+
 - Parser
   - Maintain a listing of referenced classes.
-
-- Member Access (dot operator)
 
 - Compiler
   - eql_compile

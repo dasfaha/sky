@@ -19,6 +19,7 @@ typedef struct eql_ast_node eql_ast_node;
 #include "binary_expr.h"
 #include "var_ref.h"
 #include "var_decl.h"
+#include "var_assign.h"
 #include "farg.h"
 #include "freturn.h"
 #include "function.h"
@@ -39,6 +40,7 @@ enum eql_ast_node_type_e {
     EQL_AST_TYPE_BINARY_EXPR,
     EQL_AST_TYPE_VAR_REF,
     EQL_AST_TYPE_VAR_DECL,
+    EQL_AST_TYPE_VAR_ASSIGN,
     EQL_AST_TYPE_FARG,
     EQL_AST_TYPE_FRETURN,
     EQL_AST_TYPE_FUNCTION,
@@ -62,6 +64,7 @@ struct eql_ast_node {
         eql_ast_binary_expr binary_expr;
         eql_ast_var_ref var_ref;
         eql_ast_var_decl var_decl;
+        eql_ast_var_assign var_assign;
         eql_ast_farg farg;
         eql_ast_freturn freturn;
         eql_ast_function function;

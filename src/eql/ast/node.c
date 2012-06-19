@@ -35,6 +35,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_var_decl_free(node);
             break;
         }
+        case EQL_AST_TYPE_VAR_ASSIGN: {
+            eql_ast_var_assign_free(node);
+            break;
+        }
         case EQL_AST_TYPE_FARG: {
             eql_ast_farg_free(node);
             break;
@@ -137,6 +141,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
         case EQL_AST_TYPE_VAR_REF: {
             rc = eql_ast_var_ref_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen variable reference");
+            break;
+        }
+        case EQL_AST_TYPE_VAR_ASSIGN: {
+            rc = eql_ast_var_assign_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen variable assignment");
             break;
         }
         case EQL_AST_TYPE_FRETURN: {
