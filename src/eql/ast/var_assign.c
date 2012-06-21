@@ -15,20 +15,23 @@
 
 // Creates an AST node for a variable assignment.
 //
-// name - The name of the variable to assign.
-// expr - The expression to assign to the variable.
-// ret  - A pointer to where the ast node will be returned.
+// var_ref - The variable to assign the expression to.
+// expr    - The expression to assign to the variable.
+// ret     - A pointer to where the ast node will be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int eql_ast_var_assign_create(bstring name,
+int eql_ast_var_assign_create(eql_ast_node *var_ref,
                               eql_ast_node *expr,
                               eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_VAR_ASSIGN;
     node->parent = NULL;
-    node->var_assign.name = bstrcpy(name);
-    if(name != NULL) check_mem(node->var_assign.name);
+
+    node->var_assign.var_ref = var_ref;
+    if(var_ref != NULL) {
+        var_ref->parent = node;
+    }
 
     node->var_assign.expr = expr;
     if(expr != NULL) {
@@ -49,14 +52,10 @@ error:
 // node - The AST node to free.
 void eql_ast_var_assign_free(eql_ast_node *node)
 {
-    if(node->var_assign.name) {
-        bdestroy(node->var_assign.name);
-    }
-    node->var_assign.name = NULL;
+    if(node->var_assign.var_ref) eql_ast_node_free(node->var_assign.var_ref);
+    node->var_assign.var_ref = NULL;
 
-    if(node->var_assign.expr) {
-        eql_ast_node_free(node->var_assign.expr);
-    }
+    if(node->var_assign.expr) eql_ast_node_free(node->var_assign.expr);
     node->var_assign.expr = NULL;
 }
 
@@ -89,15 +88,13 @@ int eql_ast_var_assign_codegen(eql_ast_node *node,
     rc = eql_ast_node_codegen(node->var_assign.expr, module, &expr);
     check(rc == 0 && expr != NULL, "Unable to codegen variable assignment expression");
 	
-	// Lookup variable in scope.
-	eql_ast_node *var_decl;
-    LLVMValueRef var_decl_value;
-	rc = eql_module_get_variable(module, node->var_assign.name, &var_decl, &var_decl_value);
-	check(rc == 0, "Unable to retrieve variable: %s", bdata(node->var_assign.name));
-	check(var_decl != NULL && var_decl_value != NULL, "Variable declaration is incomplete: %s", bdata(node->var_assign.name));
-	
+	// Find the variable declaration.
+    LLVMValueRef ptr = NULL;
+    rc = eql_ast_node_get_var_pointer(node->var_assign.var_ref, module, &ptr);
+    check(rc == 0 && ptr != NULL, "Unable to retrieve variable reference pointer");
+
 	// Create a store instruction.
-	*value = LLVMBuildStore(builder, expr, var_decl_value);
+	*value = LLVMBuildStore(builder, expr, ptr);
 	check(*value != NULL, "Unable to generate store instruction");
 
     return 0;

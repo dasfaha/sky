@@ -1,0 +1,189 @@
+#include <stdlib.h>
+#include <stdbool.h>
+#include "../../dbg.h"
+
+#include "node.h"
+
+//==============================================================================
+//
+// Functions
+//
+//==============================================================================
+
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
+// Creates an AST node for a struct member access.
+//
+// var_name    - The name of the parent variable.
+// member_name - The name of the member of the parent to access.
+// ret         - A pointer to where the ast node will be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_staccess_create(eql_ast_node *var_ref, bstring member_name,
+                            eql_ast_node **ret)
+{
+    eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
+    node->type = EQL_AST_TYPE_STACCESS;
+    node->parent = NULL;
+
+    node->staccess.member_name = bstrcpy(member_name);
+    if(member_name != NULL) check_mem(node->staccess.member_name);
+
+    node->staccess.var_ref = var_ref;
+    if(var_ref) {
+        var_ref->parent = node;
+    }
+
+    *ret = node;
+    return 0;
+
+error:
+    eql_ast_node_free(node);
+    (*ret) = NULL;
+    return -1;
+}
+
+// Frees a struct member access AST node from memory.
+//
+// node - The AST node to free.
+void eql_ast_staccess_free(eql_ast_node *node)
+{
+    eql_ast_node_free(node->staccess.var_ref);
+    
+    if(node->staccess.member_name) bdestroy(node->staccess.member_name);
+    node->staccess.member_name = NULL;
+}
+
+
+//--------------------------------------
+// Codegen
+//--------------------------------------
+
+// Recursively generates LLVM code for the struct member access AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_staccess_codegen(eql_ast_node *node, eql_module *module,
+                             LLVMValueRef *value)
+{
+    int rc;
+
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_STACCESS, "Node type expected to be 'struct member access'");
+	check(module != NULL, "Module required");
+	check(module->llvm_function != NULL, "Not currently in a function");
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+	// Find the variable declaration.
+    LLVMValueRef ptr = NULL;
+    rc = eql_ast_node_get_var_pointer(node->staccess.var_ref, module, &ptr);
+    check(rc == 0 && ptr != NULL, "Unable to retrieve variable pointer");
+
+	// Create load instruction.
+	*value = LLVMBuildLoad(builder, ptr, bdata(node->staccess.var_ref->var_ref.name));
+	check(*value != NULL, "Unable to create load instruction");
+
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
+// Retrieves the pointer to the member of a struct.
+//
+// node    - The node to retrieve the pointer for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM pointer value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
+                                 LLVMValueRef *value)
+{
+    int rc;
+
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_STACCESS, "Node type expected to be 'struct member access'");
+	check(module != NULL, "Module required");
+	check(module->llvm_function != NULL, "Not currently in a function");
+	check(node->staccess.var_ref != NULL, "Variable reference required");
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+	// Find the struct reference.
+    LLVMValueRef var_ref_pointer;
+    rc = eql_ast_node_get_var_pointer(node->staccess.var_ref, module, &var_ref_pointer);
+    check(rc == 0 && var_ref_pointer != NULL, "Unable to retrieve pointer to struct");
+
+    // Retrieve the type of the member.
+    bstring type_name = NULL;
+    rc = eql_ast_staccess_get_type(node, &type_name);
+    check(rc == 0 && type_name != NULL, "Unable to determine struct member type");
+
+    // Retrieve the class AST for the member.
+    eql_ast_node *class_ast = NULL;
+    rc = eql_module_get_type_ref(module, type_name, &class_ast, NULL);
+    check(rc == 0 && class_ast != NULL, "Unable to find class: %s", bdata(type_name));
+
+    // Determine the property index for the member.
+    unsigned int property_index = 0;
+    rc = eql_ast_class_get_property_index(class_ast, node->staccess.member_name, &property_index);
+    check(rc == 0, "Unable to find property '%s' on class '%s'", bdata(node->staccess.member_name), bdata(type_name));
+
+    // Build GEP instruction.
+    *value = LLVMBuildStructGEP(builder, var_ref_pointer, property_index, "gep");
+    check(*value != NULL, "Unable to build GEP instruction");
+
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
+
+//--------------------------------------
+// Type
+//--------------------------------------
+
+// Returns the type name of the AST node.
+//
+// node - The AST node to determine the type for.
+// type - A pointer to where the type name should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_staccess_get_type(eql_ast_node *node, bstring *type)
+{
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_STACCESS, "Node type must be 'struct member access'");
+
+
+
+	// Search up the parent hierarchy to find variable declaration.
+	eql_ast_node *var_decl = NULL;
+	eql_ast_node *parent = node->parent;
+	while(parent != NULL) {
+		int rc = eql_ast_node_get_var_decl(parent, node->staccess.var_ref->var_ref.name, &var_decl);
+		check(rc == 0, "Unable to search node for variable declarations");
+		
+		// If a declaration was found then return its type.
+		if(var_decl != NULL) {
+            *type = var_decl->var_decl.type;
+			return 0;
+		}
+		
+		parent = parent->parent;
+	}
+
+	sentinel("Unable to find variable declaration: %s", bdata(node->staccess.var_ref->var_ref.name));
+
+error:
+    *type = NULL;
+    return -1;
+}

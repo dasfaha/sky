@@ -107,30 +107,35 @@ int eql_module_get_type_ref(eql_module *module, bstring name,
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
     // Compare to built-in types.
+    bool found = false;
     if(biseq(name, &EQL_TYPE_NAME_INT)) {
-        *type = LLVMInt64TypeInContext(context);
+        if(type != NULL) *type = LLVMInt64TypeInContext(context);
 		if(node != NULL) *node = NULL;
+        found = true;
     }
     else if(biseq(name, &EQL_TYPE_NAME_FLOAT)) {
-        *type = LLVMDoubleTypeInContext(context);
+        if(type != NULL) *type = LLVMDoubleTypeInContext(context);
 		if(node != NULL) *node = NULL;
+        found = true;
     }
     else if(biseq(name, &EQL_TYPE_NAME_VOID)) {
-        *type = LLVMVoidTypeInContext(context);
+        if(type != NULL) *type = LLVMVoidTypeInContext(context);
 		if(node != NULL) *node = NULL;
+        found = true;
     }
 	// Find user-defined type.
 	else {
 		for(i=0; i<module->type_count; i++) {
 			if(biseq(module->type_nodes[i]->class.name, name)) {
-				*type = module->types[i];
+				if(type != NULL) *type = module->types[i];
 				if(node != NULL) *node = module->type_nodes[i];
+                found = true;
 				break;
 			}
 		}
     }
 
-    check(*type != NULL, "Invalid type in module: %s", bdata(name));
+    check(found, "Invalid type in module: %s", bdata(name));
 
     return 0;
 

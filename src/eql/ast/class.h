@@ -51,6 +51,9 @@ int eql_ast_class_add_member(struct eql_ast_node *class, struct eql_ast_node *me
 int eql_ast_class_add_members(struct eql_ast_node *class,
     struct eql_ast_node **members, unsigned int member_count);
 
+int eql_ast_class_get_property_index(eql_ast_node *node,
+    bstring property_name, unsigned int *property_index);
+    
 
 //--------------------------------------
 // Metadata Management

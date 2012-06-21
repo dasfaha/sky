@@ -20,6 +20,7 @@ typedef struct eql_ast_node eql_ast_node;
 #include "var_ref.h"
 #include "var_decl.h"
 #include "var_assign.h"
+#include "staccess.h"
 #include "farg.h"
 #include "freturn.h"
 #include "function.h"
@@ -41,6 +42,7 @@ enum eql_ast_node_type_e {
     EQL_AST_TYPE_VAR_REF,
     EQL_AST_TYPE_VAR_DECL,
     EQL_AST_TYPE_VAR_ASSIGN,
+    EQL_AST_TYPE_STACCESS,
     EQL_AST_TYPE_FARG,
     EQL_AST_TYPE_FRETURN,
     EQL_AST_TYPE_FUNCTION,
@@ -65,6 +67,7 @@ struct eql_ast_node {
         eql_ast_var_ref var_ref;
         eql_ast_var_decl var_decl;
         eql_ast_var_assign var_assign;
+        eql_ast_staccess staccess;
         eql_ast_farg farg;
         eql_ast_freturn freturn;
         eql_ast_function function;
@@ -98,6 +101,9 @@ void eql_ast_node_free(eql_ast_node *node);
 //--------------------------------------
 
 int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
+    LLVMValueRef *value);
+
+int eql_ast_node_get_var_pointer(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
 

@@ -61,6 +61,7 @@
 ":"                     return TOKEN(TCOLON);
 ","                     return TOKEN(TCOMMA);
 "="                     return TOKEN(TASSIGN);
+"."                     return TOKEN(TDOT);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

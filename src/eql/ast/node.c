@@ -39,6 +39,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_var_assign_free(node);
             break;
         }
+        case EQL_AST_TYPE_STACCESS: {
+            eql_ast_staccess_free(node);
+            break;
+        }
         case EQL_AST_TYPE_FARG: {
             eql_ast_farg_free(node);
             break;
@@ -148,6 +152,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
             check(rc == 0, "Unable to codegen variable assignment");
             break;
         }
+        case EQL_AST_TYPE_STACCESS: {
+            rc = eql_ast_staccess_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen struct member access");
+            break;
+        }
         case EQL_AST_TYPE_FRETURN: {
             rc = eql_ast_freturn_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen function return");
@@ -183,6 +192,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
             check(rc == 0, "Unable to codegen method");
             break;
         }
+        default:
+        {
+            sentinel("Unable to codegen AST node");
+            break;
+        }
     }
     
     // If a return value is requested then set it.
@@ -197,6 +211,50 @@ error:
     return -1;
 }
 
+// Retrieves a variable pointer to a given node. This only works with variable
+// references and struct member accesses.
+//
+// node    - The variable node to retrieve the pointer for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_node_get_var_pointer(eql_ast_node *node, eql_module *module,
+                                 LLVMValueRef *value)
+{
+    int rc;
+    
+    check(node != NULL, "Node is required");
+    check(module != NULL, "Module is required");
+    check(module->llvm_module != NULL, "LLVM Module is required");
+    check(module->compiler != NULL, "Module compiler is required");
+    check(module->compiler->llvm_builder != NULL, "LLVM Builder is required");
+
+    // Delegate codegen to AST nodes.
+    switch(node->type) {
+        case EQL_AST_TYPE_VAR_REF: {
+            rc = eql_ast_var_ref_get_pointer(node, module, value);
+            check(rc == 0, "Unable to retrieve pointer to variable reference");
+            break;
+        }
+        case EQL_AST_TYPE_STACCESS: {
+            rc = eql_ast_staccess_get_pointer(node, module, value);
+            check(rc == 0, "Unable to retrieve pointer to struct member access");
+            break;
+        }
+        default:
+        {
+            sentinel("Unable to retrieve pointer for AST node");
+            break;
+        }
+    }
+    
+    return 0;
+    
+error:
+    *value = NULL;
+    return -1;
+}
 
 
 //--------------------------------------
@@ -211,28 +269,40 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_node_get_type(eql_ast_node *node, bstring *type)
 {
+    int rc;
+    
     check(node != NULL, "Node required");
 
     // Delegate to each type.
     switch(node->type) {
         case EQL_AST_TYPE_INT_LITERAL: {
-            eql_ast_int_literal_get_type(node, type);
+            rc = eql_ast_int_literal_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for int literal");
             break;
         }
         case EQL_AST_TYPE_FLOAT_LITERAL: {
-            eql_ast_float_literal_get_type(node, type);
+            rc = eql_ast_float_literal_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for float literal");
             break;
         }
         case EQL_AST_TYPE_BINARY_EXPR: {
-            eql_ast_binary_expr_get_type(node, type);
+            rc = eql_ast_binary_expr_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for binary expression");
             break;
         }
         case EQL_AST_TYPE_VAR_REF: {
-            eql_ast_var_ref_get_type(node, type);
+            rc = eql_ast_var_ref_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for variable reference");
+            break;
+        }
+        case EQL_AST_TYPE_STACCESS: {
+            rc = eql_ast_staccess_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for struct member access");
             break;
         }
         case EQL_AST_TYPE_FCALL: {
-            eql_ast_fcall_get_type(node, type);
+            rc = eql_ast_fcall_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for function call");
             break;
         }
         default:
@@ -260,16 +330,20 @@ error:
 int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
 							 eql_ast_node **var_decl)
 {
+    int rc;
+
     check(node != NULL, "Node required");
 
     // Delegate to each type.
     switch(node->type) {
         case EQL_AST_TYPE_FUNCTION: {
-            eql_ast_function_get_var_decl(node, name, var_decl);
+            rc = eql_ast_function_get_var_decl(node, name, var_decl);
+            check(rc == 0, "Unable to retrieve variable declaration for function");
             break;
         }
         case EQL_AST_TYPE_BLOCK: {
-            eql_ast_block_get_var_decl(node, name, var_decl);
+            rc = eql_ast_block_get_var_decl(node, name, var_decl);
+            check(rc == 0, "Unable to retrieve variable declaration for block");
             break;
         }
         default:

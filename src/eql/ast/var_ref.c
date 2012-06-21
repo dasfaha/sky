@@ -71,6 +71,39 @@ int eql_ast_var_ref_codegen(eql_ast_node *node, eql_module *module,
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
 	// Find the variable declaration.
+    LLVMValueRef ptr = NULL;
+    rc = eql_ast_node_get_var_pointer(node, module, &ptr);
+    check(rc == 0 && ptr != NULL, "Unable to retrieve variable pointer");
+
+	// Create load instruction.
+	*value = LLVMBuildLoad(builder, ptr, bdata(node->var_ref.name));
+	check(*value != NULL, "Unable to create load instruction");
+
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
+// Retrieves the pointer to the variable reference.
+//
+// node    - The node to retrieve the pointer for.
+// module  - The compilation unit this node is a part of.
+// value   - A pointer to where the LLVM pointer value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_var_ref_get_pointer(eql_ast_node *node, eql_module *module,
+                                LLVMValueRef *value)
+{
+    int rc;
+
+	check(node != NULL, "Node required");
+	check(node->type == EQL_AST_TYPE_VAR_REF, "Node type expected to be 'variable reference'");
+	check(module != NULL, "Module required");
+	check(module->llvm_function != NULL, "Not currently in a function");
+
+	// Find the variable declaration.
 	eql_ast_node *var_decl;
 	LLVMValueRef var_decl_value;
 	rc = eql_module_get_variable(module, node->var_ref.name, &var_decl, &var_decl_value);
@@ -78,9 +111,8 @@ int eql_ast_var_ref_codegen(eql_ast_node *node, eql_module *module,
 	check(var_decl != NULL, "No variable declaration found: %s", bdata(node->var_ref.name));
 	check(var_decl_value != NULL, "No LLVM value for variable declaration: %s", bdata(node->var_ref.name));
 
-	// Create load instruction.
-	*value = LLVMBuildLoad(builder, var_decl_value, bdata(node->var_ref.name));
-	check(*value != NULL, "Unable to create load instruction");
+	// Return the pointer.
+    *value = var_decl_value;
 
     return 0;
 

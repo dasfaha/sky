@@ -10,7 +10,7 @@
 
 // Represents an assignment of an expression to a variable.
 typedef struct {
-    bstring name;
+    eql_ast_node *var_ref;
     eql_ast_node *expr;
 } eql_ast_var_assign;
 
@@ -25,7 +25,7 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-int eql_ast_var_assign_create(bstring name, eql_ast_node *expr,
+int eql_ast_var_assign_create(eql_ast_node *var_ref, eql_ast_node *expr,
     eql_ast_node **ret);
 
 void eql_ast_var_assign_free(eql_ast_node *node);

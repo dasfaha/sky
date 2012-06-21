@@ -1,7 +1,5 @@
-#ifndef _eql_ast_var_ref_h
-#define _eql_ast_var_ref_h
-
-#include "../../bstring.h"
+#ifndef _eql_ast_staccess_h
+#define _eql_ast_staccess_h
 
 
 //==============================================================================
@@ -10,10 +8,11 @@
 //
 //==============================================================================
 
-// Represents a variable reference in the AST.
+// Represents a struct member access in the AST.
 typedef struct {
-    bstring name;
-} eql_ast_var_ref;
+    eql_ast_node *var_ref;
+    bstring member_name;
+} eql_ast_staccess;
 
 
 //==============================================================================
@@ -26,25 +25,27 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-int eql_ast_var_ref_create(bstring name, eql_ast_node **node);
+int eql_ast_staccess_create(eql_ast_node *var_ref, bstring member_name,
+    eql_ast_node **ret);
 
-void eql_ast_var_ref_free(eql_ast_node *node);
+void eql_ast_staccess_free(eql_ast_node *node);
 
 
 //--------------------------------------
 // Codegen
 //--------------------------------------
 
-int eql_ast_var_ref_codegen(eql_ast_node *node, eql_module *module,
-	LLVMValueRef *value);
-
-int eql_ast_var_ref_get_pointer(eql_ast_node *node, eql_module *module,
+int eql_ast_staccess_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
+
+int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
+    LLVMValueRef *value);
+
 
 //--------------------------------------
 // Type
 //--------------------------------------
 
-int eql_ast_var_ref_get_type(eql_ast_node *node, bstring *type);
+int eql_ast_staccess_get_type(eql_ast_node *node, bstring *type);
 
 #endif

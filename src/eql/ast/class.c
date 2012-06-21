@@ -235,6 +235,30 @@ error:
     return -1;
 }
 
+// Retrieves the index of the property within the class. This is used to
+// access members of the generated struct.
+
+int eql_ast_class_get_property_index(eql_ast_node *node,
+                                     bstring property_name,
+                                     unsigned int *property_index)
+{
+    unsigned int i;
+    
+	// Loop over properties to find one that matches the name.
+	for(i=0; i<node->class.property_count; i++) {
+		if(biseq(node->class.properties[i]->property.var_decl->var_decl.name, property_name)) {
+            *property_index = i;
+            return 0;
+		}
+	}
+
+    sentinel("Unable to find property index for: %s", bdata(property_name));
+    
+error:
+    *property_index = 0;
+    return -1;
+}
+
 
 
 //--------------------------------------

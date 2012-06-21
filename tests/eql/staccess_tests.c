@@ -15,6 +15,8 @@
 //==============================================================================
 
 struct tagbstring foo = bsStatic("foo");
+struct tagbstring bar = bsStatic("bar");
+struct tagbstring baz = bsStatic("baz");
 
 
 //==============================================================================
@@ -27,16 +29,14 @@ struct tagbstring foo = bsStatic("foo");
 // AST
 //--------------------------------------
 
-int test_eql_ast_var_assign_create() {
-    eql_ast_node *node, *var_ref, *int_literal;
+int test_eql_ast_staccess_create() {
+    eql_ast_node *node, *var_ref;
     eql_ast_var_ref_create(&foo, &var_ref);
-    eql_ast_int_literal_create(10, &int_literal);
-    eql_ast_var_assign_create(var_ref, int_literal, &node);
-    mu_assert(node->type == EQL_AST_TYPE_VAR_ASSIGN, "");
-    mu_assert(node->var_assign.var_ref == var_ref, "");
-    mu_assert(node->var_assign.var_ref->parent == node, "");
-    mu_assert(node->var_assign.expr == int_literal, "");
-    mu_assert(node->var_assign.expr->parent == node, "");
+    eql_ast_staccess_create(var_ref, &bar, &node);
+    mu_assert(node->type == EQL_AST_TYPE_STACCESS, "");
+    mu_assert(node->staccess.var_ref == var_ref, "");
+    mu_assert(node->staccess.var_ref->parent == node, "");
+    mu_assert(biseqcstr(node->staccess.member_name, "bar"), "");
     eql_ast_node_free(node);
     return 0;
 }
@@ -46,15 +46,14 @@ int test_eql_ast_var_assign_create() {
 // Parser
 //--------------------------------------
 
-int test_eql_parse_var_assign() {
+int test_eql_parse_staccess() {
     eql_ast_node *module = NULL;
-    bstring text = bfromcstr("foo = 20;");
+    bstring text = bfromcstr("foo.bar;");
     eql_parse(NULL, text, &module);
     eql_ast_node *node = module->module.main_function->function.body->block.exprs[0];
-    mu_assert(node->type == EQL_AST_TYPE_VAR_ASSIGN, "");
-    mu_assert(biseqcstr(node->var_assign.var_ref->var_ref.name, "foo"), "");
-    mu_assert(node->var_assign.expr->type == EQL_AST_TYPE_INT_LITERAL, "");
-    mu_assert(node->var_assign.expr->int_literal.value == 20, "");
+    mu_assert(node->type == EQL_AST_TYPE_STACCESS, "");
+    mu_assert(biseqcstr(node->staccess.var_ref->var_ref.name, "foo"), "");
+    mu_assert(biseqcstr(node->staccess.member_name, "bar"), "");
     eql_ast_node_free(module);
     bdestroy(text);
     return 0;
@@ -65,8 +64,8 @@ int test_eql_parse_var_assign() {
 // Compile
 //--------------------------------------
 
-int test_eql_compile_var_assign() {
-    mu_assert_eql_compile("Int foo; foo = 20; return foo;", "tests/fixtures/eql/ir/var_assign.ll");
+int test_eql_compile_staccess() {
+    mu_assert_eql_compile("class Foo { public Int bar; public Int baz; } Foo x; x.baz = 20; return x.baz;", "tests/fixtures/eql/ir/staccess.ll");
     return 0;
 }
 
@@ -78,9 +77,9 @@ int test_eql_compile_var_assign() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_eql_ast_var_assign_create);
-    mu_run_test(test_eql_parse_var_assign);
-    mu_run_test(test_eql_compile_var_assign);
+    mu_run_test(test_eql_ast_staccess_create);
+    mu_run_test(test_eql_parse_staccess);
+    mu_run_test(test_eql_compile_staccess);
     return 0;
 }
 
