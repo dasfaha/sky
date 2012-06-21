@@ -4,9 +4,9 @@
 
 define %Foo @main() {
 entry:
-  %x = alloca %Foo
-  %gep = getelementptr inbounds %Foo* %x, i32 0, i32 1
-  store i64 20, i64* %gep
-  %x1 = load %Foo* %x
-  ret %Foo %x1
+  %0 = alloca %Foo
+  %1 = getelementptr inbounds %Foo* %0, i32 0, i32 1
+  store i64 20, i64* %1
+  %2 = load %Foo* %0
+  ret %Foo %2
 }

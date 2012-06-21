@@ -86,7 +86,7 @@ int eql_ast_staccess_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0 && ptr != NULL, "Unable to retrieve variable pointer");
 
 	// Create load instruction.
-	*value = LLVMBuildLoad(builder, ptr, bdata(node->staccess.var_ref->var_ref.name));
+	*value = LLVMBuildLoad(builder, ptr, "");
 	check(*value != NULL, "Unable to create load instruction");
 
     return 0;
@@ -137,7 +137,7 @@ int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
     check(rc == 0, "Unable to find property '%s' on class '%s'", bdata(node->staccess.member_name), bdata(type_name));
 
     // Build GEP instruction.
-    *value = LLVMBuildStructGEP(builder, var_ref_pointer, property_index, "gep");
+    *value = LLVMBuildStructGEP(builder, var_ref_pointer, property_index, "");
     check(*value != NULL, "Unable to build GEP instruction");
 
     return 0;

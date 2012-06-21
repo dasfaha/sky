@@ -76,7 +76,7 @@ int eql_ast_var_ref_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0 && ptr != NULL, "Unable to retrieve variable pointer");
 
 	// Create load instruction.
-	*value = LLVMBuildLoad(builder, ptr, bdata(node->var_ref.name));
+	*value = LLVMBuildLoad(builder, ptr, "");
 	check(*value != NULL, "Unable to create load instruction");
 
     return 0;

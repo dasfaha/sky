@@ -120,7 +120,7 @@ int eql_ast_fcall_codegen(eql_ast_node *node, eql_module *module,
 	check_mem(function_name);
     
 	// Create load instruction for target object.
-	LLVMValueRef this_value = LLVMBuildLoad(builder, var_decl_value, "this");
+	LLVMValueRef this_value = LLVMBuildLoad(builder, var_decl_value, "");
 	check(this_value != NULL, "Unable to create load instruction");
 
     // Offset for methods.
@@ -146,7 +146,7 @@ int eql_ast_fcall_codegen(eql_ast_node *node, eql_module *module,
     }
 
     // Create call instruction.
-    *value = LLVMBuildCall(builder, func, args, arg_count+offset, "calltmp");
+    *value = LLVMBuildCall(builder, func, args, arg_count+offset, "");
 
     return 0;
 

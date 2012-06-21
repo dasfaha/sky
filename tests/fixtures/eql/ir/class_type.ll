@@ -4,6 +4,6 @@
 
 define void @main() {
 entry:
-  %myVar = alloca %Foo
+  %0 = alloca %Foo
   ret void
 }

@@ -2,8 +2,8 @@
 
 define i64 @main() {
 entry:
-  %foo = alloca i64
-  store i64 20, i64* %foo
-  %foo1 = load i64* %foo
-  ret i64 %foo1
+  %0 = alloca i64
+  store i64 20, i64* %0
+  %1 = load i64* %0
+  ret i64 %1
 }

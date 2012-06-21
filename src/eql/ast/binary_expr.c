@@ -107,12 +107,12 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
         // Cast int to float.
         if(lhs_type_kind == LLVMDoubleTypeKind && rhs_type_kind == LLVMIntegerTypeKind)
         {
-            rhs = LLVMBuildSIToFP(builder, rhs, lhs_type, "sitofptmp");
+            rhs = LLVMBuildSIToFP(builder, rhs, lhs_type, "");
         }
         // Cast float to int.
         else if(lhs_type_kind == LLVMIntegerTypeKind && rhs_type_kind == LLVMDoubleTypeKind)
         {
-            rhs = LLVMBuildFPToSI(builder, rhs, lhs_type, "fptositmp");
+            rhs = LLVMBuildFPToSI(builder, rhs, lhs_type, "");
         }
         // Throw error if it's any other conversion.
         else {
@@ -124,19 +124,19 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
     if(lhs_type_kind == LLVMDoubleTypeKind) {
         switch(node->binary_expr.operator) {
             case EQL_BINOP_PLUS: {
-                *value = LLVMBuildFAdd(builder, lhs, rhs, "faddtmp");
+                *value = LLVMBuildFAdd(builder, lhs, rhs, "");
                 break;
             }
             case EQL_BINOP_MINUS: {
-                *value = LLVMBuildFSub(builder, lhs, rhs, "fsubtmp");
+                *value = LLVMBuildFSub(builder, lhs, rhs, "");
                 break;
             }
             case EQL_BINOP_MUL: {
-                *value = LLVMBuildFMul(builder, lhs, rhs, "fmultmp");
+                *value = LLVMBuildFMul(builder, lhs, rhs, "");
                 break;
             }
             case EQL_BINOP_DIV: {
-                *value = LLVMBuildFDiv(builder, lhs, rhs, "fdivtmp");
+                *value = LLVMBuildFDiv(builder, lhs, rhs, "");
                 break;
             }
 			default: {
@@ -148,19 +148,19 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
     else {
         switch(node->binary_expr.operator) {
             case EQL_BINOP_PLUS: {
-                *value = LLVMBuildAdd(builder, lhs, rhs, "addtmp");
+                *value = LLVMBuildAdd(builder, lhs, rhs, "");
                 break;
             }
             case EQL_BINOP_MINUS: {
-                *value = LLVMBuildSub(builder, lhs, rhs, "subtmp");
+                *value = LLVMBuildSub(builder, lhs, rhs, "");
                 break;
             }
             case EQL_BINOP_MUL: {
-                *value = LLVMBuildMul(builder, lhs, rhs, "multmp");
+                *value = LLVMBuildMul(builder, lhs, rhs, "");
                 break;
             }
             case EQL_BINOP_DIV: {
-                *value = LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
+                *value = LLVMBuildSDiv(builder, lhs, rhs, "");
                 break;
             }
 			default: {
