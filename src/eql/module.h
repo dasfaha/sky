@@ -97,6 +97,8 @@ int eql_module_get_main_function(eql_module *module, void **ret);
 
 int eql_module_execute_int(eql_module *module, int64_t *ret);
 
+int eql_module_execute_float(eql_module *module, double *ret);
+
 
 //--------------------------------------
 // Debugging

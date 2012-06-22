@@ -144,3 +144,21 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
     eql_compiler_free(compiler); \
     bdestroy(module_name); \
     bdestroy(text);
+
+// Executes an EQL query that returns a Float.
+#define mu_assert_eql_execute_float(QUERY, EXPECTED) \
+    int rc; \
+    double ret; \
+    eql_module *module; \
+    bstring module_name = bfromcstr("eql"); \
+    bstring text = bfromcstr(QUERY); \
+    eql_compiler *compiler = eql_compiler_create(); \
+    rc = eql_compiler_compile(compiler, module_name, text, &module); \
+    mu_assert(rc == 0, "Unable to compile"); \
+    rc = eql_module_execute_float(module, &ret); \
+    mu_assert(rc == 0, "Unable to execute"); \
+    mu_assert(ret == EXPECTED, "Unexpected return value"); \
+    eql_module_free(module); \
+    eql_compiler_free(compiler); \
+    bdestroy(module_name); \
+    bdestroy(text);

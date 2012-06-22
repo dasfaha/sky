@@ -378,18 +378,46 @@ error:
 // Executes the main function of a EQL module that returns an Int.
 //
 // module - The module to execute.
-// ret    - A pointer to where the returned values should be sent.
+// ret    - A pointer to where the returned value should be sent.
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_module_execute_int(eql_module *module, int64_t *ret)
 {
     check(module != NULL, "Module required");
+    check(ret != NULL, "Return pointer required");
 
     // Generate a pointer to the main function.
     void *fp;
     int rc = eql_module_get_main_function(module, &fp);
     check(rc == 0 && fp != NULL, "Unable to retrieve main function");
     int64_t (*FP)() = (int64_t (*)())(intptr_t)fp;
+    
+    // Execute function and return value.
+    *ret = FP();
+
+    return 0;
+    
+error:
+    *ret = 0;
+    return -1;
+}
+
+// Executes the main function of a EQL module that returns a Float
+//
+// module - The module to execute.
+// ret    - A pointer to where the returned value should be sent.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_execute_float(eql_module *module, double *ret)
+{
+    check(module != NULL, "Module required");
+    check(ret != NULL, "Return pointer required");
+
+    // Generate a pointer to the main function.
+    void *fp;
+    int rc = eql_module_get_main_function(module, &fp);
+    check(rc == 0 && fp != NULL, "Unable to retrieve main function");
+    double (*FP)() = (double (*)())(intptr_t)fp;
     
     // Execute function and return value.
     *ret = FP();

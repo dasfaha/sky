@@ -70,6 +70,15 @@ int test_eql_compile_float_literal() {
     return 0;
 }
 
+//--------------------------------------
+// Execute  
+//--------------------------------------
+
+int test_eql_execute_float_literal() {
+    mu_assert_eql_execute_float("return 10.25;", 10.25);
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -82,6 +91,7 @@ int all_tests() {
     mu_run_test(test_eql_float_literal_parse);
     mu_run_test(test_eql_float_literal_get_type);
     mu_run_test(test_eql_compile_float_literal);
+    mu_run_test(test_eql_execute_float_literal);
     return 0;
 }
 
