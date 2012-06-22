@@ -139,7 +139,7 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
     mu_assert(rc == 0, "Unable to compile"); \
     rc = eql_module_execute_int(module, &ret); \
     mu_assert(rc == 0, "Unable to execute"); \
-    mu_assert(ret == EXPECTED, "Unexpected return value"); \
+    mu_assert(ret == EXPECTED, "Unexpected return value: %lld", ret); \
     eql_module_free(module); \
     eql_compiler_free(compiler); \
     bdestroy(module_name); \
@@ -157,7 +157,7 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
     mu_assert(rc == 0, "Unable to compile"); \
     rc = eql_module_execute_float(module, &ret); \
     mu_assert(rc == 0, "Unable to execute"); \
-    mu_assert(ret == EXPECTED, "Unexpected return value"); \
+    mu_assert(ret == EXPECTED, "Unexpected return value: %f", ret); \
     eql_module_free(module); \
     eql_compiler_free(compiler); \
     bdestroy(module_name); \

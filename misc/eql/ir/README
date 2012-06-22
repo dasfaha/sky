@@ -1,0 +1,13 @@
+This directory contains simple C examples that can be compiled with Clang to
+produce reference LLVM IR. This is used to match up constructs within EQL to
+similar constructs in C to make sure that their LLVM IR representation is the
+same.
+
+To emit the LLVM IR, execute the following command:
+
+    $ clang -S -emit-llvm my_file.c
+
+The resulting IR file will be `my_file.s`. You can also execute the make
+command to generate IR for all the C files:
+
+    $ make llvm-ir-examples

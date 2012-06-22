@@ -186,6 +186,15 @@ int test_eql_binary_expr_get_type() {
     return 0;
 }
 
+//--------------------------------------
+// Execute  
+//--------------------------------------
+
+int test_eql_execute_binary_expr() {
+    mu_assert_eql_execute_int("return 100 + 5 * (3 + 1);", 120);
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -209,6 +218,7 @@ int all_tests() {
     mu_run_test(test_eql_compile_binary_expr_mul);
     mu_run_test(test_eql_compile_binary_expr_div);
     mu_run_test(test_eql_binary_expr_get_type);
+    mu_run_test(test_eql_execute_binary_expr);
     return 0;
 }
 

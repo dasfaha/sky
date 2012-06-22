@@ -70,6 +70,17 @@ int test_eql_compile_staccess() {
 }
 
 
+//--------------------------------------
+// Execute
+//--------------------------------------
+
+int test_eql_execute_staccess() {
+    mu_assert_eql_execute_int("class Foo { public Int bar; public Int baz; } Foo x; x.baz = 20; return x.baz;", 20);
+    return 0;
+}
+
+
+
 //==============================================================================
 //
 // Setup
@@ -80,6 +91,7 @@ int all_tests() {
     mu_run_test(test_eql_ast_staccess_create);
     mu_run_test(test_eql_parse_staccess);
     mu_run_test(test_eql_compile_staccess);
+    //mu_run_test(test_eql_execute_staccess);
     return 0;
 }
 

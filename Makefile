@@ -18,6 +18,9 @@ LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
 TEST_SOURCES=$(wildcard tests/*_tests.c tests/**/*_tests.c)
 TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 
+LLVM_IR_SOURCES=$(wildcard misc/eql/ir/*.c)
+LLVM_IR_OBJECTS=$(patsubst %.c,%.s,${LLVM_IR_SOURCES})
+
 LEX=flex
 YACC=bison
 YFLAGS=-dv
@@ -87,10 +90,22 @@ $(TEST_OBJECTS): %: %.c build/tests build/libsky.a
 
 
 ################################################################################
+# LLVM IR Examples
+################################################################################
+
+.PHONY: llvm-ir-examples
+llvm-ir-examples: $(LLVM_IR_OBJECTS)
+
+$(LLVM_IR_OBJECTS): %.s: %.c
+	clang -S -emit-llvm -o $@ $<
+
+
+################################################################################
 # Clean up
 ################################################################################
 
 clean: 
 	rm -rf build ${OBJECTS} ${TEST_OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}
+	rm -rf misc/eql/ir/*.s
 	rm -rf tests/*.dSYM
 	rm -rf tmp/*

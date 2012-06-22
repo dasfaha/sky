@@ -70,6 +70,15 @@ int test_eql_compile_var_assign() {
     return 0;
 }
 
+//--------------------------------------
+// Execute
+//--------------------------------------
+
+int test_eql_execute_var_assign() {
+    mu_assert_eql_execute_int("Int foo; foo = 20; foo = foo + 5; return foo;", 25);
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -81,6 +90,7 @@ int all_tests() {
     mu_run_test(test_eql_ast_var_assign_create);
     mu_run_test(test_eql_parse_var_assign);
     mu_run_test(test_eql_compile_var_assign);
+    mu_run_test(test_eql_execute_var_assign);
     return 0;
 }
 
