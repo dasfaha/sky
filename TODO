@@ -2,9 +2,6 @@
 - Parser
   - Maintain a listing of referenced classes.
 
-- if
-- foreach
-
 - Compiler
   - eql_compile
     - Create module (DONE)

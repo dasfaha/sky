@@ -80,6 +80,16 @@ int test_eql_compile_int_literal() {
 }
 
 
+//--------------------------------------
+// Execute  
+//--------------------------------------
+
+int test_eql_execute_int_literal() {
+    mu_assert_eql_execute_int("return 200;", 200);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -91,6 +101,7 @@ int all_tests() {
     mu_run_test(test_eql_parse_int_literal);
     mu_run_test(test_eql_int_literal_get_type);
     mu_run_test(test_eql_compile_int_literal);
+    mu_run_test(test_eql_execute_int_literal);
     return 0;
 }
 

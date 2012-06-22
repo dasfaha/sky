@@ -126,3 +126,21 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
     eql_compiler_free(compiler); \
     bdestroy(module_name); \
     bdestroy(text);
+
+// Executes an EQL query that returns an Int.
+#define mu_assert_eql_execute_int(QUERY, EXPECTED) \
+    int rc; \
+    int64_t ret; \
+    eql_module *module; \
+    bstring module_name = bfromcstr("eql"); \
+    bstring text = bfromcstr(QUERY); \
+    eql_compiler *compiler = eql_compiler_create(); \
+    rc = eql_compiler_compile(compiler, module_name, text, &module); \
+    mu_assert(rc == 0, "Unable to compile"); \
+    rc = eql_module_execute_int(module, &ret); \
+    mu_assert(rc == 0, "Unable to execute"); \
+    mu_assert(ret == EXPECTED, "Unexpected return value"); \
+    eql_module_free(module); \
+    eql_compiler_free(compiler); \
+    bdestroy(module_name); \
+    bdestroy(text);

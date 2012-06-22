@@ -45,10 +45,21 @@ eql_module *eql_module_create(bstring name, eql_compiler *compiler)
 	module->types = NULL;
 	module->type_nodes = NULL;
 	module->type_count = 0;
+
+    // Initialize LLVM.
+    LLVMInitializeNativeTarget();
+    LLVMLinkInJIT();
+
+    // Initialize engine.
+    char *msg = NULL;
+    if(LLVMCreateExecutionEngineForModule(&module->llvm_engine, module->llvm_module, &msg) == 1) {
+        sentinel("Unable to initialize execution engine: %s", msg);
+    }
 	
     return module;
     
 error:
+    if(msg != NULL) LLVMDisposeMessage(msg);
     eql_module_free(module);
     return NULL;
 }
@@ -335,6 +346,60 @@ error:
 	return -1;
 }
 
+
+//--------------------------------------
+// Execution
+//--------------------------------------
+
+// Retrieves the function pointer for the main function of a module.
+//
+// module - The module that contains the main function.
+// ret    - A pointer to where the function pointer should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_get_main_function(eql_module *module, void **ret)
+{
+    check(module != NULL, "Module required");
+
+    // Find a reference to the main function.
+    LLVMValueRef func_value = LLVMGetNamedFunction(module->llvm_module, "main");
+    check(func_value != NULL, "Main function not found in module");
+    
+    // Generate a pointer to the main function.
+    *ret = LLVMGetPointerToGlobal(module->llvm_engine, func_value);
+
+    return 0;
+    
+error:
+    *ret = NULL;
+    return -1;
+}
+
+// Executes the main function of a EQL module that returns an Int.
+//
+// module - The module to execute.
+// ret    - A pointer to where the returned values should be sent.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_execute_int(eql_module *module, int64_t *ret)
+{
+    check(module != NULL, "Module required");
+
+    // Generate a pointer to the main function.
+    void *fp;
+    int rc = eql_module_get_main_function(module, &fp);
+    check(rc == 0 && fp != NULL, "Unable to retrieve main function");
+    int64_t (*FP)() = (int64_t (*)())(intptr_t)fp;
+    
+    // Execute function and return value.
+    *ret = FP();
+
+    return 0;
+    
+error:
+    *ret = 0;
+    return -1;
+}
 
 
 //======================================

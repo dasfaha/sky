@@ -1,6 +1,7 @@
 #ifndef _eql_module_h
 #define _eql_module_h
 
+#include <inttypes.h>
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/Transforms/Scalar.h>
@@ -88,9 +89,18 @@ int eql_module_add_variable(eql_module *module, eql_ast_node *var_decl,
 	LLVMValueRef value);
 
 
-//======================================
+//--------------------------------------
+// Execution
+//--------------------------------------
+
+int eql_module_get_main_function(eql_module *module, void **ret);
+
+int eql_module_execute_int(eql_module *module, int64_t *ret);
+
+
+//--------------------------------------
 // Debugging
-//======================================
+//--------------------------------------
 
 int eql_module_dump(eql_module *module);
 
