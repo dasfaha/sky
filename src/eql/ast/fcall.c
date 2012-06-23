@@ -100,28 +100,28 @@ int eql_ast_fcall_codegen(eql_ast_node *node, eql_module *module,
 {
     int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_FCALL, "Node type expected to be 'function call'");
-	check(module != NULL, "Module required");
-	check(module->llvm_function != NULL, "Not currently in a function");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_FCALL, "Node type expected to be 'function call'");
+    check(module != NULL, "Module required");
+    check(module->llvm_function != NULL, "Not currently in a function");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
     // Retrieve the object this function is being called by.
-	eql_ast_node *var_decl;
-	LLVMValueRef var_decl_value;
-	rc = eql_module_get_variable(module, &BSTR_THIS, &var_decl, &var_decl_value);
-	check(rc == 0, "Unable to retrieve variable declaration: this");
-	check(var_decl != NULL, "No variable declaration found: this");
-	check(var_decl_value != NULL, "No LLVM value for variable declaration: this");
+    eql_ast_node *var_decl;
+    LLVMValueRef var_decl_value;
+    rc = eql_module_get_variable(module, &BSTR_THIS, &var_decl, &var_decl_value);
+    check(rc == 0, "Unable to retrieve variable declaration: this");
+    check(var_decl != NULL, "No variable declaration found: this");
+    check(var_decl_value != NULL, "No LLVM value for variable declaration: this");
 
     // Determine function name.
-	bstring function_name = bformat("%s___%s", bdata(var_decl->var_decl.type), bdata(node->fcall.name));
-	check_mem(function_name);
+    bstring function_name = bformat("%s___%s", bdata(var_decl->var_decl.type), bdata(node->fcall.name));
+    check_mem(function_name);
     
-	// Create load instruction for target object.
-	LLVMValueRef this_value = LLVMBuildLoad(builder, var_decl_value, "");
-	check(this_value != NULL, "Unable to create load instruction");
+    // Create load instruction for target object.
+    LLVMValueRef this_value = LLVMBuildLoad(builder, var_decl_value, "");
+    check(this_value != NULL, "Unable to create load instruction");
 
     // Offset for methods.
     int offset = 1;
@@ -173,18 +173,18 @@ int eql_ast_fcall_get_type(eql_ast_node *node, bstring *type)
     check(node != NULL, "Node required");
     check(node->type == EQL_AST_TYPE_FCALL, "Node type must be 'function call'");
 
-	// Find class
-	eql_ast_node *parent = node->parent;
-	while(parent != NULL) {
-	    if(parent->type == EQL_AST_TYPE_CLASS) {
+    // Find class
+    eql_ast_node *parent = node->parent;
+    while(parent != NULL) {
+        if(parent->type == EQL_AST_TYPE_CLASS) {
             *type = parent->class.name;
             break;
-	    }
+        }
 
-		parent = parent->parent;
-	}
+        parent = parent->parent;
+    }
 
-	sentinel("Unable to find function call type: %s", bdata(node->fcall.name));
+    sentinel("Unable to find function call type: %s", bdata(node->fcall.name));
 
 error:
     *type = NULL;
@@ -192,3 +192,37 @@ error:
 }
 
 
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_fcall_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<fcall name='%s'>\n", bdata(node->fcall.name));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    unsigned int i;
+    for(i=0; i<node->fcall.arg_count; i++) {
+        rc = eql_ast_node_dump(node->fcall.args[i], ret);
+        check(rc == 0, "Unable to dump fcall argument");
+    }
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
+}

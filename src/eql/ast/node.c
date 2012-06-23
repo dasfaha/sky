@@ -472,12 +472,12 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump function");
             break;
         }
-        /*
         case EQL_AST_TYPE_FCALL: {
             rc = eql_ast_fcall_dump(node, ret);
             check(rc == 0, "Unable to dump function call");
             break;
         }
+        /*
         case EQL_AST_TYPE_BLOCK: {
             rc = eql_ast_block_dump(node, ret);
             check(rc == 0, "Unable to dump block");

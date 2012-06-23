@@ -42,6 +42,13 @@ int test_eql_ast_fcall_create() {
     mu_assert(node->fcall.args[0]->parent == node, "");
     mu_assert(node->fcall.args[1] == expr2, "");
     mu_assert(node->fcall.args[1]->parent == node, "");
+
+    mu_assert_eql_node_dump(node,
+        "<fcall name='foo'>\n"
+        "  <int-literal value='10'>\n"
+        "  <int-literal value='20'>\n"
+    );
+
     eql_ast_node_free(node);
     return 0;
 }
