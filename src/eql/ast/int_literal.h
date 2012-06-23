@@ -45,4 +45,11 @@ int eql_ast_int_literal_codegen(struct eql_ast_node *node,
 
 int eql_ast_int_literal_get_type(eql_ast_node *node, bstring *type);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_int_literal_dump(eql_ast_node *node, bstring ret);
+
 #endif

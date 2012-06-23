@@ -162,3 +162,14 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
     eql_compiler_free(compiler); \
     bdestroy(module_name); \
     bdestroy(text);
+
+// Asserts the contents of an EQL AST dump.
+#define mu_assert_eql_node_dump(NODE, EXPECTED) \
+    bstring actual = bfromcstr(""); \
+    bstring expected = bfromcstr(EXPECTED); \
+    int rc = eql_ast_node_dump(node, actual); \
+    mu_assert(rc == 0, "Unable to dump"); \
+    mu_assert(biseq(actual, expected), "Unexpected dump.\n\nExpected:\n%s\n\nActual:\n%s", bdata(expected), bdata(actual)); \
+    bdestroy(actual); \
+    bdestroy(expected);
+

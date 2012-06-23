@@ -114,7 +114,14 @@ int eql_ast_node_get_var_pointer(eql_ast_node *node, eql_module *module,
 int eql_ast_node_get_type(eql_ast_node *node, bstring *type);
 
 int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
-	eql_ast_node **var_decl);
+    eql_ast_node **var_decl);
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_node_dump(eql_ast_node *node, bstring ret);
 
 
 #endif

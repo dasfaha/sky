@@ -359,3 +359,106 @@ error:
     *var_decl = NULL;
     return -1;
 }
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Recursively dumps the abstract syntax tree to a string.
+//
+// node - The AST node to dump.
+// ret  - A pointer to a bstring to concatenate to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_node_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node is required");
+
+    // Delegate dump to AST nodes.
+    switch(node->type) {
+        case EQL_AST_TYPE_INT_LITERAL: {
+            rc = eql_ast_int_literal_dump(node, ret);
+            check(rc == 0, "Unable to dump literal integer node");
+            break;
+        }
+        /*
+        case EQL_AST_TYPE_FLOAT_LITERAL: {
+            rc = eql_ast_float_literal_dump(node, ret);
+            check(rc == 0, "Unable to dump literal float");
+            break;
+        }
+        case EQL_AST_TYPE_BINARY_EXPR: {
+            rc = eql_ast_binary_expr_dump(node, ret);
+            check(rc == 0, "Unable to dump binary expression");
+            break;
+        }
+        case EQL_AST_TYPE_VAR_DECL: {
+            rc = eql_ast_var_decl_dump(node, ret);
+            check(rc == 0, "Unable to dump variable declaration");
+            break;
+        }
+        case EQL_AST_TYPE_VAR_REF: {
+            rc = eql_ast_var_ref_dump(node, ret);
+            check(rc == 0, "Unable to dump variable reference");
+            break;
+        }
+        case EQL_AST_TYPE_VAR_ASSIGN: {
+            rc = eql_ast_var_assign_dump(node, ret);
+            check(rc == 0, "Unable to dump variable assignment");
+            break;
+        }
+        case EQL_AST_TYPE_STACCESS: {
+            rc = eql_ast_staccess_dump(node, ret);
+            check(rc == 0, "Unable to dump struct member access");
+            break;
+        }
+        case EQL_AST_TYPE_FRETURN: {
+            rc = eql_ast_freturn_dump(node, ret);
+            check(rc == 0, "Unable to dump function return");
+            break;
+        }
+        case EQL_AST_TYPE_FARG: {
+            rc = eql_ast_farg_dump(node, ret);
+            check(rc == 0, "Unable to dump function argument");
+            break;
+        }
+        case EQL_AST_TYPE_FUNCTION: {
+            rc = eql_ast_function_dump(node, ret);
+            check(rc == 0, "Unable to dump function");
+            break;
+        }
+        case EQL_AST_TYPE_FCALL: {
+            rc = eql_ast_fcall_dump(node, ret);
+            check(rc == 0, "Unable to dump function call");
+            break;
+        }
+        case EQL_AST_TYPE_BLOCK: {
+            rc = eql_ast_block_dump(node, ret);
+            check(rc == 0, "Unable to dump block");
+            break;
+        }
+        case EQL_AST_TYPE_CLASS: {
+            rc = eql_ast_class_dump(node, ret);
+            check(rc == 0, "Unable to dump class");
+            break;
+        }
+        case EQL_AST_TYPE_METHOD: {
+            rc = eql_ast_method_dump(node, ret);
+            check(rc == 0, "Unable to dump method");
+            break;
+        }
+        */
+        default:
+        {
+            sentinel("Unable to dump AST node");
+            break;
+        }
+    }
+
+    return 0;
+
+error:
+    return -1;
+}

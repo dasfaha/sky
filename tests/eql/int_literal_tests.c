@@ -37,6 +37,14 @@ int test_eql_ast_int_literal_create() {
     return 0;
 }
 
+int test_eql_ast_int_literal_dump() {
+    eql_ast_node *node;
+    eql_ast_int_literal_create(20, &node);
+    mu_assert_eql_node_dump(node, "<int-literal value='20'>\n");
+    eql_ast_node_free(node);
+    return 0;
+}
+
 
 //--------------------------------------
 // Parser
@@ -98,6 +106,7 @@ int test_eql_execute_int_literal() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_int_literal_create);
+    mu_run_test(test_eql_ast_int_literal_dump);
     mu_run_test(test_eql_parse_int_literal);
     mu_run_test(test_eql_int_literal_get_type);
     mu_run_test(test_eql_compile_int_literal);
