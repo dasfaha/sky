@@ -79,3 +79,29 @@ error:
     return -1;
 }
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_float_literal_dump(eql_ast_node *node, bstring ret)
+{
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+    
+    bstring str = bformat("<float-literal value='%.5f'>\n", node->float_literal.value);
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
+}
