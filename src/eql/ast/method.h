@@ -50,4 +50,11 @@ int eql_ast_method_codegen(eql_ast_node *node, eql_module *module,
 
 int eql_ast_method_generate_this_farg(eql_ast_node *node);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_method_dump(eql_ast_node *node, bstring ret);
+
 #endif

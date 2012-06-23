@@ -482,7 +482,6 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump block");
             break;
         }
-        /*
         case EQL_AST_TYPE_CLASS: {
             rc = eql_ast_class_dump(node, ret);
             check(rc == 0, "Unable to dump class");
@@ -493,7 +492,11 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump method");
             break;
         }
-        */
+        case EQL_AST_TYPE_PROPERTY: {
+            rc = eql_ast_property_dump(node, ret);
+            check(rc == 0, "Unable to dump property");
+            break;
+        }
         default:
         {
             sentinel("Unable to dump AST node");

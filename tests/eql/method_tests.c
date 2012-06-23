@@ -35,6 +35,12 @@ int test_eql_ast_method_create() {
     mu_assert(node->method.access == EQL_ACCESS_PUBLIC, "");
     mu_assert(node->method.function == function, "");
     mu_assert(node->method.function->parent == node, "");
+
+    mu_assert_eql_node_dump(node,
+        "<method>\n"
+        "  <function name='foo' return-type='bar'>\n"
+    );
+
     eql_ast_node_free(node);
     return 0;
 }

@@ -244,13 +244,13 @@ int eql_ast_class_get_property_index(eql_ast_node *node,
 {
     unsigned int i;
     
-	// Loop over properties to find one that matches the name.
-	for(i=0; i<node->class.property_count; i++) {
-		if(biseq(node->class.properties[i]->property.var_decl->var_decl.name, property_name)) {
+    // Loop over properties to find one that matches the name.
+    for(i=0; i<node->class.property_count; i++) {
+        if(biseq(node->class.properties[i]->property.var_decl->var_decl.name, property_name)) {
             *property_index = i;
             return 0;
-		}
-	}
+        }
+    }
 
     sentinel("Unable to find property index for: %s", bdata(property_name));
     
@@ -336,21 +336,21 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_class_codegen(eql_ast_node *node, eql_module *module)
 {
-	int rc;
+    int rc;
     unsigned int i;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
-	check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
+    check(module != NULL, "Module required");
 
-	// Generate the methods of the class.
-	unsigned int method_count = node->class.method_count;
-	for(i=0; i<method_count; i++) {
-		eql_ast_node *method = node->class.methods[i];
-		LLVMValueRef func = NULL;
-		rc = eql_ast_node_codegen(method, module, &func);
-		check(rc == 0, "Unable to codegen method: %s", bdata(method->method.function->function.name));
-	}
+    // Generate the methods of the class.
+    unsigned int method_count = node->class.method_count;
+    for(i=0; i<method_count; i++) {
+        eql_ast_node *method = node->class.methods[i];
+        LLVMValueRef func = NULL;
+        rc = eql_ast_node_codegen(method, module, &func);
+        check(rc == 0, "Unable to codegen method: %s", bdata(method->method.function->function.name));
+    }
     
     return 0;
 
@@ -367,52 +367,96 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_class_codegen_type(eql_module *module, eql_ast_node *node)
 {
-	int rc;
-	unsigned int i;
-	
-	check(module != NULL, "Module required");
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
+    int rc;
+    unsigned int i;
+    
+    check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
 
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
-	// Generate struct for class and properties.
-	LLVMTypeRef llvm_struct = LLVMStructCreateNamed(context, bdata(node->class.name));
+    // Generate struct for class and properties.
+    LLVMTypeRef llvm_struct = LLVMStructCreateNamed(context, bdata(node->class.name));
 
-	// Generate the properties of the struct.
-	unsigned int property_count = node->class.property_count;
-	unsigned int element_count;
-	
-	// If there are no properties then generate a single property.
-	LLVMTypeRef *elements;
-	if(property_count == 0) {
-		elements = malloc(sizeof(LLVMTypeRef));
+    // Generate the properties of the struct.
+    unsigned int property_count = node->class.property_count;
+    unsigned int element_count;
+    
+    // If there are no properties then generate a single property.
+    LLVMTypeRef *elements;
+    if(property_count == 0) {
+        elements = malloc(sizeof(LLVMTypeRef));
         element_count = 1;
         bstring intTypeName = bfromcstr("Int");
-		rc = eql_module_get_type_ref(module, intTypeName, NULL, &elements[0]);
+        rc = eql_module_get_type_ref(module, intTypeName, NULL, &elements[0]);
         bdestroy(intTypeName);
-		check(rc == 0, "Unable to retrieve Int type");
-	}
-	else {
+        check(rc == 0, "Unable to retrieve Int type");
+    }
+    else {
         element_count = property_count;
-		elements = malloc(sizeof(LLVMTypeRef) * property_count);
-		for(i=0; i<property_count; i++) {
-			eql_ast_node *property = node->class.properties[i];
-			bstring property_type = property->property.var_decl->var_decl.type;
-			rc = eql_module_get_type_ref(module, property_type, NULL, &elements[i]);
-			check(rc == 0, "Unable to retrieve type: %s", bdata(property_type));
-		}
-	}
+        elements = malloc(sizeof(LLVMTypeRef) * property_count);
+        for(i=0; i<property_count; i++) {
+            eql_ast_node *property = node->class.properties[i];
+            bstring property_type = property->property.var_decl->var_decl.type;
+            rc = eql_module_get_type_ref(module, property_type, NULL, &elements[i]);
+            check(rc == 0, "Unable to retrieve type: %s", bdata(property_type));
+        }
+    }
 
-	// Set the struct body.
-	LLVMStructSetBody(llvm_struct, elements, element_count, false);
+    // Set the struct body.
+    LLVMStructSetBody(llvm_struct, elements, element_count, false);
 
-	// Add type to the module.
-	rc = eql_module_add_type_ref(module, node, llvm_struct);	
-	check(rc == 0, "Unable to add type to module");
-	
-	return 0;
-	
+    // Add type to the module.
+    rc = eql_module_add_type_ref(module, node, llvm_struct);    
+    check(rc == 0, "Unable to add type to module");
+    
+    return 0;
+    
 error:
-	return -1;
+    return -1;
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_class_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<class name='%s'>\n", bdatae(node->class.name, ""));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    unsigned int i;
+    for(i=0; i<node->class.method_count; i++) {
+        rc = eql_ast_node_dump(node->class.methods[i], ret);
+        check(rc == 0, "Unable to dump class method");
+    }
+    for(i=0; i<node->class.property_count; i++) {
+        rc = eql_ast_node_dump(node->class.properties[i], ret);
+        check(rc == 0, "Unable to dump class property");
+    }
+    for(i=0; i<node->class.metadata_count; i++) {
+        rc = eql_ast_node_dump(node->class.metadatas[i], ret);
+        check(rc == 0, "Unable to dump class metadata");
+    }
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
 }

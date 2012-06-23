@@ -55,6 +55,14 @@ int test_eql_ast_class_create() {
     mu_assert(node->class.properties[0]->parent == node, "");
     mu_assert(node->class.properties[1] == property2, "");
     mu_assert(node->class.properties[1]->parent == node, "");
+
+    mu_assert_eql_node_dump(node,
+        "<class name='Foo'>\n"
+        "  <method>\n"
+        "  <property>\n"
+        "  <property>\n"
+    );
+
     eql_ast_node_free(node);
     return 0;
 }

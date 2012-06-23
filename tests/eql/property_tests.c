@@ -35,6 +35,12 @@ int test_eql_ast_property_create() {
     mu_assert(node->property.access == EQL_ACCESS_PUBLIC, "");
     mu_assert(node->property.var_decl == var_decl, "");
     mu_assert(node->property.var_decl->parent == node, "");
+
+    mu_assert_eql_node_dump(node,
+        "<property>\n"
+        "  <var-decl type='foo' name='bar'>\n"
+    );
+
     eql_ast_node_free(node);
     return 0;
 }

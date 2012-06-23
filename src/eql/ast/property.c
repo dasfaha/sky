@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "../../dbg.h"
 
-#include "property.h"
 #include "node.h"
 
 //==============================================================================
@@ -9,6 +8,10 @@
 // Functions
 //
 //==============================================================================
+
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
 
 // Creates an AST node for a property.
 //
@@ -44,4 +47,36 @@ void eql_ast_property_free(struct eql_ast_node *node)
 {
     if(node->property.var_decl) eql_ast_node_free(node->property.var_decl);
     node->property.var_decl = NULL;
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_property_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    check(bcatcstr(ret, "<property>\n") == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->property.var_decl != NULL) {
+        rc = eql_ast_node_dump(node->property.var_decl, ret);
+        check(rc == 0, "Unable to dump method function");
+    }
+
+    return 0;
+
+error:
+    return -1;
 }

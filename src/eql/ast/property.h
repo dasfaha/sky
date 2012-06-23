@@ -26,9 +26,20 @@ typedef struct {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 int eql_ast_property_create(eql_ast_access_e access,
     struct eql_ast_node *var_decl, struct eql_ast_node **ret);
 
 void eql_ast_property_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_property_dump(eql_ast_node *node, bstring ret);
 
 #endif

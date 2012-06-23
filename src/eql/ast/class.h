@@ -73,4 +73,11 @@ int eql_ast_class_codegen(eql_ast_node *node, eql_module *module);
 
 int eql_ast_class_codegen_type(eql_module *module, eql_ast_node *node);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_class_dump(eql_ast_node *node, bstring ret);
+
 #endif

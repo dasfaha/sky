@@ -63,18 +63,18 @@ void eql_ast_method_free(struct eql_ast_node *node)
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_method_codegen(eql_ast_node *node, eql_module *module,
-						   LLVMValueRef *value)
+                           LLVMValueRef *value)
 {
-	int rc;
+    int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_METHOD, "Node type must be 'method'");
-	check(node->method.function != NULL, "Method function required");
-	check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_METHOD, "Node type must be 'method'");
+    check(node->method.function != NULL, "Method function required");
+    check(module != NULL, "Module required");
 
-	// Delegate LLVM generation to the function.
-	rc = eql_ast_function_codegen(node->method.function, module, value);
-	check(rc == 0, "Unable to codegen method");
+    // Delegate LLVM generation to the function.
+    rc = eql_ast_function_codegen(node->method.function, module, value);
+    check(rc == 0, "Unable to codegen method");
     
     return 0;
 
@@ -95,13 +95,13 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_method_generate_this_farg(eql_ast_node *node)
 {
-	int rc;
+    int rc;
     eql_ast_node *farg, *var_decl;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_METHOD, "Node type must be 'method'");
-	check(node->parent != NULL, "Method parent required");
-	check(node->parent->type == EQL_AST_TYPE_CLASS, "Node parent type must be 'class'");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_METHOD, "Node type must be 'method'");
+    check(node->parent != NULL, "Method parent required");
+    check(node->parent->type == EQL_AST_TYPE_CLASS, "Node parent type must be 'class'");
 
     eql_ast_node *function = node->method.function;
 
@@ -130,6 +130,38 @@ int eql_ast_method_generate_this_farg(eql_ast_node *node)
 
     return 0;
     
+error:
+    return -1;
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_method_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    check(bcatcstr(ret, "<method>\n") == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->method.function != NULL) {
+        rc = eql_ast_node_dump(node->method.function, ret);
+        check(rc == 0, "Unable to dump method function");
+    }
+
+    return 0;
+
 error:
     return -1;
 }
