@@ -38,4 +38,11 @@ void eql_ast_var_assign_free(eql_ast_node *node);
 int eql_ast_var_assign_codegen(struct eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_var_assign_dump(eql_ast_node *node, bstring ret);
+
 #endif

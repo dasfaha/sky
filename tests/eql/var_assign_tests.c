@@ -37,6 +37,11 @@ int test_eql_ast_var_assign_create() {
     mu_assert(node->var_assign.var_ref->parent == node, "");
     mu_assert(node->var_assign.expr == int_literal, "");
     mu_assert(node->var_assign.expr->parent == node, "");
+    mu_assert_eql_node_dump(node,
+        "<var-assign>\n"
+        "  <var-ref name='foo'>\n"
+        "  <int-literal value='10'>\n"
+    );
     eql_ast_node_free(node);
     return 0;
 }

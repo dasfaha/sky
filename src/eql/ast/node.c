@@ -447,12 +447,12 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump variable reference");
             break;
         }
-        /*
         case EQL_AST_TYPE_VAR_ASSIGN: {
             rc = eql_ast_var_assign_dump(node, ret);
             check(rc == 0, "Unable to dump variable assignment");
             break;
         }
+        /*
         case EQL_AST_TYPE_STACCESS: {
             rc = eql_ast_staccess_dump(node, ret);
             check(rc == 0, "Unable to dump struct member access");

@@ -83,23 +83,59 @@ int eql_ast_var_assign_codegen(eql_ast_node *node,
     
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-	// Generate expression.
+    // Generate expression.
     LLVMValueRef expr;
     rc = eql_ast_node_codegen(node->var_assign.expr, module, &expr);
     check(rc == 0 && expr != NULL, "Unable to codegen variable assignment expression");
-	
-	// Find the variable declaration.
+    
+    // Find the variable declaration.
     LLVMValueRef ptr = NULL;
     rc = eql_ast_node_get_var_pointer(node->var_assign.var_ref, module, &ptr);
     check(rc == 0 && ptr != NULL, "Unable to retrieve variable reference pointer");
 
-	// Create a store instruction.
-	*value = LLVMBuildStore(builder, expr, ptr);
-	check(*value != NULL, "Unable to generate store instruction");
+    // Create a store instruction.
+    *value = LLVMBuildStore(builder, expr, ptr);
+    check(*value != NULL, "Unable to generate store instruction");
 
     return 0;
 
 error:
     *value = NULL;
+    return -1;
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_var_assign_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    check(bcatcstr(ret, "<var-assign>\n") == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->var_assign.var_ref != NULL) {
+        rc = eql_ast_node_dump(node->var_assign.var_ref, ret);
+        check(rc == 0, "Unable to dump variable reference");
+    }
+    if(node->var_assign.expr != NULL) {
+        rc = eql_ast_node_dump(node->var_assign.expr, ret);
+        check(rc == 0, "Unable to dump expression");
+    }
+
+    return 0;
+
+error:
     return -1;
 }
