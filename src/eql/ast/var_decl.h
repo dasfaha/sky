@@ -36,6 +36,13 @@ void eql_ast_var_decl_free(struct eql_ast_node *node);
 //--------------------------------------
 
 int eql_ast_var_decl_codegen(struct eql_ast_node *node, eql_module *module,
-	LLVMValueRef *value);
+    LLVMValueRef *value);
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_var_decl_dump(eql_ast_node *node, bstring ret);
 
 #endif

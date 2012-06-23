@@ -33,6 +33,7 @@ int test_eql_ast_var_decl_create() {
     mu_assert(node->type == EQL_AST_TYPE_VAR_DECL, "");
     mu_assert(biseqcstr(node->var_decl.type, "foo"), "");
     mu_assert(biseqcstr(node->var_decl.name, "bar"), "");
+    mu_assert_eql_node_dump(node, "<var-decl type='foo' name='bar'>\n");
     eql_ast_node_free(node);
     return 0;
 }

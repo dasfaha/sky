@@ -437,12 +437,12 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump binary expression");
             break;
         }
-        /*
         case EQL_AST_TYPE_VAR_DECL: {
             rc = eql_ast_var_decl_dump(node, ret);
             check(rc == 0, "Unable to dump variable declaration");
             break;
         }
+        /*
         case EQL_AST_TYPE_VAR_REF: {
             rc = eql_ast_var_ref_dump(node, ret);
             check(rc == 0, "Unable to dump variable reference");
