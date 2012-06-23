@@ -25,6 +25,8 @@ int eql_ast_farg_create(struct eql_ast_node *var_decl, struct eql_ast_node **ret
     node->type = EQL_AST_TYPE_FARG;
     node->parent = NULL;
     node->farg.var_decl = var_decl;
+    if(var_decl != NULL) var_decl->parent = node;
+    
     *ret = node;
     return 0;
 
@@ -58,18 +60,18 @@ void eql_ast_farg_free(struct eql_ast_node *node)
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_farg_codegen(eql_ast_node *node, eql_module *module,
-						 LLVMValueRef *value)
+                         LLVMValueRef *value)
 {
-	int rc;
+    int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_FARG, "Node type must be 'function argument'");
-	check(node->farg.var_decl != NULL, "Function argument declaration required");
-	check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_FARG, "Node type must be 'function argument'");
+    check(node->farg.var_decl != NULL, "Function argument declaration required");
+    check(module != NULL, "Module required");
 
-	// Delegate LLVM generation to the variable declaration.
-	rc = eql_ast_node_codegen(node->farg.var_decl, module, value);
-	check(rc == 0, "Unable to codegen function argument");
+    // Delegate LLVM generation to the variable declaration.
+    rc = eql_ast_node_codegen(node->farg.var_decl, module, value);
+    check(rc == 0, "Unable to codegen function argument");
     
     return 0;
 
@@ -77,3 +79,34 @@ error:
     return -1;
 }
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_farg_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    check(bcatcstr(ret, "<farg>\n") == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->farg.var_decl != NULL) {
+        rc = eql_ast_node_dump(node->farg.var_decl, ret);
+        check(rc == 0, "Unable to dump variable declaration");
+    }
+
+    return 0;
+
+error:
+    return -1;
+}

@@ -32,6 +32,11 @@ int test_eql_ast_farg_create() {
     eql_ast_farg_create(var_decl, &node);
     mu_assert(node->type == EQL_AST_TYPE_FARG, "");
     mu_assert(node->farg.var_decl == var_decl, "");
+    mu_assert(node->farg.var_decl->parent == node, "");
+    mu_assert_eql_node_dump(node,
+        "<farg>\n"
+        "  <var-decl type='foo' name='bar'>\n"
+    );
     eql_ast_node_free(node);
     return 0;
 }

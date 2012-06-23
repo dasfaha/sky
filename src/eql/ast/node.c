@@ -462,12 +462,12 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump function return");
             break;
         }
-        /*
         case EQL_AST_TYPE_FARG: {
             rc = eql_ast_farg_dump(node, ret);
             check(rc == 0, "Unable to dump function argument");
             break;
         }
+        /*
         case EQL_AST_TYPE_FUNCTION: {
             rc = eql_ast_function_dump(node, ret);
             check(rc == 0, "Unable to dump function");

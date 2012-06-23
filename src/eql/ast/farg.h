@@ -37,4 +37,11 @@ void eql_ast_farg_free(eql_ast_node *node);
 int eql_ast_farg_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_farg_dump(eql_ast_node *node, bstring ret);
+
 #endif
