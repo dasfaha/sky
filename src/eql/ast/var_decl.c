@@ -73,36 +73,36 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
 {
     int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_VAR_DECL, "Node type expected to be 'variable declaration'");
-	check(module != NULL, "Module required");
-	check(module->llvm_function != NULL, "Not currently in a function");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_VAR_DECL, "Node type expected to be 'variable declaration'");
+    check(module != NULL, "Module required");
+    check(module->llvm_function != NULL, "Not currently in a function");
     check(node->var_decl.type != NULL, "Variable declaration type required");
     check(node->var_decl.name != NULL, "Variable declaration name required");
     
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-	// Save position;
-	LLVMBasicBlockRef originalBlock = LLVMGetInsertBlock(builder);
+    // Save position;
+    LLVMBasicBlockRef originalBlock = LLVMGetInsertBlock(builder);
 
-	// Position builder at the beginning of function.
-	LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(module->llvm_function);
-	LLVMPositionBuilder(builder, entryBlock, LLVMGetFirstInstruction(entryBlock));
-	
-	// Find LLVM type.
-	LLVMTypeRef type;
-	rc = eql_module_get_type_ref(module, node->var_decl.type, NULL, &type);
+    // Position builder at the beginning of function.
+    LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(module->llvm_function);
+    LLVMPositionBuilder(builder, entryBlock, LLVMGetFirstInstruction(entryBlock));
+    
+    // Find LLVM type.
+    LLVMTypeRef type;
+    rc = eql_module_get_type_ref(module, node->var_decl.type, NULL, &type);
     check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(node->var_decl.type));
 
-	// Add alloca.
-	*value = LLVMBuildAlloca(builder, type, "");
-	
-	// Store variable location in the current scope.
-	rc = eql_module_add_variable(module, node, *value);
+    // Add alloca.
+    *value = LLVMBuildAlloca(builder, type, "");
+    
+    // Store variable location in the current scope.
+    rc = eql_module_add_variable(module, node, *value);
     check(rc == 0, "Unable to add variable to scope: %s", bdata(node->var_decl.name));
-	
-	// Reposition builder at end of original block.
-	LLVMPositionBuilderAtEnd(builder, originalBlock);
+    
+    // Reposition builder at end of original block.
+    LLVMPositionBuilderAtEnd(builder, originalBlock);
 
     return 0;
 

@@ -32,6 +32,7 @@ int test_eql_ast_var_ref_create() {
     eql_ast_var_ref_create(&foo, &node);
     mu_assert(node->type == EQL_AST_TYPE_VAR_REF, "");
     mu_assert(biseqcstr(node->var_ref.name, "foo"), "");
+    mu_assert_eql_node_dump(node, "<var-ref name='foo'>\n");
     eql_ast_node_free(node);
     return 0;
 }
