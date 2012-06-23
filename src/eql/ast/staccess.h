@@ -48,4 +48,11 @@ int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
 
 int eql_ast_staccess_get_type(eql_ast_node *node, bstring *type);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_staccess_dump(eql_ast_node *node, bstring ret);
+
 #endif

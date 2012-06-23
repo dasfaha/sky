@@ -37,6 +37,10 @@ int test_eql_ast_staccess_create() {
     mu_assert(node->staccess.var_ref == var_ref, "");
     mu_assert(node->staccess.var_ref->parent == node, "");
     mu_assert(biseqcstr(node->staccess.member_name, "bar"), "");
+    mu_assert_eql_node_dump(node,
+        "<staccess member-name='bar'>\n"
+        "  <var-ref name='foo'>\n"
+    );
     eql_ast_node_free(node);
     return 0;
 }

@@ -73,21 +73,21 @@ int eql_ast_staccess_codegen(eql_ast_node *node, eql_module *module,
 {
     int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_STACCESS, "Node type expected to be 'struct member access'");
-	check(module != NULL, "Module required");
-	check(module->llvm_function != NULL, "Not currently in a function");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_STACCESS, "Node type expected to be 'struct member access'");
+    check(module != NULL, "Module required");
+    check(module->llvm_function != NULL, "Not currently in a function");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-	// Find the variable declaration.
+    // Find the variable declaration.
     LLVMValueRef ptr = NULL;
     rc = eql_ast_node_get_var_pointer(node->staccess.var_ref, module, &ptr);
     check(rc == 0 && ptr != NULL, "Unable to retrieve variable pointer");
 
-	// Create load instruction.
-	*value = LLVMBuildLoad(builder, ptr, "");
-	check(*value != NULL, "Unable to create load instruction");
+    // Create load instruction.
+    *value = LLVMBuildLoad(builder, ptr, "");
+    check(*value != NULL, "Unable to create load instruction");
 
     return 0;
 
@@ -108,15 +108,15 @@ int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
 {
     int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_STACCESS, "Node type expected to be 'struct member access'");
-	check(module != NULL, "Module required");
-	check(module->llvm_function != NULL, "Not currently in a function");
-	check(node->staccess.var_ref != NULL, "Variable reference required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_STACCESS, "Node type expected to be 'struct member access'");
+    check(module != NULL, "Module required");
+    check(module->llvm_function != NULL, "Not currently in a function");
+    check(node->staccess.var_ref != NULL, "Variable reference required");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-	// Find the struct reference.
+    // Find the struct reference.
     LLVMValueRef var_ref_pointer;
     rc = eql_ast_node_get_var_pointer(node->staccess.var_ref, module, &var_ref_pointer);
     check(rc == 0 && var_ref_pointer != NULL, "Unable to retrieve pointer to struct");
@@ -165,25 +165,59 @@ int eql_ast_staccess_get_type(eql_ast_node *node, bstring *type)
 
 
 
-	// Search up the parent hierarchy to find variable declaration.
-	eql_ast_node *var_decl = NULL;
-	eql_ast_node *parent = node->parent;
-	while(parent != NULL) {
-		int rc = eql_ast_node_get_var_decl(parent, node->staccess.var_ref->var_ref.name, &var_decl);
-		check(rc == 0, "Unable to search node for variable declarations");
-		
-		// If a declaration was found then return its type.
-		if(var_decl != NULL) {
+    // Search up the parent hierarchy to find variable declaration.
+    eql_ast_node *var_decl = NULL;
+    eql_ast_node *parent = node->parent;
+    while(parent != NULL) {
+        int rc = eql_ast_node_get_var_decl(parent, node->staccess.var_ref->var_ref.name, &var_decl);
+        check(rc == 0, "Unable to search node for variable declarations");
+        
+        // If a declaration was found then return its type.
+        if(var_decl != NULL) {
             *type = var_decl->var_decl.type;
-			return 0;
-		}
-		
-		parent = parent->parent;
-	}
+            return 0;
+        }
+        
+        parent = parent->parent;
+    }
 
-	sentinel("Unable to find variable declaration: %s", bdata(node->staccess.var_ref->var_ref.name));
+    sentinel("Unable to find variable declaration: %s", bdata(node->staccess.var_ref->var_ref.name));
 
 error:
     *type = NULL;
+    return -1;
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_staccess_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<staccess member-name='%s'>\n", bdata(node->staccess.member_name));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->staccess.var_ref != NULL) {
+        rc = eql_ast_node_dump(node->staccess.var_ref, ret);
+        check(rc == 0, "Unable to dump variable reference");
+    }
+
+    return 0;
+
+error:
     return -1;
 }
