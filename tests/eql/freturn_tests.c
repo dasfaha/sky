@@ -35,6 +35,10 @@ int test_eql_ast_freturn_create() {
     mu_assert(node->type == EQL_AST_TYPE_FRETURN, "");
     mu_assert(node->freturn.value == value, "");
     mu_assert(node->freturn.value->parent == node, "");
+    mu_assert_eql_node_dump(node,
+        "<freturn>\n"
+        "  <int-literal value='1'>\n"
+    );
     eql_ast_node_free(node);
     return 0;
 }

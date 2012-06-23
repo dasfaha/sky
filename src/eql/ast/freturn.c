@@ -81,3 +81,35 @@ error:
     *value = NULL;
     return -1;
 }
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_freturn_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    check(bcatcstr(ret, "<freturn>\n") == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->freturn.value != NULL) {
+        rc = eql_ast_node_dump(node->freturn.value, ret);
+        check(rc == 0, "Unable to dump return value");
+    }
+
+    return 0;
+
+error:
+    return -1;
+}

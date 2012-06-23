@@ -219,5 +219,6 @@ int eql_ast_staccess_dump(eql_ast_node *node, bstring ret)
     return 0;
 
 error:
+    if(str) bdestroy(str);
     return -1;
 }

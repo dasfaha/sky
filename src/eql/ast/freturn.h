@@ -37,4 +37,11 @@ void eql_ast_freturn_free(eql_ast_node *node);
 int eql_ast_freturn_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *type);
 
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_freturn_dump(eql_ast_node *node, bstring ret);
+
 #endif
