@@ -206,7 +206,7 @@ int eql_ast_staccess_dump(eql_ast_node *node, bstring ret)
     check(ret != NULL, "String required");
 
     // Append dump.
-    bstring str = bformat("<staccess member-name='%s'>\n", bdata(node->staccess.member_name));
+    bstring str = bformat("<staccess member-name='%s'>\n", bdatae(node->staccess.member_name, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 

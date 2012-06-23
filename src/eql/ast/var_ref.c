@@ -177,7 +177,7 @@ int eql_ast_var_ref_dump(eql_ast_node *node, bstring ret)
     check(node != NULL, "Node required");
     check(ret != NULL, "String required");
     
-    bstring str = bformat("<var-ref name='%s'>\n", bdata(node->var_ref.name));
+    bstring str = bformat("<var-ref name='%s'>\n", bdatae(node->var_ref.name, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 

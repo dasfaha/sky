@@ -127,7 +127,7 @@ int eql_ast_var_decl_dump(eql_ast_node *node, bstring ret)
     check(node != NULL, "Node required");
     check(ret != NULL, "String required");
     
-    bstring str = bformat("<var-decl type='%s' name='%s'>\n", bdata(node->var_decl.type), bdata(node->var_decl.name));
+    bstring str = bformat("<var-decl type='%s' name='%s'>\n", bdatae(node->var_decl.type, ""), bdatae(node->var_decl.name, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 

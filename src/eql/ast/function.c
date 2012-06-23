@@ -382,7 +382,7 @@ int eql_ast_function_dump(eql_ast_node *node, bstring ret)
     check(ret != NULL, "String required");
 
     // Append dump.
-    bstring str = bformat("<function name='%s' return-type='%s'>\n", bdata(node->function.name), bdata(node->function.return_type));
+    bstring str = bformat("<function name='%s' return-type='%s'>\n", bdatae(node->function.name, ""), bdatae(node->function.return_type, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 
@@ -392,12 +392,10 @@ int eql_ast_function_dump(eql_ast_node *node, bstring ret)
         rc = eql_ast_node_dump(node->function.args[i], ret);
         check(rc == 0, "Unable to dump function argument");
     }
-    /*
     if(node->function.body != NULL) {
         rc = eql_ast_node_dump(node->function.body, ret);
         check(rc == 0, "Unable to dump function body");
     }
-    */
 
     return 0;
 

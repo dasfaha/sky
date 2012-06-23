@@ -142,12 +142,12 @@ error:
 int eql_ast_block_codegen(eql_ast_node *node, eql_module *module, 
                           LLVMValueRef *value)
 {
-	int rc;
+    int rc;
 
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_BLOCK, "Node type expected to be 'block'");
-	check(node->parent != NULL, "Node parent required");
-	check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+    check(node->parent != NULL, "Node parent required");
+    check(module != NULL, "Module required");
     check(module->llvm_function != NULL, "Unable to add a block without a function");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
@@ -161,9 +161,9 @@ int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
         check(rc == 0, "Unable to codegen function arguments");
     }
    
-	// Add block scope.
-	rc = eql_module_push_scope(module, node);
-	check(rc == 0, "Unable to add block scope");
+    // Add block scope.
+    rc = eql_module_push_scope(module, node);
+    check(rc == 0, "Unable to add block scope");
 
     // Codegen expressions in block.
     unsigned int i;
@@ -173,9 +173,9 @@ int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
         check(rc == 0, "Unable to codegen block expression");
     }
 
-	// Remove block scope.
-	rc = eql_module_pop_scope(module, node);
-	check(rc == 0, "Unable to remove block scope");
+    // Remove block scope.
+    rc = eql_module_pop_scope(module, node);
+    check(rc == 0, "Unable to remove block scope");
 
     // Return block as a value.
     *value = LLVMBasicBlockAsValue(block);
@@ -200,7 +200,7 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_block_get_var_decl(eql_ast_node *node, bstring name,
-							   eql_ast_node **var_decl)
+                               eql_ast_node **var_decl)
 {
     unsigned int i;
 
@@ -208,19 +208,55 @@ int eql_ast_block_get_var_decl(eql_ast_node *node, bstring name,
     check(node->type == EQL_AST_TYPE_BLOCK, "Node type must be 'block'");
 
     // Search expressions for variable declaration.
-	*var_decl = NULL;
+    *var_decl = NULL;
     for(i=0; i<node->block.expr_count; i++) {
-		if(node->block.exprs[i]->type == EQL_AST_TYPE_VAR_DECL) {
-			if(biseq(node->block.exprs[i]->var_decl.name, name)) {
-				*var_decl = node->block.exprs[i];
-				break;
-			}
-		}
+        if(node->block.exprs[i]->type == EQL_AST_TYPE_VAR_DECL) {
+            if(biseq(node->block.exprs[i]->var_decl.name, name)) {
+                *var_decl = node->block.exprs[i];
+                break;
+            }
+        }
     }
 
-	return 0;
-	
+    return 0;
+    
 error:
-	*var_decl = NULL;
-	return -1;	
+    *var_decl = NULL;
+    return -1;    
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_block_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<block name='%s'>\n", bdatae(node->block.name, ""));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children
+    unsigned int i;
+    for(i=0; i<node->block.expr_count; i++) {
+        rc = eql_ast_node_dump(node->block.exprs[i], ret);
+        check(rc == 0, "Unable to dump block expression");
+    }
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
 }

@@ -209,7 +209,7 @@ int eql_ast_fcall_dump(eql_ast_node *node, bstring ret)
     check(ret != NULL, "String required");
 
     // Append dump.
-    bstring str = bformat("<fcall name='%s'>\n", bdata(node->fcall.name));
+    bstring str = bformat("<fcall name='%s'>\n", bdatae(node->fcall.name, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 

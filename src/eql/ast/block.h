@@ -58,6 +58,13 @@ int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
 //--------------------------------------
 
 int eql_ast_block_get_var_decl(eql_ast_node *node, bstring name,
-	eql_ast_node **var_decl);
+    eql_ast_node **var_decl);
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_block_dump(eql_ast_node *node, bstring ret);
 
 #endif
