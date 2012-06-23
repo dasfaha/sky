@@ -95,6 +95,38 @@ void eql_ast_node_free(eql_ast_node *node)
 
 
 //--------------------------------------
+// Hierarchy
+//--------------------------------------
+
+// Retrieves the node depth level in the AST tree.
+//
+// node  - The node to retrieve the depth for.
+// depth - A pointer to where the depth should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_node_get_depth(eql_ast_node *node, int32_t *depth)
+{
+    check(node != NULL, "Node required");
+
+    // Count how many parents the node has.
+    int32_t count = 0;
+    eql_ast_node *parent = node->parent;
+    while(parent != NULL) {
+        count++;
+        parent = parent->parent;
+    }
+    
+    // Return the value to the caller.
+    *depth = count;
+    return 0;
+    
+error:
+    *depth = 0;
+    return -1;
+}
+
+
+//--------------------------------------
 // Codegen
 //--------------------------------------
 
@@ -328,7 +360,7 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
-							 eql_ast_node **var_decl)
+                             eql_ast_node **var_decl)
 {
     int rc;
 
@@ -348,7 +380,7 @@ int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
         }
         default:
         {
-			*var_decl = NULL;
+            *var_decl = NULL;
             break;
         }
     }
@@ -375,6 +407,18 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
 {
     int rc;
     check(node != NULL, "Node is required");
+    check(ret != NULL, "String required");
+
+    // Retrieve the depth of the node.
+    int32_t depth;
+    rc = eql_ast_node_get_depth(node, &depth);
+    check(rc == 0, "Unable to retrieve depth for node");
+    
+    // Indent current node based on depth.
+    int i;
+    for(i=0; i<depth; i++) {
+        check(bcatcstr(ret, "  ") == BSTR_OK, "Unable to indent dump");
+    }
 
     // Delegate dump to AST nodes.
     switch(node->type) {
@@ -388,12 +432,12 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump literal float");
             break;
         }
-        /*
         case EQL_AST_TYPE_BINARY_EXPR: {
             rc = eql_ast_binary_expr_dump(node, ret);
             check(rc == 0, "Unable to dump binary expression");
             break;
         }
+        /*
         case EQL_AST_TYPE_VAR_DECL: {
             rc = eql_ast_var_decl_dump(node, ret);
             check(rc == 0, "Unable to dump variable declaration");

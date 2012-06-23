@@ -97,6 +97,13 @@ void eql_ast_node_free(eql_ast_node *node);
 
 
 //--------------------------------------
+// Hierarchy
+//--------------------------------------
+
+int eql_ast_node_get_depth(eql_ast_node *node, int32_t *depth);
+
+
+//--------------------------------------
 // Codegen
 //--------------------------------------
 

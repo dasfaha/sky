@@ -28,6 +28,11 @@ int test_eql_ast_binary_expr_create() {
     mu_assert(node->binary_expr.lhs->parent == node, "");
     mu_assert(node->binary_expr.rhs == rhs, "");
     mu_assert(node->binary_expr.rhs->parent == node, "");
+    mu_assert_eql_node_dump(node,
+        "<binary-expr operator='*'>\n"
+        "  <int-literal value='10'>\n"
+        "  <float-literal value='10.00000'>\n"
+    );
     eql_ast_node_free(node);
     return 0;
 }

@@ -169,7 +169,7 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
     bstring expected = bfromcstr(EXPECTED); \
     int rc = eql_ast_node_dump(node, actual); \
     mu_assert(rc == 0, "Unable to dump"); \
-    mu_assert(biseq(actual, expected), "Unexpected dump.\n\nExpected:\n%s\n\nActual:\n%s", bdata(expected), bdata(actual)); \
+    mu_assert(biseq(actual, expected), "Unexpected dump.\n\nExpected:\n%s\nActual:\n%s", bdata(expected), bdata(actual)); \
     bdestroy(actual); \
     bdestroy(expected);
 

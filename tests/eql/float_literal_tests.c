@@ -23,14 +23,7 @@ int test_eql_ast_float_literal_create() {
     eql_ast_float_literal_create(100.293, &node);
     mu_assert(node->type == EQL_AST_TYPE_FLOAT_LITERAL, "");
     mu_assert(node->float_literal.value == 100.293, "");
-    eql_ast_node_free(node);
-    return 0;
-}
-
-int test_eql_ast_float_literal_dump() {
-    eql_ast_node *node;
-    eql_ast_float_literal_create(10.25, &node);
-    mu_assert_eql_node_dump(node, "<float-literal value='10.25000'>\n");
+    mu_assert_eql_node_dump(node, "<float-literal value='100.29300'>\n");
     eql_ast_node_free(node);
     return 0;
 }
@@ -96,7 +89,6 @@ int test_eql_execute_float_literal() {
 
 int all_tests() {
     mu_run_test(test_eql_ast_float_literal_create);
-    mu_run_test(test_eql_ast_float_literal_dump);
     mu_run_test(test_eql_float_literal_parse);
     mu_run_test(test_eql_float_literal_get_type);
     mu_run_test(test_eql_compile_float_literal);
