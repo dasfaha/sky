@@ -48,6 +48,15 @@ int test_eql_ast_function_create() {
     mu_assert(node->function.args[1]->parent == node, "");
     mu_assert(node->function.body == body, "");
     mu_assert(node->function.body->parent == node, "");
+
+    mu_assert_eql_node_dump(node,
+        "<function name='foo' return-type='bar>\n"
+        "  <farg>\n"
+        "    <var-decl type='foo' name='bar'>\n"
+        "  <farg>\n"
+        "    <var-decl type='foo' name='bar'>\n"
+    );
+
     eql_ast_node_free(node);
     return 0;
 }

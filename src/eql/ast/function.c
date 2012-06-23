@@ -113,29 +113,29 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     unsigned int i;
 
     // Find the class this function belongs to, if any.
-	eql_ast_node *class_ast = NULL;
-	rc = eql_ast_function_get_class(node, &class_ast);
-	check(rc == 0, "Unable to retrieve parent class for function");
+    eql_ast_node *class_ast = NULL;
+    rc = eql_ast_function_get_class(node, &class_ast);
+    check(rc == 0, "Unable to retrieve parent class for function");
 
-	// Function name should be prepended with the class name if this is a method.
-	bool is_method = (class_ast != NULL);
-	bstring function_name;
-	if(is_method) {
-		check(blength(class_ast->class.name) > 0, "Class name required for method");
-		function_name = bformat("%s___%s", bdata(class_ast->class.name), bdata(node->function.name));
-		check_mem(function_name);
-	}
-	else {
-		function_name = bstrcpy(node->function.name);
-		check_mem(function_name);
-	}
+    // Function name should be prepended with the class name if this is a method.
+    bool is_method = (class_ast != NULL);
+    bstring function_name;
+    if(is_method) {
+        check(blength(class_ast->class.name) > 0, "Class name required for method");
+        function_name = bformat("%s___%s", bdata(class_ast->class.name), bdata(node->function.name));
+        check_mem(function_name);
+    }
+    else {
+        function_name = bstrcpy(node->function.name);
+        check_mem(function_name);
+    }
 
     // Create a list of function argument types.
     eql_ast_node *arg;
     unsigned int arg_count = node->function.arg_count;
     LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * arg_count);
 
-	// Create arguments.
+    // Create arguments.
     for(i=0; i<arg_count; i++) {
         arg = node->function.args[i];
         rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i]);
@@ -157,8 +157,8 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     
     // Store the current function on the module.
     module->llvm_function = func;
-	rc = eql_module_push_scope(module, node);
-	check(rc == 0, "Unable to add function scope");
+    rc = eql_module_push_scope(module, node);
+    check(rc == 0, "Unable to add function scope");
 
     // Assign names to function arguments.
     for(i=0; i<arg_count; i++) {
@@ -180,18 +180,18 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     check(rc != 1, "Invalid function");
 
     // Unset the current function.
-	rc = eql_module_pop_scope(module, node);
-	check(rc == 0, "Unable to remove function scope");
+    rc = eql_module_pop_scope(module, node);
+    check(rc == 0, "Unable to remove function scope");
     module->llvm_function = NULL;
 
     // Return function as a value.
     *value = func;
     
-	bdestroy(function_name);
+    bdestroy(function_name);
     return 0;
 
 error:
-	bdestroy(function_name);
+    bdestroy(function_name);
 
     // Unset the current function.
     module->llvm_function = NULL;
@@ -212,13 +212,13 @@ int eql_ast_function_codegen_args(eql_ast_node *node, eql_module *module)
     int rc;
     unsigned int i;
     
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_FUNCTION, "Node type expected to be 'function'");
-	check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_FUNCTION, "Node type expected to be 'function'");
+    check(module != NULL, "Module required");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-	// Codegen allocas.
+    // Codegen allocas.
     LLVMValueRef *values = malloc(sizeof(LLVMValueRef) * node->function.arg_count);
     check_mem(values);
     
@@ -227,7 +227,7 @@ int eql_ast_function_codegen_args(eql_ast_node *node, eql_module *module)
         check(rc == 0, "Unable to determine function argument type");
     }
     
-	// Codegen store instructions.
+    // Codegen store instructions.
     for(i=0; i<node->function.arg_count; i++) {
         LLVMValueRef build_value = LLVMBuildStore(builder, LLVMGetParam(module->llvm_function, i), values[i]);
         check(build_value != NULL, "Unable to create build instruction");
@@ -255,27 +255,27 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_function_get_class(eql_ast_node *node, eql_ast_node **class_ast)
 {
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_FUNCTION, "Node type must be 'function'");
-	check(class_ast != NULL, "Class return pointer must not be null");
-	
-	*class_ast = NULL;
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_FUNCTION, "Node type must be 'function'");
+    check(class_ast != NULL, "Class return pointer must not be null");
+    
+    *class_ast = NULL;
 
-	// Check if there is a parent method.
-	if(node->parent != NULL && node->parent->type == EQL_AST_TYPE_METHOD) {
-		eql_ast_node *method = node->parent;
+    // Check if there is a parent method.
+    if(node->parent != NULL && node->parent->type == EQL_AST_TYPE_METHOD) {
+        eql_ast_node *method = node->parent;
 
-		// Check if the method has a class.
-		if(method->parent != NULL && method->parent->type == EQL_AST_TYPE_CLASS) {
-			*class_ast = method->parent;
-		}
-	}
-	
-	return 0;
-	
+        // Check if the method has a class.
+        if(method->parent != NULL && method->parent->type == EQL_AST_TYPE_CLASS) {
+            *class_ast = method->parent;
+        }
+    }
+    
+    return 0;
+    
 error:
-	*class_ast = NULL;
-	return -1;
+    *class_ast = NULL;
+    return -1;
 }
 
 
@@ -341,25 +341,67 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_function_get_var_decl(eql_ast_node *node, bstring name,
-								  eql_ast_node **var_decl)
+                                  eql_ast_node **var_decl)
 {
-	unsigned int i;
-	
+    unsigned int i;
+    
     check(node != NULL, "Node required");
     check(node->type == EQL_AST_TYPE_FUNCTION, "Node type must be 'function'");
 
     // Search argument list for variable declaration.
-	*var_decl = NULL;
+    *var_decl = NULL;
     for(i=0; i<node->function.arg_count; i++) {
         if(biseq(node->function.args[i]->farg.var_decl->var_decl.name, name)) {
-			*var_decl = node->function.args[i]->farg.var_decl;
-			break;
-		}
+            *var_decl = node->function.args[i]->farg.var_decl;
+            break;
+        }
     }
 
-	return 0;
-	
+    return 0;
+    
 error:
-	*var_decl = NULL;
-	return -1;	
+    *var_decl = NULL;
+    return -1;    
+}
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_function_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<function name='%s' return-type='%s>\n", bdata(node->function.name), bdata(node->function.return_type));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children
+    unsigned int i;
+    for(i=0; i<node->function.arg_count; i++) {
+        rc = eql_ast_node_dump(node->function.args[i], ret);
+        check(rc == 0, "Unable to dump function argument");
+    }
+    /*
+    if(node->function.body != NULL) {
+        rc = eql_ast_node_dump(node->function.body, ret);
+        check(rc == 0, "Unable to dump function body");
+    }
+    */
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
 }
