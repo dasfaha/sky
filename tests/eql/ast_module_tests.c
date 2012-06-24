@@ -51,6 +51,14 @@ int test_eql_ast_module_create() {
     mu_assert(node->module.classes[1]->parent == node, "");
     mu_assert(node->module.main_function == main_function, "");
     mu_assert(node->module.main_function->parent == node, "");
+
+    mu_assert_eql_node_dump(node,
+        "<module name='bar'>\n"
+        "  <class name='Foo'>\n"
+        "  <class name='Bar'>\n"
+        "  <function name='' return-type=''>\n"
+    );
+
     eql_ast_node_free(node);
     return 0;
 }

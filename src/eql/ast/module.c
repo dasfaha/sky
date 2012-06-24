@@ -186,3 +186,43 @@ int eql_ast_module_add_class(struct eql_ast_node *module,
 error:
     return -1;
 }
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_module_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<module name='%s'>\n", bdatae(node->module.name, ""));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    unsigned int i;
+    for(i=0; i<node->module.class_count; i++) {
+        rc = eql_ast_node_dump(node->module.classes[i], ret);
+        check(rc == 0, "Unable to dump class");
+    }
+    if(node->module.main_function != NULL) {
+        rc = eql_ast_node_dump(node->module.main_function, ret);
+        check(rc == 0, "Unable to dump main function");
+    }
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
+}

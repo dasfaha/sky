@@ -497,6 +497,11 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump property");
             break;
         }
+        case EQL_AST_TYPE_MODULE: {
+            rc = eql_ast_module_dump(node, ret);
+            check(rc == 0, "Unable to dump module");
+            break;
+        }
         default:
         {
             sentinel("Unable to dump AST node");

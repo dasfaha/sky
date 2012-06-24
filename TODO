@@ -10,7 +10,9 @@
     - Validate AST
     - Codegen (DONE)
     - Return module (DONE)
+- HashMap impl
 - Msgpack
+  - Generate class serialization.
 - Add server support
 
 # Client API (hisky)

@@ -51,4 +51,10 @@ int eql_ast_module_codegen_type(eql_module *module, eql_ast_node *node);
 int eql_ast_module_add_class(struct eql_ast_node *module, struct eql_ast_node *class);
 
 
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_module_dump(eql_ast_node *node, bstring ret);
+
 #endif
