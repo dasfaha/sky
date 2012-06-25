@@ -25,8 +25,19 @@ typedef struct {
 //
 //==============================================================================
 
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
 int eql_ast_metadata_item_create(bstring key, bstring value, struct eql_ast_node **node);
 
 void eql_ast_metadata_item_free(struct eql_ast_node *node);
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+int eql_ast_metadata_dump(eql_ast_node *node, bstring ret);
 
 #endif

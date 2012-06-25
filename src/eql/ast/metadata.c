@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "../../dbg.h"
 
-#include "metadata.h"
 #include "node.h"
 
 //==============================================================================
@@ -9,6 +8,10 @@
 // Functions
 //
 //==============================================================================
+
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
 
 // Creates an AST node for a metadata tag.
 //
@@ -71,4 +74,41 @@ void eql_ast_metadata_free(struct eql_ast_node *node)
         free(node->metadata.items);
         node->metadata.item_count = 0;
     }
+}
+
+
+
+//--------------------------------------
+// Debugging
+//--------------------------------------
+
+// Append the contents of the AST node to the string.
+// 
+// node - The node to dump.
+// ret  - A pointer to the bstring to concatenate to.
+//
+// Return 0 if successful, otherwise returns -1.s
+int eql_ast_metadata_dump(eql_ast_node *node, bstring ret)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(ret != NULL, "String required");
+
+    // Append dump.
+    bstring str = bformat("<metadata name='%s'>\n", bdatae(node->metadata.name, ""));
+    check_mem(str);
+    check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    unsigned int i;
+    for(i=0; i<node->metadata.item_count; i++) {
+        rc = eql_ast_node_dump(node->metadata.items[i], ret);
+        check(rc == 0, "Unable to dump metadata item");
+    }
+
+    return 0;
+
+error:
+    if(str != NULL) bdestroy(str);
+    return -1;
 }

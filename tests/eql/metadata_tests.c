@@ -47,6 +47,11 @@ int test_eql_ast_metadata_create() {
     mu_assert(node->metadata.items[0]->parent == node, "");
     mu_assert(node->metadata.items[1] == item2, "");
     mu_assert(node->metadata.items[1]->parent == node, "");
+    mu_assert_eql_node_dump(node,
+        "<metadata name='Foo'>\n"
+        "  <metadata-item key='foo' value='bar'>\n"
+        "  <metadata-item key='foo' value='baz'>\n"
+    );
     eql_ast_node_free(node);
     return 0;
 }

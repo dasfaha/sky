@@ -503,6 +503,16 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
             check(rc == 0, "Unable to dump module");
             break;
         }
+        case EQL_AST_TYPE_METADATA: {
+            rc = eql_ast_metadata_dump(node, ret);
+            check(rc == 0, "Unable to dump metadata");
+            break;
+        }
+        case EQL_AST_TYPE_METADATA_ITEM: {
+            rc = eql_ast_metadata_item_dump(node, ret);
+            check(rc == 0, "Unable to dump metadata item");
+            break;
+        }
         default:
         {
             sentinel("Unable to dump AST node");

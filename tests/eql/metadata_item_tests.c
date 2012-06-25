@@ -38,6 +38,7 @@ int test_eql_ast_metadata_item_create() {
     mu_assert(node->type == EQL_AST_TYPE_METADATA_ITEM, "");
     mu_assert(biseqcstr(node->metadata_item.key, "foo"), "");
     mu_assert(biseqcstr(node->metadata_item.value, "bar"), "");
+    mu_assert_eql_node_dump(node, "<metadata-item key='foo' value='bar'>\n");
     eql_ast_node_free(node);
     return 0;
 }
