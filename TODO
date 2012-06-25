@@ -10,6 +10,8 @@
     - Validate AST
     - Codegen (DONE)
     - Return module (DONE)
+- Line #'s in AST.
+- Error messages.
 - HashMap impl
 - Msgpack
   - Generate class serialization.

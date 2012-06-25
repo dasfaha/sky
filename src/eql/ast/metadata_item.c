@@ -64,7 +64,6 @@ void eql_ast_metadata_item_free(struct eql_ast_node *node)
 // Return 0 if successful, otherwise returns -1.s
 int eql_ast_metadata_item_dump(eql_ast_node *node, bstring ret)
 {
-    int rc;
     check(node != NULL, "Node required");
     check(ret != NULL, "String required");
 

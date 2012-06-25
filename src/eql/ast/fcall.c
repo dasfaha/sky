@@ -165,12 +165,10 @@ error:
 // Returns the type name of the AST node.
 //
 // node   - The AST node to determine the type for.
-// module - The compilation unit this node is a part of.
 // type   - A pointer to where the type name should be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int eql_ast_fcall_get_type(eql_ast_node *node, eql_module *module,
-                           bstring *type)
+int eql_ast_fcall_get_type(eql_ast_node *node, bstring *type)
 {
     check(node != NULL, "Node required");
     check(node->type == EQL_AST_TYPE_FCALL, "Node type must be 'function call'");

@@ -38,6 +38,6 @@ void eql_ast_metadata_item_free(struct eql_ast_node *node);
 // Debugging
 //--------------------------------------
 
-int eql_ast_metadata_dump(eql_ast_node *node, bstring ret);
+int eql_ast_metadata_item_dump(eql_ast_node *node, bstring ret);
 
 #endif

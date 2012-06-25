@@ -42,7 +42,7 @@
 "private"               return TOKEN(TPRIVATE);
 "public"                return TOKEN(TPUBLIC);
 "return"                return TOKEN(TRETURN);
-[ \t\n]                 ;
+[ \t\n\f]               ;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;
 [0-9]+                  SAVE_INT; return TINT;
