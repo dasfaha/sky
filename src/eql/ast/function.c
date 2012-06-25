@@ -112,6 +112,12 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     int rc;
     unsigned int i;
 
+    // Dynamically generate the return type of the function if it is missing.
+    if(node->function.return_type == NULL) {
+        rc = eql_ast_function_generate_return_type(node, module);
+        check(rc == 0, "Unable to generate return type for function");
+    }
+
     // Find the class this function belongs to, if any.
     eql_ast_node *class_ast = NULL;
     rc = eql_ast_function_get_class(node, &class_ast);
@@ -283,10 +289,12 @@ error:
 // of the function. This is used for implicit functions like the main function
 // of a module.
 //
-// node - The function ast node to generate a type for.
+// node   - The function ast node to generate a type for.
+// module - The compilation unit this node is a part of.
 //
 // Returns 0 if successful, otherwise returns -1.
-int eql_ast_function_generate_return_type(eql_ast_node *node)
+int eql_ast_function_generate_return_type(eql_ast_node *node,
+                                          eql_module *module)
 {
     int rc;
     bstring type;
@@ -318,7 +326,7 @@ int eql_ast_function_generate_return_type(eql_ast_node *node)
         }
         // Otherwise check the last return value to determine its type.
         else {
-            rc = eql_ast_node_get_type(freturn->freturn.value, &type);
+            rc = eql_ast_node_get_type(freturn->freturn.value, module, &type);
             check(rc == 0, "Unable to determine return type");
         }
     }

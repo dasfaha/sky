@@ -52,7 +52,8 @@ int eql_ast_binary_expr_codegen(struct eql_ast_node *node, eql_module *module,
 // Type
 //--------------------------------------
 
-int eql_ast_binary_expr_get_type(eql_ast_node *node, bstring *type);
+int eql_ast_binary_expr_get_type(eql_ast_node *node, eql_module *module,
+    bstring *type);
 
 
 //--------------------------------------

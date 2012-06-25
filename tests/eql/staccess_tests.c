@@ -72,7 +72,7 @@ int test_eql_parse_staccess_dump() {
         "      <var-decl type='Int' name='bar'>\n"
         "    <property>\n"
         "      <var-decl type='Int' name='baz'>\n"
-        "<function name='main' return-type='Foo'>\n"
+        "<function name='main' return-type=''>\n"
         "  <block name=''>\n"
         "    <var-decl type='Foo' name='x'>\n"
         "    <var-assign>\n"
@@ -119,7 +119,7 @@ int all_tests() {
     mu_run_test(test_eql_parse_staccess);
     mu_run_test(test_eql_parse_staccess_dump);
     mu_run_test(test_eql_compile_staccess);
-    //mu_run_test(test_eql_execute_staccess);
+    mu_run_test(test_eql_execute_staccess);
     return 0;
 }
 

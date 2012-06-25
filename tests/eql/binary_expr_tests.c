@@ -9,6 +9,15 @@
 
 //==============================================================================
 //
+// Globals
+//
+//==============================================================================
+
+struct tagbstring foo = bsStatic("foo");
+
+
+//==============================================================================
+//
 // Test Cases
 //
 //==============================================================================
@@ -180,13 +189,15 @@ int test_eql_compile_binary_expr_div() {
 
 int test_eql_binary_expr_get_type() {
     bstring type;
+    eql_module *module = eql_module_create(&foo, NULL);
     eql_ast_node *node, *lhs, *rhs;
     eql_ast_int_literal_create(10, &lhs);
     eql_ast_float_literal_create(10, &rhs);
     eql_ast_binary_expr_create(EQL_BINOP_MUL, lhs, rhs, &node);
-    eql_ast_node_get_type(node, &type);
+    eql_ast_node_get_type(node, module, &type);
     mu_assert(biseqcstr(type, "Int"), "");
     eql_ast_node_free(node);
+    eql_module_free(module);
     bdestroy(type);
     return 0;
 }

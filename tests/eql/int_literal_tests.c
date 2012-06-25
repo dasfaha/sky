@@ -62,10 +62,12 @@ int test_eql_parse_int_literal() {
 int test_eql_int_literal_get_type() {
     eql_ast_node *node;
     bstring type;
+    eql_module *module = eql_module_create(&foo, NULL);
     eql_ast_int_literal_create(20, &node);
-    eql_ast_node_get_type(node, &type);
+    eql_ast_node_get_type(node, module, &type);
     mu_assert(biseqcstr(type, "Int"), "");
     eql_ast_node_free(node);
+    eql_module_free(module);
     bdestroy(type);
     return 0;
 }

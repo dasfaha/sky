@@ -45,7 +45,8 @@ int eql_ast_var_ref_get_pointer(eql_ast_node *node, eql_module *module,
 // Type
 //--------------------------------------
 
-int eql_ast_var_ref_get_type(eql_ast_node *node, bstring *type);
+int eql_ast_var_ref_get_type(eql_ast_node *node, eql_module *module,
+    bstring *type);
 
 
 //--------------------------------------

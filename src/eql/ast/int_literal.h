@@ -43,7 +43,8 @@ int eql_ast_int_literal_codegen(struct eql_ast_node *node,
 // Type
 //--------------------------------------
 
-int eql_ast_int_literal_get_type(eql_ast_node *node, bstring *type);
+int eql_ast_int_literal_get_type(eql_ast_node *node, eql_module *module,
+    bstring *type);
 
 
 //--------------------------------------

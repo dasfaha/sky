@@ -44,7 +44,8 @@ int eql_ast_fcall_codegen(eql_ast_node *node, eql_module *module,
 // Type
 //--------------------------------------
 
-int eql_ast_fcall_get_type(eql_ast_node *node, bstring *type);
+int eql_ast_fcall_get_type(eql_ast_node *node, eql_module *module,
+    bstring *type);
 
 
 //--------------------------------------

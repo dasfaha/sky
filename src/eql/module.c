@@ -40,11 +40,11 @@ eql_module *eql_module_create(bstring name, eql_compiler *compiler)
     module->llvm_function = NULL;
     module->llvm_engine = NULL;
     module->llvm_pass_manager = NULL;
-	module->scopes = NULL;
-	module->scope_count = 0;
-	module->types = NULL;
-	module->type_nodes = NULL;
-	module->type_count = 0;
+    module->scopes = NULL;
+    module->scope_count = 0;
+    module->types = NULL;
+    module->type_nodes = NULL;
+    module->type_count = 0;
 
     // Initialize LLVM.
     LLVMInitializeNativeTarget();
@@ -55,7 +55,7 @@ eql_module *eql_module_create(bstring name, eql_compiler *compiler)
     if(LLVMCreateExecutionEngineForModule(&module->llvm_engine, module->llvm_module, &msg) == 1) {
         sentinel("Unable to initialize execution engine: %s", msg);
     }
-	
+    
     return module;
     
 error:
@@ -72,7 +72,7 @@ void eql_module_free(eql_module *module)
     if(module) {
         module->compiler = NULL;
 
-    	if(module->llvm_pass_manager) LLVMDisposePassManager(module->llvm_pass_manager);
+        if(module->llvm_pass_manager) LLVMDisposePassManager(module->llvm_pass_manager);
         module->llvm_pass_manager = NULL;
 
         if(module->llvm_module) LLVMDisposeModule(module->llvm_module);
@@ -80,13 +80,13 @@ void eql_module_free(eql_module *module)
 
         module->llvm_function = NULL;
 
-		if(module->scopes != NULL) free(module->scopes);
-		module->scopes = NULL;
-		module->scope_count = 0;
+        if(module->scopes != NULL) free(module->scopes);
+        module->scopes = NULL;
+        module->scope_count = 0;
 
-		if(module->types != NULL) free(module->types);
-		module->types = NULL;
-		module->type_count = 0;
+        if(module->types != NULL) free(module->types);
+        module->types = NULL;
+        module->type_count = 0;
 
         free(module);
     }
@@ -110,8 +110,8 @@ void eql_module_free(eql_module *module)
 int eql_module_get_type_ref(eql_module *module, bstring name,
                             eql_ast_node **node, LLVMTypeRef *type)
 {
-	int i;
-	
+    int i;
+    
     check(module != NULL, "Module is required");
     check(name != NULL, "Type name is required");
     
@@ -121,29 +121,29 @@ int eql_module_get_type_ref(eql_module *module, bstring name,
     bool found = false;
     if(biseq(name, &EQL_TYPE_NAME_INT)) {
         if(type != NULL) *type = LLVMInt64TypeInContext(context);
-		if(node != NULL) *node = NULL;
+        if(node != NULL) *node = NULL;
         found = true;
     }
     else if(biseq(name, &EQL_TYPE_NAME_FLOAT)) {
         if(type != NULL) *type = LLVMDoubleTypeInContext(context);
-		if(node != NULL) *node = NULL;
+        if(node != NULL) *node = NULL;
         found = true;
     }
     else if(biseq(name, &EQL_TYPE_NAME_VOID)) {
         if(type != NULL) *type = LLVMVoidTypeInContext(context);
-		if(node != NULL) *node = NULL;
+        if(node != NULL) *node = NULL;
         found = true;
     }
-	// Find user-defined type.
-	else {
-		for(i=0; i<module->type_count; i++) {
-			if(biseq(module->type_nodes[i]->class.name, name)) {
-				if(type != NULL) *type = module->types[i];
-				if(node != NULL) *node = module->type_nodes[i];
+    // Find user-defined type.
+    else {
+        for(i=0; i<module->type_count; i++) {
+            if(biseq(module->type_nodes[i]->class.name, name)) {
+                if(type != NULL) *type = module->types[i];
+                if(node != NULL) *node = module->type_nodes[i];
                 found = true;
-				break;
-			}
-		}
+                break;
+            }
+        }
     }
 
     check(found, "Invalid type in module: %s", bdata(name));
@@ -163,29 +163,29 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_module_add_type_ref(eql_module *module, eql_ast_node *node,
-							LLVMTypeRef type)
+                            LLVMTypeRef type)
 {
-	check(module != NULL, "Module required");
-	check(node != NULL, "Node required");
-	check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
-	check(type != NULL, "LLVM type required");
+    check(module != NULL, "Module required");
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_CLASS, "Node type must be 'class'");
+    check(type != NULL, "LLVM type required");
 
     module->type_count++;
 
-	// Append to the list of types.
+    // Append to the list of types.
     module->types = realloc(module->types, sizeof(LLVMTypeRef) * module->type_count);
     check_mem(module->types);
     module->types[module->type_count-1] = type;
 
-	// Append to the list of AST nodes.
+    // Append to the list of AST nodes.
     module->type_nodes = realloc(module->type_nodes, sizeof(eql_ast_node*) * module->type_count);
     check_mem(module->type_nodes);
     module->type_nodes[module->type_count-1] = node;
-	
-	return 0;
-	
+    
+    return 0;
+    
 error:
-	return -1;
+    return -1;
 }
 
 
@@ -201,28 +201,28 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_module_push_scope(eql_module *module, eql_ast_node *node)
 {
-	check(module != NULL, "Module is required");
-	check(node != NULL, "Node is required");
-	
-	// Create scope.
-	eql_module_scope *scope = malloc(sizeof(eql_module_scope));
-	check_mem(scope);
-	scope->node = node;
-	scope->var_values = NULL;
-	scope->var_decls = NULL;
-	scope->var_count = 0;
-	
-	// Resize scope stack and append.
+    check(module != NULL, "Module is required");
+    check(node != NULL, "Node is required");
+    
+    // Create scope.
+    eql_module_scope *scope = malloc(sizeof(eql_module_scope));
+    check_mem(scope);
+    scope->node = node;
+    scope->var_values = NULL;
+    scope->var_decls = NULL;
+    scope->var_count = 0;
+    
+    // Resize scope stack and append.
     module->scope_count++;
     module->scopes = realloc(module->scopes, sizeof(eql_module_scope*) * module->scope_count);
     check_mem(module->scopes);
     module->scopes[module->scope_count-1] = scope;
 
-	return 0;
-	
+    return 0;
+    
 error:
-	if(scope) free(scope);
-	return -1;
+    if(scope) free(scope);
+    return -1;
 }
 
 // Removes the current scope from the stack of the module. If the current
@@ -234,29 +234,29 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_module_pop_scope(eql_module *module, eql_ast_node *node)
 {
-	check(module != NULL, "Module is required");
-	check(module->scope_count > 0, "Module has no more scopes");
-	check(node != NULL, "Node is required");
-	check(module->scopes[module->scope_count-1]->node == node, "Current scope does not match node");
+    check(module != NULL, "Module is required");
+    check(module->scope_count > 0, "Module has no more scopes");
+    check(node != NULL, "Node is required");
+    check(module->scopes[module->scope_count-1]->node == node, "Current scope does not match node");
 
-	// Destroy current scope.
-	eql_module_scope *scope = module->scopes[module->scope_count-1];
-	scope->node = NULL;
-	if(scope->var_values) free(scope->var_values);
-	scope->var_values = NULL;
-	if(scope->var_decls) free(scope->var_decls);
-	scope->var_decls = NULL;
-	scope->var_count = 0;
-	free(scope);
-	
-	// Resize scope stack.
+    // Destroy current scope.
+    eql_module_scope *scope = module->scopes[module->scope_count-1];
+    scope->node = NULL;
+    if(scope->var_values) free(scope->var_values);
+    scope->var_values = NULL;
+    if(scope->var_decls) free(scope->var_decls);
+    scope->var_decls = NULL;
+    scope->var_count = 0;
+    free(scope);
+    
+    // Resize scope stack.
     module->scope_count--;
 
-	return 0;
-	
+    return 0;
+    
 error:
-	return -1;
-	
+    return -1;
+    
 }
 
 // Searches the module scope stack for variables declared with the given name.
@@ -271,36 +271,36 @@ error:
 int eql_module_get_variable(eql_module *module, bstring name,
     eql_ast_node **var_decl, LLVMValueRef *value)
 {
-	check(module != NULL, "Module is required");
-	check(module->scope_count > 0, "Module has no scope");
-	check(name != NULL, "Variable name is required");
-	check(var_decl != NULL, "Variable declaration return pointer is required");
-	check(value != NULL, "LLVM value return pointer is required");
+    check(module != NULL, "Module is required");
+    check(module->scope_count > 0, "Module has no scope");
+    check(name != NULL, "Variable name is required");
+    check(var_decl != NULL, "Variable declaration return pointer is required");
+    check(value != NULL, "LLVM value return pointer is required");
 
-	// Loop over scopes from the top down.
-	int32_t i, j;
-	for(i=module->scope_count-1; i>=0; i--) {
-		eql_module_scope *scope = module->scopes[i];
-		
-		// Search scope for a variable with the given name.
-		for(j=0; j<scope->var_count; j++) {
-			if(biseq(scope->var_decls[j]->var_decl.name, name)) {
-				*var_decl = scope->var_decls[j];
-				*value    = scope->var_values[j];
-				return 0;
-			}
-		}
-	}
+    // Loop over scopes from the top down.
+    int32_t i, j;
+    for(i=module->scope_count-1; i>=0; i--) {
+        eql_module_scope *scope = module->scopes[i];
+        
+        // Search scope for a variable with the given name.
+        for(j=0; j<scope->var_count; j++) {
+            if(biseq(scope->var_decls[j]->var_decl.name, name)) {
+                *var_decl = scope->var_decls[j];
+                *value    = scope->var_values[j];
+                return 0;
+            }
+        }
+    }
 
-	// If we reach here then we couldn't find the variable in any scope.
-	*var_decl = NULL;
-	*value    = NULL;
-	return 0;
+    // If we reach here then we couldn't find the variable in any scope.
+    *var_decl = NULL;
+    *value    = NULL;
+    return 0;
 
 error:
-	*var_decl = NULL;
-	*value    = NULL;
-	return -1;
+    *var_decl = NULL;
+    *value    = NULL;
+    return -1;
 }
 
 // Adds a variable declaration to the current scope of the module.
@@ -311,26 +311,26 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_module_add_variable(eql_module *module, eql_ast_node *var_decl,
-	LLVMValueRef value)
+    LLVMValueRef value)
 {
-	check(module != NULL, "Module is required");
-	check(module->scope_count > 0, "Module has no scope");
-	check(var_decl != NULL, "Variable declaration is required");
-	check(var_decl->var_decl.name != NULL, "Variable declaration name is required");
-	check(value != NULL, "LLVM value is required");
+    check(module != NULL, "Module is required");
+    check(module->scope_count > 0, "Module has no scope");
+    check(var_decl != NULL, "Variable declaration is required");
+    check(var_decl->var_decl.name != NULL, "Variable declaration name is required");
+    check(value != NULL, "LLVM value is required");
 
-	// Find current scope.
-	eql_module_scope *scope = module->scopes[module->scope_count-1];
+    // Find current scope.
+    eql_module_scope *scope = module->scopes[module->scope_count-1];
 
-	// Search for existing variable in scope.
-	int32_t i;
-	for(i=0; i<scope->var_count; i++) {
-		if(biseq(scope->var_decls[i]->var_decl.name, var_decl->var_decl.name)) {
-			sentinel("Variable already exists in scope: %s", bdata(var_decl->var_decl.name));
-		}
-	}
+    // Search for existing variable in scope.
+    int32_t i;
+    for(i=0; i<scope->var_count; i++) {
+        if(biseq(scope->var_decls[i]->var_decl.name, var_decl->var_decl.name)) {
+            sentinel("Variable already exists in scope: %s", bdata(var_decl->var_decl.name));
+        }
+    }
 
-	// Append variable declaration & LLVM value to scope.
+    // Append variable declaration & LLVM value to scope.
     scope->var_count++;
     scope->var_decls = realloc(scope->var_decls, sizeof(eql_ast_node*) * scope->var_count);
     check_mem(scope->var_decls);
@@ -340,10 +340,10 @@ int eql_module_add_variable(eql_module *module, eql_ast_node *var_decl,
     check_mem(scope->var_values);
     scope->var_values[scope->var_count-1] = value;
 
-	return 0;
+    return 0;
 
 error:
-	return -1;
+    return -1;
 }
 
 

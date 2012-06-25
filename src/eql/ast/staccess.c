@@ -80,10 +80,10 @@ int eql_ast_staccess_codegen(eql_ast_node *node, eql_module *module,
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
 
-    // Find the variable declaration.
+    // Retrieve a pointer to the member.
     LLVMValueRef ptr = NULL;
-    rc = eql_ast_node_get_var_pointer(node->staccess.var_ref, module, &ptr);
-    check(rc == 0 && ptr != NULL, "Unable to retrieve variable pointer");
+    rc = eql_ast_node_get_var_pointer(node, module, &ptr);
+    check(rc == 0 && ptr != NULL, "Unable to retrieve struct member pointer");
 
     // Create load instruction.
     *value = LLVMBuildLoad(builder, ptr, "");
@@ -121,20 +121,20 @@ int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
     rc = eql_ast_node_get_var_pointer(node->staccess.var_ref, module, &var_ref_pointer);
     check(rc == 0 && var_ref_pointer != NULL, "Unable to retrieve pointer to struct");
 
-    // Retrieve the type of the member.
-    bstring type_name = NULL;
-    rc = eql_ast_staccess_get_type(node, &type_name);
-    check(rc == 0 && type_name != NULL, "Unable to determine struct member type");
+    // Retrieve the type of the variable reference.
+    bstring var_ref_type_name = NULL;
+    rc = eql_ast_node_get_type(node->staccess.var_ref, module, &var_ref_type_name);
+    check(rc == 0 && var_ref_type_name != NULL, "Unable to determine struct type");
 
-    // Retrieve the class AST for the member.
+    // Retrieve the class AST for the variable reference.
     eql_ast_node *class_ast = NULL;
-    rc = eql_module_get_type_ref(module, type_name, &class_ast, NULL);
-    check(rc == 0 && class_ast != NULL, "Unable to find class: %s", bdata(type_name));
+    rc = eql_module_get_type_ref(module, var_ref_type_name, &class_ast, NULL);
+    check(rc == 0 && class_ast != NULL, "Unable to find class: %s", bdata(var_ref_type_name));
 
     // Determine the property index for the member.
     unsigned int property_index = 0;
     rc = eql_ast_class_get_property_index(class_ast, node->staccess.member_name, &property_index);
-    check(rc == 0, "Unable to find property '%s' on class '%s'", bdata(node->staccess.member_name), bdata(type_name));
+    check(rc == 0, "Unable to find property '%s' on class '%s'", bdata(node->staccess.member_name), bdata(var_ref_type_name));
 
     // Build GEP instruction.
     *value = LLVMBuildStructGEP(builder, var_ref_pointer, property_index, "");
@@ -154,35 +154,38 @@ error:
 
 // Returns the type name of the AST node.
 //
-// node - The AST node to determine the type for.
-// type - A pointer to where the type name should be returned.
+// node   - The AST node to determine the type for.
+// module - The compilation unit this node is a part of.
+// type   - A pointer to where the type name should be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int eql_ast_staccess_get_type(eql_ast_node *node, bstring *type)
+int eql_ast_staccess_get_type(eql_ast_node *node, eql_module *module,
+                              bstring *type)
 {
+    int rc;
     check(node != NULL, "Node required");
     check(node->type == EQL_AST_TYPE_STACCESS, "Node type must be 'struct member access'");
 
+    // Retrieve the type of the variable reference.
+    bstring var_ref_type_name = NULL;
+    rc = eql_ast_node_get_type(node->staccess.var_ref, module, &var_ref_type_name);
+    check(rc == 0 && var_ref_type_name != NULL, "Unable to determine struct type");
 
+    // Retrieve the class AST for the variable reference.
+    eql_ast_node *class_ast = NULL;
+    rc = eql_module_get_type_ref(module, var_ref_type_name, &class_ast, NULL);
+    check(rc == 0 && class_ast != NULL, "Unable to find class: %s", bdata(var_ref_type_name));
 
-    // Search up the parent hierarchy to find variable declaration.
-    eql_ast_node *var_decl = NULL;
-    eql_ast_node *parent = node->parent;
-    while(parent != NULL) {
-        int rc = eql_ast_node_get_var_decl(parent, node->staccess.var_ref->var_ref.name, &var_decl);
-        check(rc == 0, "Unable to search node for variable declarations");
-        
-        // If a declaration was found then return its type.
-        if(var_decl != NULL) {
-            *type = var_decl->var_decl.type;
-            return 0;
-        }
-        
-        parent = parent->parent;
-    }
+    // Find the property for the member.
+    eql_ast_node *property = NULL;
+    rc = eql_ast_class_get_property(class_ast, node->staccess.member_name, &property);
+    check(rc == 0 || property == NULL, "Unable to find property '%s' on class '%s'", bdata(node->staccess.member_name), bdata(var_ref_type_name));
 
-    sentinel("Unable to find variable declaration: %s", bdata(node->staccess.var_ref->var_ref.name));
+    // Return the property type name.
+    *type = property->property.var_decl->var_decl.type;
 
+    return 0;
+    
 error:
     *type = NULL;
     return -1;

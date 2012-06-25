@@ -237,7 +237,12 @@ error:
 
 // Retrieves the index of the property within the class. This is used to
 // access members of the generated struct.
-
+//
+// node - The class AST node.
+// property_name - The name of the property to find.
+// property_index - A pointer to where the index should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
 int eql_ast_class_get_property_index(eql_ast_node *node,
                                      bstring property_name,
                                      unsigned int *property_index)
@@ -256,6 +261,29 @@ int eql_ast_class_get_property_index(eql_ast_node *node,
     
 error:
     *property_index = 0;
+    return -1;
+}
+
+// Retrieves a reference to a property within the class.
+//
+// node - The class AST node.
+// property_name - The name of the property to find.
+// property      - A pointer to where the property should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_class_get_property(eql_ast_node *node,
+                               bstring property_name,
+                               eql_ast_node **property)
+{
+    unsigned int index;
+    int rc = eql_ast_class_get_property_index(node, property_name, &index);
+    check(rc == 0, "Unable to retrieve property: %s", bdata(property_name));
+
+    *property = node->class.properties[index];
+    return 0;
+    
+error:
+    *property = NULL;
     return -1;
 }
 

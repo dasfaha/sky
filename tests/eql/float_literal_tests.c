@@ -10,6 +10,15 @@
 
 //==============================================================================
 //
+// Globals
+//
+//==============================================================================
+
+struct tagbstring foo = bsStatic("foo");
+
+
+//==============================================================================
+//
 // Test Cases
 //
 //==============================================================================
@@ -53,10 +62,12 @@ int test_eql_float_literal_parse() {
 int test_eql_float_literal_get_type() {
     eql_ast_node *node;
     bstring type;
+    eql_module *module = eql_module_create(&foo, NULL);
     eql_ast_float_literal_create(100.1, &node);
-    eql_ast_node_get_type(node, &type);
+    eql_ast_node_get_type(node, module, &type);
     mu_assert(biseqcstr(type, "Float"), "");
     eql_ast_node_free(node);
+    eql_module_free(module);
     bdestroy(type);
     return 0;
 }
