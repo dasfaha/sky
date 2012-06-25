@@ -26,6 +26,7 @@ typedef struct eql_ast_node eql_ast_node;
 #include "function.h"
 #include "fcall.h"
 #include "block.h"
+#include "if_stmt.h"
 #include "method.h"
 #include "property.h"
 #include "class.h"
@@ -48,6 +49,7 @@ enum eql_ast_node_type_e {
     EQL_AST_TYPE_FUNCTION,
     EQL_AST_TYPE_FCALL,
     EQL_AST_TYPE_BLOCK,
+    EQL_AST_TYPE_IF_STMT,
     EQL_AST_TYPE_METHOD,
     EQL_AST_TYPE_PROPERTY,
     EQL_AST_TYPE_CLASS,
@@ -73,6 +75,7 @@ struct eql_ast_node {
         eql_ast_function function;
         eql_ast_fcall fcall;
         eql_ast_block block;
+        eql_ast_if_stmt if_stmt;
         eql_ast_method method;
         eql_ast_property property;
         eql_ast_class class;

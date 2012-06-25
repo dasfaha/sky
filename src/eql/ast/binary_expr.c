@@ -232,6 +232,7 @@ int eql_ast_binary_expr_dump(eql_ast_node *node, bstring ret)
         case EQL_BINOP_MINUS: operator = "-"; break;
         case EQL_BINOP_MUL: operator = "*"; break;
         case EQL_BINOP_DIV: operator = "/"; break;
+        case EQL_BINOP_EQUALS: operator = "=="; break;
     }
     
     // Append dump.

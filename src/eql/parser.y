@@ -37,14 +37,17 @@
 %token <float_value> TFLOAT
 %token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE TRETURN
+%token <token> TIF
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
 %token <token> TQUOTE TDBLQUOTE
 %token <token> TSEMICOLON TCOLON TCOMMA
 %token <token> TPLUS TMINUS TMUL TDIV TASSIGN
+%token <token> TEQUALS
 %token <token> TDOT
 
 %type <string> string
 %type <node> block stmt expr
+%type <node> if_stmt
 %type <node> var_ref var_decl
 %type <node> class method property
 %type <node> function farg fcall
@@ -54,6 +57,7 @@
 %type <access> access
 
 %left TASSIGN
+%left TEQUALS
 %left TPLUS TMINUS
 %left TMUL TDIV
 %left TDOT
@@ -78,12 +82,14 @@ stmt    : expr TSEMICOLON
         | TRETURN expr TSEMICOLON { eql_ast_freturn_create($2, &$$); }
         | TRETURN TSEMICOLON { eql_ast_freturn_create(NULL, &$$); }
         | var_ref TASSIGN expr TSEMICOLON { eql_ast_var_assign_create($1, $3, &$$); }
+        | if_stmt
 ;
 
-expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
-        | expr TMINUS expr  { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }
-        | expr TMUL expr    { eql_ast_binary_expr_create(EQL_BINOP_MUL, $1, $3, &$$); }
-        | expr TDIV expr    { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
+expr    : expr TPLUS expr     { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
+        | expr TMINUS expr    { eql_ast_binary_expr_create(EQL_BINOP_MINUS, $1, $3, &$$); }
+        | expr TMUL expr      { eql_ast_binary_expr_create(EQL_BINOP_MUL, $1, $3, &$$); }
+        | expr TDIV expr      { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
+        | expr TEQUALS expr   { eql_ast_binary_expr_create(EQL_BINOP_EQUALS, $1, $3, &$$); }
         | number
         | var_ref
         | fcall
@@ -91,7 +97,7 @@ expr    : expr TPLUS expr   { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3,
 ;
 
 var_ref : TIDENTIFIER { eql_ast_var_ref_create($1, &$$); bdestroy($1); }
-		| var_ref TDOT TIDENTIFIER { eql_ast_staccess_create($1, $3, &$$); bdestroy($3); }
+        | var_ref TDOT TIDENTIFIER { eql_ast_staccess_create($1, $3, &$$); bdestroy($3); }
 ;
 
 var_decl : TIDENTIFIER TIDENTIFIER { eql_ast_var_decl_create($1, $2, &$$); bdestroy($1); bdestroy($2); };
@@ -134,6 +140,8 @@ fargs  : /* empty */        { $$ = eql_array_create(); }
 ;
 
 farg   : var_decl  { eql_ast_farg_create($1, &$$); };
+
+if_stmt : TIF TLPAREN expr TRPAREN TLBRACE block TRBRACE { eql_ast_if_stmt_create($3, $6, &$$); };
 
 access : TPUBLIC    { $$ = EQL_ACCESS_PUBLIC; }
        | TPRIVATE   { $$ = EQL_ACCESS_PRIVATE; }

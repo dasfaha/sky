@@ -63,6 +63,10 @@ void eql_ast_node_free(eql_ast_node *node)
             eql_ast_block_free(node);
             break;
         }
+        case EQL_AST_TYPE_IF_STMT: {
+            eql_ast_if_stmt_free(node);
+            break;
+        }
         case EQL_AST_TYPE_METHOD: {
             eql_ast_method_free(node);
             break;
@@ -212,6 +216,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
         case EQL_AST_TYPE_BLOCK: {
             rc = eql_ast_block_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen block");
+            break;
+        }
+        case EQL_AST_TYPE_IF_STMT: {
+            rc = eql_ast_if_stmt_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen if statement");
             break;
         }
         case EQL_AST_TYPE_CLASS: {
@@ -481,6 +490,11 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
         case EQL_AST_TYPE_BLOCK: {
             rc = eql_ast_block_dump(node, ret);
             check(rc == 0, "Unable to dump block");
+            break;
+        }
+        case EQL_AST_TYPE_IF_STMT: {
+            rc = eql_ast_if_stmt_dump(node, ret);
+            check(rc == 0, "Unable to dump if statement");
             break;
         }
         case EQL_AST_TYPE_CLASS: {

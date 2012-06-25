@@ -42,6 +42,7 @@
 "private"               return TOKEN(TPRIVATE);
 "public"                return TOKEN(TPUBLIC);
 "return"                return TOKEN(TRETURN);
+"if"                    return TOKEN(TIF);
 [ \t\n\f]               ;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;
@@ -60,6 +61,7 @@
 ";"                     return TOKEN(TSEMICOLON);
 ":"                     return TOKEN(TCOLON);
 ","                     return TOKEN(TCOMMA);
+"=="                    return TOKEN(TEQUALS);
 "="                     return TOKEN(TASSIGN);
 "."                     return TOKEN(TDOT);
 .                       printf("Unknown token!\n"); yyterminate();

@@ -69,7 +69,7 @@ error:
     return -1;
 }
 
-// Frees a variable declaration AST node from memory.
+// Frees a function AST node from memory.
 //
 // node - The AST node to free.
 void eql_ast_function_free(struct eql_ast_node *node)

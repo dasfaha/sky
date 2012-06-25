@@ -14,6 +14,7 @@ typedef enum {
     EQL_BINOP_MINUS,
     EQL_BINOP_MUL,
     EQL_BINOP_DIV,
+    EQL_BINOP_EQUALS,
 } eql_ast_binop_e;
 
 // Represents a binary expression in the AST.
