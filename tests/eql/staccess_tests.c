@@ -63,6 +63,29 @@ int test_eql_parse_staccess() {
     return 0;
 }
 
+int test_eql_parse_staccess_dump() {
+    mu_assert_eql_ast_dump(
+        "class Foo { public Int bar; public Int baz; } Foo x; x.baz = 20; return x.baz;",
+        "<module name=''>\n"
+        "  <class name='Foo'>\n"
+        "    <property>\n"
+        "      <var-decl type='Int' name='bar'>\n"
+        "    <property>\n"
+        "      <var-decl type='Int' name='baz'>\n"
+        "<function name='main' return-type='Foo'>\n"
+        "  <block name=''>\n"
+        "    <var-decl type='Foo' name='x'>\n"
+        "    <var-assign>\n"
+        "      <staccess member-name='baz'>\n"
+        "        <var-ref name='x'>\n"
+        "      <int-literal value='20'>\n"
+        "    <freturn>\n"
+        "      <staccess member-name='baz'>\n"
+        "        <var-ref name='x'>\n"
+    );
+    return 0;
+}
+
 
 //--------------------------------------
 // Compile
@@ -94,6 +117,7 @@ int test_eql_execute_staccess() {
 int all_tests() {
     mu_run_test(test_eql_ast_staccess_create);
     mu_run_test(test_eql_parse_staccess);
+    mu_run_test(test_eql_parse_staccess_dump);
     mu_run_test(test_eql_compile_staccess);
     //mu_run_test(test_eql_execute_staccess);
     return 0;

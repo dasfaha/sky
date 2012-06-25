@@ -20,7 +20,7 @@ entry:
 
 define %Foo @main() {
 entry:
-  %0 = alloca %Foo
-  %1 = load %Foo* %0
-  ret %Foo %1
+  %x = alloca %Foo
+  %0 = load %Foo* %x
+  ret %Foo %0
 }

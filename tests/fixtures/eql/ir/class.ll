@@ -11,7 +11,7 @@ entry:
 
 define %Foo.0 @main() {
 entry:
-  %0 = alloca %Foo.0
-  %1 = load %Foo.0* %0
-  ret %Foo.0 %1
+  %x = alloca %Foo.0
+  %0 = load %Foo.0* %x
+  ret %Foo.0 %0
 }

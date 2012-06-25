@@ -112,6 +112,15 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
 #define mu_assert_tempfile(EXP_FILENAME) \
     mu_assert_file(TEMPFILE, EXP_FILENAME)
 
+// Asserts the contents of the eql AST dump.
+#define mu_assert_eql_ast_dump(QUERY, EXPECTED) \
+    eql_ast_node *module = NULL; \
+    bstring text = bfromcstr(QUERY); \
+    eql_parse(NULL, text, &module); \
+    mu_assert_eql_node_dump(module, EXPECTED); \
+    eql_ast_node_free(module); \
+    bdestroy(text);
+
 // Asserts the contents of the eql dump file.
 #define mu_assert_eql_compile(QUERY, EXP_FILENAME) \
     eql_module *module; \
@@ -167,7 +176,7 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
 #define mu_assert_eql_node_dump(NODE, EXPECTED) \
     bstring actual = bfromcstr(""); \
     bstring expected = bfromcstr(EXPECTED); \
-    int rc = eql_ast_node_dump(node, actual); \
+    int rc = eql_ast_node_dump(NODE, actual); \
     mu_assert(rc == 0, "Unable to dump"); \
     mu_assert(biseq(actual, expected), "Unexpected dump.\n\nExpected:\n%s\nActual:\n%s", bdata(expected), bdata(actual)); \
     bdestroy(actual); \

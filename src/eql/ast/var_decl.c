@@ -95,7 +95,8 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(node->var_decl.type));
 
     // Add alloca.
-    *value = LLVMBuildAlloca(builder, type, "");
+    char *name = (node->parent->type == EQL_AST_TYPE_FARG ? "" : bdata(node->var_decl.name));
+    *value = LLVMBuildAlloca(builder, type, name);
     
     // Store variable location in the current scope.
     rc = eql_module_add_variable(module, node, *value);
