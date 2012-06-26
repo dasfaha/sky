@@ -105,7 +105,7 @@ int codegen_int(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
         default: {}
     }
     
-    check(*value != NULL, "Unable to Int codegen binary expression");
+    check(*value != NULL, "Unable to codegen Int binary expression");
     return 0;
 
 error:
@@ -147,13 +147,42 @@ int codegen_float(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
         default: {}
     }
     
-    check(*value != NULL, "Unable to Float codegen binary expression");
+    check(*value != NULL, "Unable to codegen Float binary expression");
     return 0;
 
 error:
     *value = NULL;
     return -1;
 }
+
+// Generates LLVM code for a binary expression of type "Boolean".
+//
+// node   - The binary expression node.
+// module - The compilation unit this node is a part of.
+// lhs    - The left hand value of the expression.
+// rhs    - The right hand value of the expression.
+// value  - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int codegen_boolean(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
+                    LLVMValueRef rhs, LLVMValueRef *value)
+{
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+    switch(node->binary_expr.operator) {
+        default: {
+            sentinel("Invalid binary operator for a Boolean value");
+        }
+    }
+    
+    check(*value != NULL, "Unable to codegen Boolean binary expression");
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
 
 // Recursively generates LLVM code for the binary expression AST node.
 //
@@ -198,6 +227,10 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
     else if(biseqcstr(lhs_type_name, "Float")) {
         rc = codegen_float(node, module, lhs, rhs, value);
         check(rc == 0, "Unable to codegen Float");
+    }
+    else if(biseqcstr(lhs_type_name, "Boolean")) {
+        rc = codegen_boolean(node, module, lhs, rhs, value);
+        check(rc == 0, "Unable to codegen Boolean");
     }
 
     check(*value != NULL, "Unable to codegen binary expression");

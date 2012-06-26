@@ -23,6 +23,7 @@ void eql_ast_node_free(eql_ast_node *node)
     switch(node->type) {
         case EQL_AST_TYPE_INT_LITERAL: break;
         case EQL_AST_TYPE_FLOAT_LITERAL: break;
+        case EQL_AST_TYPE_BOOLEAN_LITERAL: break;
         case EQL_AST_TYPE_BINARY_EXPR: {
             eql_ast_binary_expr_free(node);
             break;
@@ -166,6 +167,11 @@ int eql_ast_node_codegen(eql_ast_node *node, eql_module *module,
         case EQL_AST_TYPE_FLOAT_LITERAL: {
             rc = eql_ast_float_literal_codegen(node, module, &ret_value);
             check(rc == 0, "Unable to codegen literal float");
+            break;
+        }
+        case EQL_AST_TYPE_BOOLEAN_LITERAL: {
+            rc = eql_ast_boolean_literal_codegen(node, module, &ret_value);
+            check(rc == 0, "Unable to codegen literal boolean");
             break;
         }
         case EQL_AST_TYPE_BINARY_EXPR: {
@@ -327,6 +333,11 @@ int eql_ast_node_get_type(eql_ast_node *node, eql_module *module, bstring *type)
             check(rc == 0, "Unable to retrieve type name for float literal");
             break;
         }
+        case EQL_AST_TYPE_BOOLEAN_LITERAL: {
+            rc = eql_ast_boolean_literal_get_type(node, type);
+            check(rc == 0, "Unable to retrieve type name for boolean literal");
+            break;
+        }
         case EQL_AST_TYPE_BINARY_EXPR: {
             rc = eql_ast_binary_expr_get_type(node, module, type);
             check(rc == 0, "Unable to retrieve type name for binary expression");
@@ -440,6 +451,11 @@ int eql_ast_node_dump(eql_ast_node *node, bstring ret)
         case EQL_AST_TYPE_FLOAT_LITERAL: {
             rc = eql_ast_float_literal_dump(node, ret);
             check(rc == 0, "Unable to dump literal float");
+            break;
+        }
+        case EQL_AST_TYPE_BOOLEAN_LITERAL: {
+            rc = eql_ast_boolean_literal_dump(node, ret);
+            check(rc == 0, "Unable to dump literal boolean node");
             break;
         }
         case EQL_AST_TYPE_BINARY_EXPR: {

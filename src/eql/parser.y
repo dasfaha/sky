@@ -1,4 +1,5 @@
 %{
+    #include "stdbool.h"
     #include "stdio.h"
     #include "parser.h"
     #include "lexer.h"
@@ -26,6 +27,7 @@
     bstring string;
     int64_t int_value;
     double float_value;
+    bool boolean_value;
     eql_ast_access_e access;
     eql_ast_node *node;
     eql_array *array;
@@ -43,6 +45,7 @@
 %token <string> TIDENTIFIER TSTRING
 %token <int_value> TINT
 %token <float_value> TFLOAT
+%token <boolean_value> TTRUE TFALSE
 %token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE TRETURN
 %token <token> TIF TELSE
@@ -59,7 +62,7 @@
 %type <node> var_ref var_decl
 %type <node> class method property
 %type <node> function farg fcall
-%type <node> number int_literal float_literal
+%type <node> number literal int_literal float_literal boolean_literal
 %type <node> metadata metadata_item
 %type <array> stmts fcall_args fargs class_members metadatas metadata_items
 %type <if_block> if_block else_if_block
@@ -100,7 +103,7 @@ expr    : expr TPLUS expr     { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $
         | expr TMUL expr      { eql_ast_binary_expr_create(EQL_BINOP_MUL, $1, $3, &$$); }
         | expr TDIV expr      { eql_ast_binary_expr_create(EQL_BINOP_DIV, $1, $3, &$$); }
         | expr TEQUALS expr   { eql_ast_binary_expr_create(EQL_BINOP_EQUALS, $1, $3, &$$); }
-        | number
+        | literal
         | var_ref
         | fcall
         | TLPAREN expr TRPAREN { $$ = $2; }
@@ -114,6 +117,10 @@ var_decl : TIDENTIFIER TIDENTIFIER { eql_ast_var_decl_create($1, $2, &$$); bdest
 
 string : TSTRING;
 
+literal : boolean_literal
+        | number
+;
+
 number  : float_literal
         | int_literal
 ;
@@ -121,6 +128,10 @@ number  : float_literal
 int_literal  : TINT { eql_ast_int_literal_create($1, &$$); };
 
 float_literal  : TFLOAT { eql_ast_float_literal_create($1, &$$); };
+
+boolean_literal  : TTRUE  { eql_ast_boolean_literal_create(true, &$$); }
+                 | TFALSE { eql_ast_boolean_literal_create(false, &$$); }
+;
 
 fcall : TIDENTIFIER TLPAREN fcall_args TRPAREN
         {

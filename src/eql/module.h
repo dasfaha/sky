@@ -1,6 +1,7 @@
 #ifndef _eql_module_h
 #define _eql_module_h
 
+#include <stdbool.h>
 #include <inttypes.h>
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
@@ -101,6 +102,8 @@ int eql_module_get_main_function(eql_module *module, void **ret);
 int eql_module_execute_int(eql_module *module, int64_t *ret);
 
 int eql_module_execute_float(eql_module *module, double *ret);
+
+int eql_module_execute_boolean(eql_module *module, bool *ret);
 
 
 //--------------------------------------

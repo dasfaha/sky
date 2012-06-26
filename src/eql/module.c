@@ -13,11 +13,13 @@
 //
 //==============================================================================
 
-struct tagbstring EQL_TYPE_NAME_INT   = bsStatic("Int");
+struct tagbstring EQL_TYPE_NAME_INT     = bsStatic("Int");
 
-struct tagbstring EQL_TYPE_NAME_FLOAT = bsStatic("Float");
+struct tagbstring EQL_TYPE_NAME_FLOAT   = bsStatic("Float");
 
-struct tagbstring EQL_TYPE_NAME_VOID  = bsStatic("void");
+struct tagbstring EQL_TYPE_NAME_BOOLEAN = bsStatic("Boolean");
+
+struct tagbstring EQL_TYPE_NAME_VOID    = bsStatic("void");
 
 
 //==============================================================================
@@ -119,17 +121,22 @@ int eql_module_get_type_ref(eql_module *module, bstring name,
 
     // Compare to built-in types.
     bool found = false;
-    if(biseq(name, &EQL_TYPE_NAME_INT)) {
+    if(biseqcstr(name, "Int")) {
         if(type != NULL) *type = LLVMInt64TypeInContext(context);
         if(node != NULL) *node = NULL;
         found = true;
     }
-    else if(biseq(name, &EQL_TYPE_NAME_FLOAT)) {
+    else if(biseqcstr(name, "Float")) {
         if(type != NULL) *type = LLVMDoubleTypeInContext(context);
         if(node != NULL) *node = NULL;
         found = true;
     }
-    else if(biseq(name, &EQL_TYPE_NAME_VOID)) {
+    else if(biseqcstr(name, "Boolean")) {
+        if(type != NULL) *type = LLVMInt1TypeInContext(context);
+        if(node != NULL) *node = NULL;
+        found = true;
+    }
+    else if(biseqcstr(name, "void")) {
         if(type != NULL) *type = LLVMVoidTypeInContext(context);
         if(node != NULL) *node = NULL;
         found = true;
@@ -223,11 +230,26 @@ int eql_module_cast_value(eql_module *module, LLVMValueRef value,
             if(biseqcstr(from_type_name, "Float")) {
                 *ret = LLVMBuildFPToSI(builder, value, LLVMInt64TypeInContext(context), "");
             }
+            else if(biseqcstr(from_type_name, "Boolean")) {
+                *ret = LLVMBuildZExt(builder, value, LLVMInt64TypeInContext(context), "");
+            }
         }
         // Cast to Float
         else if(biseqcstr(to_type_name, "Float")) {
             if(biseqcstr(from_type_name, "Int")) {
                 *ret = LLVMBuildSIToFP(builder, value, LLVMDoubleTypeInContext(context), "");
+            }
+            else if(biseqcstr(from_type_name, "Boolean")) {
+                *ret = LLVMBuildUIToFP(builder, value, LLVMDoubleTypeInContext(context), "");
+            }
+        }
+        // Cast to Boolean
+        else if(biseqcstr(to_type_name, "Boolean")) {
+            if(biseqcstr(from_type_name, "Int")) {
+                *ret = LLVMBuildTrunc(builder, value, LLVMInt1TypeInContext(context), "");
+            }
+            else if(biseqcstr(from_type_name, "Float")) {
+                *ret = LLVMBuildFPToUI(builder, value, LLVMInt1TypeInContext(context), "");
             }
         }
     }
@@ -483,6 +505,32 @@ error:
     return -1;
 }
 
+// Executes the main function of a EQL module that returns a Boolean.
+//
+// module - The module to execute.
+// ret    - A pointer to where the returned value should be sent.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_execute_boolean(eql_module *module, bool *ret)
+{
+    check(module != NULL, "Module required");
+    check(ret != NULL, "Return pointer required");
+
+    // Generate a pointer to the main function.
+    void *fp;
+    int rc = eql_module_get_main_function(module, &fp);
+    check(rc == 0 && fp != NULL, "Unable to retrieve main function");
+    bool (*FP)() = (bool (*)())(intptr_t)fp;
+    
+    // Execute function and return value.
+    *ret = FP();
+
+    return 0;
+    
+error:
+    *ret = 0;
+    return -1;
+}
 
 //======================================
 // Debugging

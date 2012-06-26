@@ -16,6 +16,7 @@ typedef struct eql_ast_node eql_ast_node;
 #include "access.h"
 #include "int_literal.h"
 #include "float_literal.h"
+#include "boolean_literal.h"
 #include "binary_expr.h"
 #include "var_ref.h"
 #include "var_decl.h"
@@ -39,6 +40,7 @@ typedef struct eql_ast_node eql_ast_node;
 enum eql_ast_node_type_e {
     EQL_AST_TYPE_INT_LITERAL,
     EQL_AST_TYPE_FLOAT_LITERAL,
+    EQL_AST_TYPE_BOOLEAN_LITERAL,
     EQL_AST_TYPE_BINARY_EXPR,
     EQL_AST_TYPE_VAR_REF,
     EQL_AST_TYPE_VAR_DECL,
@@ -65,6 +67,7 @@ struct eql_ast_node {
     union {
         eql_ast_int_literal int_literal;
         eql_ast_float_literal float_literal;
+        eql_ast_boolean_literal boolean_literal;
         eql_ast_binary_expr binary_expr;
         eql_ast_var_ref var_ref;
         eql_ast_var_decl var_decl;
