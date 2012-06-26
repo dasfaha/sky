@@ -71,6 +71,90 @@ void eql_ast_binary_expr_free(eql_ast_node *node)
 // Codegen
 //--------------------------------------
 
+// Generates LLVM code for a binary expression of type "Int".
+//
+// node - The binary expression node.
+// module - The compilation unit this node is a part of.
+// lhs    - The left hand value of the expression.
+// rhs    - The right hand value of the expression.
+// value  - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int codegen_int(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
+                LLVMValueRef rhs, LLVMValueRef *value)
+{
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+    switch(node->binary_expr.operator) {
+        case EQL_BINOP_PLUS: {
+            *value = LLVMBuildAdd(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_MINUS: {
+            *value = LLVMBuildSub(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_MUL: {
+            *value = LLVMBuildMul(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_DIV: {
+            *value = LLVMBuildSDiv(builder, lhs, rhs, "");
+            break;
+        }
+        default: {}
+    }
+    
+    check(*value != NULL, "Unable to Int codegen binary expression");
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
+// Generates LLVM code for a binary expression of type "Float".
+//
+// node - The binary expression node.
+// module - The compilation unit this node is a part of.
+// lhs    - The left hand value of the expression.
+// rhs    - The right hand value of the expression.
+// value  - A pointer to where the LLVM value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int codegen_float(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
+                  LLVMValueRef rhs, LLVMValueRef *value)
+{
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+    switch(node->binary_expr.operator) {
+        case EQL_BINOP_PLUS: {
+            *value = LLVMBuildFAdd(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_MINUS: {
+            *value = LLVMBuildFSub(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_MUL: {
+            *value = LLVMBuildFMul(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_DIV: {
+            *value = LLVMBuildFDiv(builder, lhs, rhs, "");
+            break;
+        }
+        default: {}
+    }
+    
+    check(*value != NULL, "Unable to Float codegen binary expression");
+    return 0;
+
+error:
+    *value = NULL;
+    return -1;
+}
+
 // Recursively generates LLVM code for the binary expression AST node.
 //
 // node    - The node to generate an LLVM value for.
@@ -89,88 +173,34 @@ int eql_ast_binary_expr_codegen(eql_ast_node *node,
     check(node->type == EQL_AST_TYPE_BINARY_EXPR, "Node type must be 'binary expression'");
     check(module != NULL, "Module required");
     
-    LLVMBuilderRef builder = module->compiler->llvm_builder;
-
     // Evaluate left and right hand values.
     rc = eql_ast_node_codegen(node->binary_expr.lhs, module, &lhs);
     check(rc == 0 && lhs != NULL, "Unable to codegen lhs");
     rc = eql_ast_node_codegen(node->binary_expr.rhs, module, &rhs);
     check(rc == 0 && rhs != NULL, "Unable to codegen rhs");
 
-    // If values are different types then cast RHS to LHS.
-    LLVMTypeRef lhs_type = LLVMTypeOf(lhs);
-    LLVMTypeKind lhs_type_kind = LLVMGetTypeKind(lhs_type);
-    LLVMTypeRef rhs_type = LLVMTypeOf(rhs);
-    LLVMTypeKind rhs_type_kind = LLVMGetTypeKind(rhs_type);
+    // Retrieve types.
+    bstring lhs_type_name = NULL, rhs_type_name = NULL;
+    rc = eql_ast_node_get_type(node->binary_expr.lhs, module, &lhs_type_name);
+    check(rc == 0, "Unable to retrieve LHS type");
+    rc = eql_ast_node_get_type(node->binary_expr.rhs, module, &rhs_type_name);
+    check(rc == 0, "Unable to retrieve RHS type");
 
-    if(lhs_type != rhs_type) {
-        // Cast int to float.
-        if(lhs_type_kind == LLVMDoubleTypeKind && rhs_type_kind == LLVMIntegerTypeKind)
-        {
-            rhs = LLVMBuildSIToFP(builder, rhs, lhs_type, "");
-        }
-        // Cast float to int.
-        else if(lhs_type_kind == LLVMIntegerTypeKind && rhs_type_kind == LLVMDoubleTypeKind)
-        {
-            rhs = LLVMBuildFPToSI(builder, rhs, lhs_type, "");
-        }
-        // Throw error if it's any other conversion.
-        else {
-            sentinel("Unable to cast types");
-        }
+    // Cast RHS into the LHS type.
+    rc = eql_module_cast_value(module, rhs, rhs_type_name, lhs_type_name, &rhs);
+    check(rc == 0 && rhs != NULL, "Unable to cast value");
+
+    // Delegate LLVM IR generation to type-specific function.
+    if(biseqcstr(lhs_type_name, "Int")) {
+        rc = codegen_int(node, module, lhs, rhs, value);
+        check(rc == 0, "Unable to codegen Int");
+    }
+    else if(biseqcstr(lhs_type_name, "Float")) {
+        rc = codegen_float(node, module, lhs, rhs, value);
+        check(rc == 0, "Unable to codegen Float");
     }
 
-    // Generate Float operations.
-    if(lhs_type_kind == LLVMDoubleTypeKind) {
-        switch(node->binary_expr.operator) {
-            case EQL_BINOP_PLUS: {
-                *value = LLVMBuildFAdd(builder, lhs, rhs, "");
-                break;
-            }
-            case EQL_BINOP_MINUS: {
-                *value = LLVMBuildFSub(builder, lhs, rhs, "");
-                break;
-            }
-            case EQL_BINOP_MUL: {
-                *value = LLVMBuildFMul(builder, lhs, rhs, "");
-                break;
-            }
-            case EQL_BINOP_DIV: {
-                *value = LLVMBuildFDiv(builder, lhs, rhs, "");
-                break;
-            }
-			default: {
-				sentinel("Invalid float binary operator");
-			}
-        }
-    }
-    // Generate Integer operations.
-    else {
-        switch(node->binary_expr.operator) {
-            case EQL_BINOP_PLUS: {
-                *value = LLVMBuildAdd(builder, lhs, rhs, "");
-                break;
-            }
-            case EQL_BINOP_MINUS: {
-                *value = LLVMBuildSub(builder, lhs, rhs, "");
-                break;
-            }
-            case EQL_BINOP_MUL: {
-                *value = LLVMBuildMul(builder, lhs, rhs, "");
-                break;
-            }
-            case EQL_BINOP_DIV: {
-                *value = LLVMBuildSDiv(builder, lhs, rhs, "");
-                break;
-            }
-			default: {
-				sentinel("Invalid int binary operator");
-			}
-        }
-    }
-	
     check(*value != NULL, "Unable to codegen binary expression");
-    
     return 0;
 
 error:

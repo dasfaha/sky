@@ -188,6 +188,60 @@ error:
     return -1;
 }
 
+// Casts an LLVM value from one type to another.
+//
+// module         - The compilation unit that value belongs to.
+// value          - The original value to cast.
+// from_type_name - The name of the original type.
+// to_type_name   - The name of the type being cast to.
+// ret            - A pointer to where the new value should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_module_cast_value(eql_module *module, LLVMValueRef value,
+                          bstring from_type_name, bstring to_type_name,
+                          LLVMValueRef *ret)
+{
+    check(module != NULL, "Module required");
+    check(value != NULL, "Value required");
+    check(from_type_name != NULL, "Source type required");
+    check(to_type_name != NULL, "Destination type required");
+    check(ret != NULL, "Return pointer required");
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+
+    *ret = NULL;
+    
+    // If the types are equal then just return the original value.
+    if(biseq(to_type_name, from_type_name)) {
+        *ret = value;
+    }
+    // Otherwise maps types.
+    else {
+        // Cast to Int
+        if(biseqcstr(to_type_name, "Int")) {
+            if(biseqcstr(from_type_name, "Float")) {
+                *ret = LLVMBuildFPToSI(builder, value, LLVMInt64TypeInContext(context), "");
+            }
+        }
+        // Cast to Float
+        else if(biseqcstr(to_type_name, "Float")) {
+            if(biseqcstr(from_type_name, "Int")) {
+                *ret = LLVMBuildSIToFP(builder, value, LLVMDoubleTypeInContext(context), "");
+            }
+        }
+    }
+
+    // Throw an error if the types cannot be cast.
+    check(*ret != NULL, "Unable to cast '%s' to '%s'", bdatae(from_type_name, ""), bdatae(to_type_name, ""))
+    
+    return 0;
+
+error:
+    *ret = NULL;
+    return -1;
+}
+
 
 //--------------------------------------
 // Scope

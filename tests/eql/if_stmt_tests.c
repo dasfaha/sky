@@ -133,6 +133,18 @@ int test_eql_parse_if_else_if_stmt() {
 }
 
 
+//--------------------------------------
+// Compile
+//--------------------------------------
+
+int test_eql_compile_if_stmt() {
+    mu_assert_eql_compile("Int foo; if(foo == 1) { foo = 2; } return foo;", "tests/fixtures/eql/ir/if_stmt.ll");
+    return 0;
+}
+
+
+
+
 //==============================================================================
 //
 // Setup
@@ -143,6 +155,7 @@ int all_tests() {
     mu_run_test(test_eql_ast_if_stmt_create);
     mu_run_test(test_eql_parse_if_stmt);
     mu_run_test(test_eql_parse_if_else_if_stmt);
+    //mu_run_test(test_eql_compile_if_stmt);
     return 0;
 }
 
