@@ -43,6 +43,7 @@
 "public"                return TOKEN(TPUBLIC);
 "return"                return TOKEN(TRETURN);
 "if"                    return TOKEN(TIF);
+"else"                  return TOKEN(TELSE);
 [ \t\n\f]               ;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_STRING; return TIDENTIFIER;
 [0-9]+\.[0-9]+          SAVE_FLOAT; return TFLOAT;

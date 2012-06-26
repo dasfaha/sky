@@ -29,6 +29,14 @@
     eql_ast_access_e access;
     eql_ast_node *node;
     eql_array *array;
+    struct {
+        eql_ast_node *condition;
+        eql_ast_node *block;
+    } if_block;
+    struct {
+        eql_array *conditions;
+        eql_array *blocks;
+    } if_blocks;
     int token;
 }
 
@@ -37,7 +45,7 @@
 %token <float_value> TFLOAT
 %token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE TRETURN
-%token <token> TIF
+%token <token> TIF TELSE
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
 %token <token> TQUOTE TDBLQUOTE
 %token <token> TSEMICOLON TCOLON TCOMMA
@@ -47,13 +55,15 @@
 
 %type <string> string
 %type <node> block stmt expr
-%type <node> if_stmt
+%type <node> if_stmt else_block
 %type <node> var_ref var_decl
 %type <node> class method property
 %type <node> function farg fcall
 %type <node> number int_literal float_literal
 %type <node> metadata metadata_item
 %type <array> stmts fcall_args fargs class_members metadatas metadata_items
+%type <if_block> if_block else_if_block
+%type <if_blocks> else_if_blocks
 %type <access> access
 
 %left TASSIGN
@@ -141,7 +151,28 @@ fargs  : /* empty */        { $$ = eql_array_create(); }
 
 farg   : var_decl  { eql_ast_farg_create($1, &$$); };
 
-if_stmt : TIF TLPAREN expr TRPAREN TLBRACE block TRBRACE { eql_ast_if_stmt_create($3, $6, &$$); };
+if_stmt : if_block else_if_blocks else_block
+          {
+              eql_ast_if_stmt_create(&$$);
+              eql_ast_if_stmt_add_block($$, $1.condition, $1.block);
+              eql_ast_if_stmt_add_blocks($$, (eql_ast_node**)$2.conditions->elements, (eql_ast_node**)$2.blocks->elements, $2.blocks->length);
+              eql_ast_if_stmt_set_else_block($$, $3);
+              eql_array_free($2.conditions);
+              eql_array_free($2.blocks);
+          }
+;
+
+if_block : TIF TLPAREN expr TRPAREN TLBRACE block TRBRACE { $$.condition = $3; $$.block = $6; };
+
+else_if_blocks : /* empty */                     { $$.conditions = eql_array_create(); $$.blocks = eql_array_create(); }
+               | else_if_blocks else_if_block    { eql_array_push($1.conditions, $2.condition); eql_array_push($1.blocks, $2.block); }
+;
+
+else_if_block : TELSE if_block                 { $$ = $2; }
+
+else_block : /* empty */                 { $$ = NULL; }
+           | TELSE TLBRACE block TRBRACE { $$ = $3; }
+;
 
 access : TPUBLIC    { $$ = EQL_ACCESS_PUBLIC; }
        | TPRIVATE   { $$ = EQL_ACCESS_PRIVATE; }
