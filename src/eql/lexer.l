@@ -44,6 +44,9 @@
 "return"                return TOKEN(TRETURN);
 "if"                    return TOKEN(TIF);
 "else"                  return TOKEN(TELSE);
+"for"                   return TOKEN(TFOR);
+"each"                  return TOKEN(TEACH);
+"in"                    return TOKEN(TIN);
 "true"                  return TOKEN(TTRUE);
 "false"                 return TOKEN(TFALSE);
 [ \t\n\f]               ;

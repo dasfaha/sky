@@ -49,6 +49,7 @@
 %token <token> TCLASS
 %token <token> TPUBLIC TPRIVATE TRETURN
 %token <token> TIF TELSE
+%token <token> TFOR TEACH TIN
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET
 %token <token> TQUOTE TDBLQUOTE
 %token <token> TSEMICOLON TCOLON TCOMMA
@@ -58,7 +59,7 @@
 
 %type <string> string
 %type <node> block stmt expr
-%type <node> if_stmt else_block
+%type <node> if_stmt else_block for_each_stmt
 %type <node> var_ref var_decl
 %type <node> class method property
 %type <node> function farg fcall
@@ -96,6 +97,7 @@ stmt    : expr TSEMICOLON
         | TRETURN TSEMICOLON { eql_ast_freturn_create(NULL, &$$); }
         | var_ref TASSIGN expr TSEMICOLON { eql_ast_var_assign_create($1, $3, &$$); }
         | if_stmt
+        | for_each_stmt
 ;
 
 expr    : expr TPLUS expr     { eql_ast_binary_expr_create(EQL_BINOP_PLUS, $1, $3, &$$); }
@@ -183,6 +185,12 @@ else_if_block : TELSE if_block                 { $$ = $2; }
 
 else_block : /* empty */                 { $$ = NULL; }
            | TELSE TLBRACE block TRBRACE { $$ = $3; }
+;
+
+for_each_stmt : TFOR TEACH TLPAREN var_decl TIN expr TRPAREN TLBRACE block TRBRACE
+                {
+                    eql_ast_for_each_stmt_create($4, $6, $9, &$$);
+                }
 ;
 
 access : TPUBLIC    { $$ = EQL_ACCESS_PUBLIC; }

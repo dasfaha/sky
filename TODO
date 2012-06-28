@@ -1,5 +1,4 @@
 # EQL
-- Nested if statements.
 - for each stmt
   - Enumerable
 - External functions (through metadata)
