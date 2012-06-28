@@ -102,6 +102,10 @@ int codegen_int(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
             *value = LLVMBuildSDiv(builder, lhs, rhs, "");
             break;
         }
+        case EQL_BINOP_EQUALS: {
+            *value = LLVMBuildICmp(builder, LLVMIntEQ, lhs, rhs, "");
+            break;
+        }
         default: {}
     }
     
@@ -142,6 +146,10 @@ int codegen_float(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
         }
         case EQL_BINOP_DIV: {
             *value = LLVMBuildFDiv(builder, lhs, rhs, "");
+            break;
+        }
+        case EQL_BINOP_EQUALS: {
+            *value = LLVMBuildFCmp(builder, LLVMRealOEQ, lhs, rhs, "");
             break;
         }
         default: {}
@@ -260,9 +268,26 @@ int eql_ast_binary_expr_get_type(eql_ast_node *node, eql_module *module,
     check(node->type == EQL_AST_TYPE_BINARY_EXPR, "Node type must be 'binary expr'");
     check(node->binary_expr.lhs != NULL, "Binary expression LHS is required");
     
-    // Return the type of the left side.
-    int rc = eql_ast_node_get_type(node->binary_expr.lhs, module, type);
-    check(rc == 0, "Unable to determine the binary expression type");
+    switch(node->binary_expr.operator) {
+        // If this is an arithmetic operator then use the LHS type.
+        case EQL_BINOP_PLUS:
+        case EQL_BINOP_MINUS:
+        case EQL_BINOP_MUL:
+        case EQL_BINOP_DIV:
+        {
+            int rc = eql_ast_node_get_type(node->binary_expr.lhs, module, type);
+            check(rc == 0, "Unable to determine the binary expression type");
+            break;
+        }
+        
+        // Otherwise it's a boolean expression.
+        default:
+        {
+            *type = bfromcstr("Boolean");
+            check_mem(*type);
+            break;
+        }
+    }
     
     return 0;
 

@@ -188,29 +188,55 @@ int codegen_block(eql_ast_node *node, eql_module *module, unsigned int index)
     // Retrieve the associated condition & block.
     eql_ast_node *condition = node->if_stmt.conditions[index];
     eql_ast_node *block = node->if_stmt.blocks[index];
+    eql_ast_node *alt_block = node->if_stmt.else_block;
 
     // Generate IR for condition.
     LLVMValueRef condition_value  = NULL;
     rc = eql_ast_node_codegen(condition, module, &condition_value);
 
     // Generate block if condition is true.
-    LLVMValueRef true_block_value = NULL;
-    rc = eql_ast_node_codegen(condition, module, &true_block_value);
-    LLVMBasicBlockRef true_block = LLVMValueAsBasicBlock(true_block_value);
+    LLVMBasicBlockRef true_block = NULL;
+    rc = eql_ast_block_codegen_block(block, module, &true_block);
+    check(rc == 0 && true_block != NULL, "Unable to codegen if statement true block");
     
-    // Generate else block if condition is false.
-    LLVMValueRef false_block_value = NULL;
-    rc = eql_ast_node_codegen(condition, module, &false_block_value);
-    LLVMBasicBlockRef false_block = LLVMValueAsBasicBlock(false_block_value);
-
-    // Append merge block.
+    // Generate block if condition is false.
+    LLVMBasicBlockRef false_block = NULL;
+    rc = eql_ast_block_codegen_block(block, module, &false_block);
+    check(rc == 0 && false_block != NULL, "Unable to codegen if statement false block");
+    
+    // Create merge block.
     LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(module->llvm_function, "");
 
     // Create a conditional branch.
     LLVMBuildCondBr(builder, condition_value, true_block, false_block);
     
+    // Codegen the true block body.
+    rc = eql_ast_block_codegen_with_block(block, module, true_block);
+    check(rc == 0, "Unable to codegen if statement true block body");
+    
+    // Add unconditional branch to merge block.
+    LLVMBuildBr(builder, merge_block);
+    
+    // Retrieve current value of true block (in case we nested).
+    true_block = LLVMGetInsertBlock(builder);
+    
+    // Codegen the false block body.
+    rc = eql_ast_block_codegen_with_block(alt_block, module, false_block);
+    check(rc == 0, "Unable to codegen if statement false block body");
+    
+    // Add unconditional branch to merge block.
+    LLVMBuildBr(builder, merge_block);
+
+    // Retrieve current value of false block (in case we nested).
+    false_block = LLVMGetInsertBlock(builder);
+
+    // Position builder at the end of the merge block.
+    LLVMPositionBuilderAtEnd(builder, merge_block);
+    //*value = LLVMBasicBlockAsValue(merge_block);
+    return 0;
     
 error:
+    //*value = NULL;
     return -1;
 }
 
