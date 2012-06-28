@@ -171,6 +171,49 @@ error:
 // Codegen
 //--------------------------------------
 
+// Generates an if/else block. The "else if" blocks are recusively nested
+// so that the IR generation matches what LLVM expects.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// index   - The block number to generate for.
+//
+// Returns 0 if successful, otherwise returns -1.
+int codegen_block(eql_ast_node *node, eql_module *module, unsigned int index)
+{
+    int rc;
+    
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+ 
+    // Retrieve the associated condition & block.
+    eql_ast_node *condition = node->if_stmt.conditions[index];
+    eql_ast_node *block = node->if_stmt.blocks[index];
+
+    // Generate IR for condition.
+    LLVMValueRef condition_value  = NULL;
+    rc = eql_ast_node_codegen(condition, module, &condition_value);
+
+    // Generate block if condition is true.
+    LLVMValueRef true_block_value = NULL;
+    rc = eql_ast_node_codegen(condition, module, &true_block_value);
+    LLVMBasicBlockRef true_block = LLVMValueAsBasicBlock(true_block_value);
+    
+    // Generate else block if condition is false.
+    LLVMValueRef false_block_value = NULL;
+    rc = eql_ast_node_codegen(condition, module, &false_block_value);
+    LLVMBasicBlockRef false_block = LLVMValueAsBasicBlock(false_block_value);
+
+    // Append merge block.
+    LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(module->llvm_function, "");
+
+    // Create a conditional branch.
+    LLVMBuildCondBr(builder, condition_value, true_block, false_block);
+    
+    
+error:
+    return -1;
+}
+
 // Recursively generates LLVM code for the "if" statement AST node.
 //
 // node    - The node to generate an LLVM value for.
@@ -181,10 +224,16 @@ error:
 int eql_ast_if_stmt_codegen(eql_ast_node *node, eql_module *module,
                             LLVMValueRef *value)
 {
-    //int rc;
+    int rc;
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
+    check(node->if_stmt.block_count > 0, "If statement blocks required");
 
+    // Recursively generate and wrap blocks.
+    rc = codegen_block(node, module, 0);
+    check(rc == 0, "Unable to generate if block");
+
+    *value = NULL;
     return 0;
 
 error:

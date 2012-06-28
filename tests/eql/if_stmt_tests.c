@@ -82,7 +82,7 @@ int test_eql_parse_if_stmt() {
     mu_assert_eql_node_dump(module,
         "<module name=''>\n"
         "<function name='main' return-type=''>\n"
-        "  <block name=''>\n"
+        "  <block name='entry'>\n"
         "    <var-decl type='Int' name='foo'>\n"
         "    <if-stmt>\n"
         "      <binary-expr operator='=='>\n"
@@ -107,7 +107,7 @@ int test_eql_parse_if_else_if_stmt() {
     mu_assert_eql_node_dump(module,
         "<module name=''>\n"
         "<function name='main' return-type=''>\n"
-        "  <block name=''>\n"
+        "  <block name='entry'>\n"
         "    <var-decl type='Int' name='foo'>\n"
         "    <if-stmt>\n"
         "      <binary-expr operator='=='>\n"

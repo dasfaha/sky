@@ -58,6 +58,7 @@ int eql_ast_function_create(bstring name, bstring return_type,
     node->function.body = body;
     if(body != NULL) {
         body->parent = node;
+        body->block.name = bfromcstr("entry");
     }
 
     *ret = node;
@@ -111,6 +112,8 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 {
     int rc;
     unsigned int i;
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
 
     // Dynamically generate the return type of the function if it is missing.
     if(node->function.return_type == NULL) {
@@ -173,10 +176,19 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
         LLVMSetValueName(param, bdata(arg->farg.var_decl->var_decl.name));
     }
 
-    // Generate body.
-    LLVMValueRef body;
-    rc = eql_ast_node_codegen(node->function.body, module, &body);
-    check(rc == 0, "Unable to generate function body");
+    // Generate body block.
+    LLVMBasicBlockRef block = NULL;
+    rc = eql_ast_block_codegen_block(node->function.body, module, &block);
+    check(rc == 0, "Unable to generate function body block");
+
+    // Generate function arguments.
+    LLVMPositionBuilderAtEnd(builder, block);
+    rc = eql_ast_function_codegen_args(node, module);
+    check(rc == 0, "Unable to codegen function arguments");
+   
+   // Generate the body statements.
+    rc = eql_ast_block_codegen_with_block(node->function.body, module, block);
+    check(rc == 0, "Unable to generate function function body statements");
     
     // Dump before verification.
     // LLVMDumpValue(func);

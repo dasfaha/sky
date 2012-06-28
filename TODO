@@ -1,9 +1,4 @@
 # EQL
-- refactor binary expr.
-- add Boolean type.
-  - literals (true, false)
-  - casting
-
 - if stmt
 - foreach stmt
 

@@ -49,6 +49,12 @@ int eql_ast_block_add_exprs(eql_ast_node *block,
 // Codegen
 //--------------------------------------
 
+int eql_ast_block_codegen_block(eql_ast_node *node, eql_module *module,
+    LLVMBasicBlockRef *block);
+
+int eql_ast_block_codegen_with_block(eql_ast_node *node, eql_module *module,
+    LLVMBasicBlockRef block);
+
 int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
     LLVMValueRef *value);
 

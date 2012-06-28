@@ -73,7 +73,7 @@ int test_eql_parse_staccess_dump() {
         "    <property>\n"
         "      <var-decl type='Int' name='baz'>\n"
         "<function name='main' return-type=''>\n"
-        "  <block name=''>\n"
+        "  <block name='entry'>\n"
         "    <var-decl type='Foo' name='x'>\n"
         "    <var-assign>\n"
         "      <staccess member-name='baz'>\n"

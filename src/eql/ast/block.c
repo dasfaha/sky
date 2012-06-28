@@ -132,6 +132,78 @@ error:
 // Codegen
 //--------------------------------------
 
+// Creates the LLVM block for this AST but does not generate the statements.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// block   - A pointer to where the LLVM basic block should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_block_codegen_block(eql_ast_node *node, eql_module *module, 
+                          LLVMBasicBlockRef *block)
+{
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+    check(node->parent != NULL, "Node parent required");
+    check(module != NULL, "Module required");
+    check(module->llvm_function != NULL, "Unable to create block without a function");
+
+    // Create LLVM block.
+    *block = LLVMAppendBasicBlock(module->llvm_function, bdatae(node->block.name, ""));
+    
+    return 0;
+    
+error:
+    *block = NULL;
+    return -1;
+}
+    
+// Recursively generates LLVM code for the block AST node.
+//
+// node    - The node to generate an LLVM value for.
+// module  - The compilation unit this node is a part of.
+// block   - The LLVM block to insert instructions into.
+//
+// Returns 0 if successful, otherwise returns -1.
+int eql_ast_block_codegen_with_block(eql_ast_node *node, eql_module *module, 
+                                     LLVMBasicBlockRef block)
+{
+    int rc;
+
+    check(node != NULL, "Node required");
+    check(node->type == EQL_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+    check(node->parent != NULL, "Node parent required");
+    check(module != NULL, "Module required");
+    check(module->llvm_function != NULL, "Unable to add a block without a function");
+    check(block != NULL, "LLVM block required");
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+
+    // Move builder to the end of the block.
+    LLVMPositionBuilderAtEnd(builder, block);
+   
+    // Add block scope.
+    rc = eql_module_push_scope(module, node);
+    check(rc == 0, "Unable to add block scope");
+
+    // Codegen expressions in block.
+    unsigned int i;
+    for(i=0; i<node->block.expr_count; i++) {
+        LLVMValueRef expression_value;
+        int rc = eql_ast_node_codegen(node->block.exprs[i], module, &expression_value);
+        check(rc == 0, "Unable to codegen block expression");
+    }
+
+    // Remove block scope.
+    rc = eql_module_pop_scope(module, node);
+    check(rc == 0, "Unable to remove block scope");
+
+    return 0;
+
+error:
+    return -1;
+}
+
 // Recursively generates LLVM code for the block AST node.
 //
 // node    - The node to generate an LLVM value for.
@@ -150,43 +222,22 @@ int eql_ast_block_codegen(eql_ast_node *node, eql_module *module,
     check(module != NULL, "Module required");
     check(module->llvm_function != NULL, "Unable to add a block without a function");
 
-    LLVMBuilderRef builder = module->compiler->llvm_builder;
-    LLVMBasicBlockRef block = LLVMAppendBasicBlock(module->llvm_function, "entry");  // bdata(node->block.name)
-    LLVMPositionBuilderAtEnd(builder, block);
-   
-    // HACK: If the parent is a function then insert the allocas here now that
-    //       we have an entry block.
-    if(node->parent->type == EQL_AST_TYPE_FUNCTION) {
-        rc = eql_ast_function_codegen_args(node->parent, module);
-        check(rc == 0, "Unable to codegen function arguments");
-    }
-   
-    // Add block scope.
-    rc = eql_module_push_scope(module, node);
-    check(rc == 0, "Unable to add block scope");
-
-    // Codegen expressions in block.
-    unsigned int i;
-    for(i=0; i<node->block.expr_count; i++) {
-        LLVMValueRef expression_value;
-        int rc = eql_ast_node_codegen(node->block.exprs[i], module, &expression_value);
-        check(rc == 0, "Unable to codegen block expression");
-    }
-
-    // Remove block scope.
-    rc = eql_module_pop_scope(module, node);
-    check(rc == 0, "Unable to remove block scope");
-
-    // Return block as a value.
-    *value = LLVMBasicBlockAsValue(block);
+    // Generate block.
+    LLVMBasicBlockRef block = NULL;
+    rc = eql_ast_block_codegen_block(node, module, &block);
+    check(rc == 0, "Unable to create LLVM block");
     
+    // Generate statements within block.
+    rc = eql_ast_block_codegen_with_block(node, module, block);
+    check(rc == 0, "Unable to codegen block statements");
+
+    *value = LLVMBasicBlockAsValue(block);
     return 0;
 
 error:
     *value = NULL;
     return -1;
 }
-
 
 //--------------------------------------
 // Misc
