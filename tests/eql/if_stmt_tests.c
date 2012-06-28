@@ -147,6 +147,16 @@ int test_eql_compile_if_stmt_with_else() {
     return 0;
 }
 
+int test_eql_compile_if_stmt_with_else_if() {
+    mu_assert_eql_compile("Int foo; Int bar; bar = 0; if(bar == 1) { foo = 1; } else if (bar == 2) { foo = 2; } return foo;", "tests/fixtures/eql/ir/if_stmt_with_else_if.ll");
+    return 0;
+}
+
+int test_eql_compile_if_stmt_with_else_if_else() {
+    mu_assert_eql_compile("Int foo; Int bar; bar = 0; if(bar == 1) { foo = 1; } else if (bar == 2) { foo = 2; } else { foo = 0; } return foo;", "tests/fixtures/eql/ir/if_stmt_with_else_if_else.ll");
+    return 0;
+}
+
 
 
 
@@ -162,6 +172,7 @@ int all_tests() {
     mu_run_test(test_eql_parse_if_else_if_stmt);
     mu_run_test(test_eql_compile_if_stmt);
     mu_run_test(test_eql_compile_if_stmt_with_else);
+    mu_run_test(test_eql_compile_if_stmt_with_else_if);
     return 0;
 }
 

@@ -192,7 +192,7 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0, "Unable to generate function function body statements");
     
     // Dump before verification.
-    // LLVMDumpValue(func);
+    //LLVMDumpValue(func);
     
     // Verify function.
     rc = LLVMVerifyFunction(func, LLVMPrintMessageAction);
