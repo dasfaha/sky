@@ -201,14 +201,21 @@ int codegen_block(eql_ast_node *node, eql_module *module, unsigned int index)
     
     // Generate block if condition is false.
     LLVMBasicBlockRef false_block = NULL;
-    rc = eql_ast_block_codegen_block(block, module, &false_block);
-    check(rc == 0 && false_block != NULL, "Unable to codegen if statement false block");
+    if(alt_block) {
+        rc = eql_ast_block_codegen_block(block, module, &false_block);
+        check(rc == 0 && false_block != NULL, "Unable to codegen if statement false block");
+    }
     
     // Create merge block.
     LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(module->llvm_function, "");
 
     // Create a conditional branch.
-    LLVMBuildCondBr(builder, condition_value, true_block, false_block);
+    if(false_block) {
+        LLVMBuildCondBr(builder, condition_value, true_block, false_block);
+    }
+    else {
+        LLVMBuildCondBr(builder, condition_value, true_block, merge_block);
+    }
     
     // Codegen the true block body.
     rc = eql_ast_block_codegen_with_block(block, module, true_block);
@@ -220,15 +227,17 @@ int codegen_block(eql_ast_node *node, eql_module *module, unsigned int index)
     // Retrieve current value of true block (in case we nested).
     true_block = LLVMGetInsertBlock(builder);
     
-    // Codegen the false block body.
-    rc = eql_ast_block_codegen_with_block(alt_block, module, false_block);
-    check(rc == 0, "Unable to codegen if statement false block body");
-    
-    // Add unconditional branch to merge block.
-    LLVMBuildBr(builder, merge_block);
+    // Codegen the false block body, if it exists.
+    if(alt_block) {
+        rc = eql_ast_block_codegen_with_block(alt_block, module, false_block);
+        check(rc == 0, "Unable to codegen if statement false block body");
 
-    // Retrieve current value of false block (in case we nested).
-    false_block = LLVMGetInsertBlock(builder);
+        // Add unconditional branch to merge block.
+        LLVMBuildBr(builder, merge_block);
+
+        // Retrieve current value of false block (in case we nested).
+        false_block = LLVMGetInsertBlock(builder);
+    }
 
     // Position builder at the end of the merge block.
     LLVMPositionBuilderAtEnd(builder, merge_block);

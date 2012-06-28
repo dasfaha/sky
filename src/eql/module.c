@@ -40,6 +40,7 @@ eql_module *eql_module_create(bstring name, eql_compiler *compiler)
     module->compiler = compiler;
     module->llvm_module = LLVMModuleCreateWithName(bdata(name));
     module->llvm_function = NULL;
+    module->llvm_last_alloca = NULL;
     module->llvm_engine = NULL;
     module->llvm_pass_manager = NULL;
     module->scopes = NULL;
@@ -81,6 +82,7 @@ void eql_module_free(eql_module *module)
         module->llvm_module = NULL;
 
         module->llvm_function = NULL;
+        module->llvm_last_alloca = NULL;
 
         if(module->scopes != NULL) free(module->scopes);
         module->scopes = NULL;

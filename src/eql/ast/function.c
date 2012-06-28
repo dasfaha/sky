@@ -166,6 +166,7 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     
     // Store the current function on the module.
     module->llvm_function = func;
+    module->llvm_last_alloca = NULL;
     rc = eql_module_push_scope(module, node);
     check(rc == 0, "Unable to add function scope");
 
@@ -201,6 +202,7 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     rc = eql_module_pop_scope(module, node);
     check(rc == 0, "Unable to remove function scope");
     module->llvm_function = NULL;
+    module->llvm_last_alloca = NULL;
 
     // Return function as a value.
     *value = func;

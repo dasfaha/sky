@@ -85,9 +85,15 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
     // Save position;
     LLVMBasicBlockRef originalBlock = LLVMGetInsertBlock(builder);
 
-    // Position builder at the beginning of function.
+    // If no allocas exist yet, position builder at the beginning of function.
     LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(module->llvm_function);
-    LLVMPositionBuilder(builder, entryBlock, LLVMGetFirstInstruction(entryBlock));
+    if(module->llvm_last_alloca == NULL) {
+        LLVMPositionBuilder(builder, entryBlock, LLVMGetFirstInstruction(entryBlock));
+    }
+    // Otherwise position it after the last alloca in the function.
+    else {
+        LLVMPositionBuilder(builder, entryBlock, module->llvm_last_alloca);
+    }
     
     // Find LLVM type.
     LLVMTypeRef type;
@@ -97,6 +103,7 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
     // Add alloca.
     char *name = (node->parent->type == EQL_AST_TYPE_FARG ? "" : bdata(node->var_decl.name));
     *value = LLVMBuildAlloca(builder, type, name);
+    module->llvm_last_alloca = *value;
     
     // Store variable location in the current scope.
     rc = eql_module_add_variable(module, node, *value);

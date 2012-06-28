@@ -39,6 +39,7 @@ struct eql_module {
     eql_compiler *compiler;
     LLVMModuleRef llvm_module;
     LLVMValueRef llvm_function;
+    LLVMValueRef llvm_last_alloca;
     LLVMExecutionEngineRef llvm_engine;
     LLVMPassManagerRef llvm_pass_manager;
     eql_module_scope **scopes;
