@@ -209,6 +209,7 @@ int codegen_block(eql_ast_node *node, eql_module *module, unsigned int index)
     true_block = LLVMGetInsertBlock(builder);
 
     // Move to the false block.
+    LLVMMoveBasicBlockAfter(false_block, true_block);
     LLVMPositionBuilderAtEnd(builder, false_block);
 
     // Codegen "else if" blocks.

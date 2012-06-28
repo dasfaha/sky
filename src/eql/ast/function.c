@@ -58,7 +58,7 @@ int eql_ast_function_create(bstring name, bstring return_type,
     node->function.body = body;
     if(body != NULL) {
         body->parent = node;
-        body->block.name = bfromcstr("entry");
+        body->block.name = NULL;
     }
 
     *ret = node;

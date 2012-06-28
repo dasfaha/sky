@@ -82,7 +82,7 @@ int test_eql_parse_if_stmt() {
     mu_assert_eql_node_dump(module,
         "<module name=''>\n"
         "<function name='main' return-type=''>\n"
-        "  <block name='entry'>\n"
+        "  <block name=''>\n"
         "    <var-decl type='Int' name='foo'>\n"
         "    <if-stmt>\n"
         "      <binary-expr operator='=='>\n"
@@ -107,7 +107,7 @@ int test_eql_parse_if_else_if_stmt() {
     mu_assert_eql_node_dump(module,
         "<module name=''>\n"
         "<function name='main' return-type=''>\n"
-        "  <block name='entry'>\n"
+        "  <block name=''>\n"
         "    <var-decl type='Int' name='foo'>\n"
         "    <if-stmt>\n"
         "      <binary-expr operator='=='>\n"
@@ -157,6 +157,11 @@ int test_eql_compile_if_stmt_with_else_if_else() {
     return 0;
 }
 
+int test_eql_compile_if_stmt_nested() {
+    mu_assert_eql_compile("Int foo; Int bar; bar = 0; if(bar == 1) { if(bar == 10) { foo = 1; } else if(bar == 11) { foo = 2; } else { foo = 3; }  } else if (bar == 2) { foo = 4; } else { foo = 5; } return foo;", "tests/fixtures/eql/ir/if_stmt_nested.ll");
+    return 0;
+}
+
 
 
 
@@ -173,6 +178,7 @@ int all_tests() {
     mu_run_test(test_eql_compile_if_stmt);
     mu_run_test(test_eql_compile_if_stmt_with_else);
     mu_run_test(test_eql_compile_if_stmt_with_else_if);
+    mu_run_test(test_eql_compile_if_stmt_nested);
     return 0;
 }
 

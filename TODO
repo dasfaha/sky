@@ -1,6 +1,8 @@
 # EQL
-- if stmt
-- foreach stmt
+- Nested if statements.
+- for each stmt
+  - Enumerable
+- External functions (through metadata)
 
 - Parser
   - Maintain a listing of referenced classes.

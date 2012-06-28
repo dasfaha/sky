@@ -55,7 +55,7 @@ int test_eql_ast_function_create() {
         "    <var-decl type='foo' name='bar'>\n"
         "  <farg>\n"
         "    <var-decl type='foo' name='bar'>\n"
-        "  <block name='entry'>\n"
+        "  <block name=''>\n"
     );
 
     eql_ast_node_free(node);
