@@ -408,6 +408,11 @@ int eql_ast_node_get_var_decl(eql_ast_node *node, bstring name,
             check(rc == 0, "Unable to retrieve variable declaration for block");
             break;
         }
+        case EQL_AST_TYPE_FOR_EACH_STMT: {
+            rc = eql_ast_for_each_stmt_get_var_decl(node, name, var_decl);
+            check(rc == 0, "Unable to retrieve variable declaration for for each statement");
+            break;
+        }
         default:
         {
             *var_decl = NULL;

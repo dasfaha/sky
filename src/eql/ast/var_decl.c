@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "../../dbg.h"
 
+#include "../llvm.h"
 #include "node.h"
 
 
@@ -99,6 +100,14 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
     LLVMTypeRef type;
     rc = eql_module_get_type_ref(module, node->var_decl.type, NULL, &type);
     check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(node->var_decl.type));
+
+    // If this is a complex type and a function argument then wrap the type.
+    if(node->parent != NULL &&
+       node->parent->type == EQL_AST_TYPE_FARG &&
+       eql_llvm_is_complex_type(type))
+    {
+        type = LLVMPointerType(type, 0);
+    }
 
     // Add alloca.
     char *name = (node->parent->type == EQL_AST_TYPE_FARG ? "" : bdata(node->var_decl.name));

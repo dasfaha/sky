@@ -178,12 +178,40 @@ int test_eql_parse_class() {
 //--------------------------------------
 
 int test_eql_compile_class_type() {
-    mu_assert_eql_compile("class Foo { public Int bar; private Float baz; private Float bat; } Foo myVar; return;", "tests/fixtures/eql/ir/class_type.ll");
+    mu_assert_eql_compile(
+        "class Foo {\n"
+        "  public Int bar;\n"
+        "  private Float baz;\n"
+        "  private Float bat;\n"
+        "}\n"
+        "\n"
+        "Foo myVar;\n"
+        "return;"
+        ,
+        "tests/fixtures/eql/ir/class_type.ll"
+    );
     return 0;
 }
 
 int test_eql_compile_class() {
-    mu_assert_eql_compile("class Foo { public Int baz() { return 20; } } Foo x; return x;", "tests/fixtures/eql/ir/class.ll");
+    mu_assert_eql_compile(
+        "class Foo {\n"
+        "  public Int bar;\n"
+        "\n"
+        "  public Int baz() {\n"
+        "    this.bar = 20;\n"
+        "    return this.bar;\n"
+        "  }\n"
+        "}\n"
+        "\n"
+        "Foo x;\n"
+        "Foo y;\n"
+        "x.bar = 10;\n"
+        // TODO: "x.baz();\n"
+        "return;"
+        ,
+        "tests/fixtures/eql/ir/class.ll"
+    );
     return 0;
 }
 

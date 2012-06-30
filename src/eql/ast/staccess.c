@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include "../../dbg.h"
 
+#include "../llvm.h"
 #include "node.h"
 
 //==============================================================================
@@ -135,6 +136,11 @@ int eql_ast_staccess_get_pointer(eql_ast_node *node, eql_module *module,
     unsigned int property_index = 0;
     rc = eql_ast_class_get_property_index(class_ast, node->staccess.member_name, &property_index);
     check(rc == 0, "Unable to find property '%s' on class '%s'", bdata(node->staccess.member_name), bdata(var_ref_type_name));
+
+    // If this is a complex type from a function argument then dereference first.
+    if(eql_llvm_is_double_pointer_type(LLVMTypeOf(var_ref_pointer))) {
+        var_ref_pointer = LLVMBuildLoad(builder, var_ref_pointer, "");
+    }
 
     // Build GEP instruction.
     *value = LLVMBuildStructGEP(builder, var_ref_pointer, property_index, "");

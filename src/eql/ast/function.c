@@ -3,6 +3,7 @@
 #include "../../dbg.h"
 #include "../../mem.h"
 
+#include "../llvm.h"
 #include "node.h"
 
 #include <llvm-c/Core.h>
@@ -146,9 +147,19 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
 
     // Create arguments.
     for(i=0; i<arg_count; i++) {
+        LLVMTypeRef param = NULL;
         arg = node->function.args[i];
-        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &params[i]);
+        rc = eql_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &param);
         check(rc == 0, "Unable to determine function argument type");
+        
+        // Pass argument as reference if this is a complex type.
+        if(eql_llvm_is_complex_type(param)) {
+            params[i] = LLVMPointerType(param, 0);
+        }
+        // Otherwise pass it by value.
+        else {
+            params[i] = param;
+        }
     }
 
     // Determine return type.
@@ -192,7 +203,7 @@ int eql_ast_function_codegen(eql_ast_node *node, eql_module *module,
     check(rc == 0, "Unable to generate function function body statements");
     
     // Dump before verification.
-    //LLVMDumpValue(func);
+    // LLVMDumpValue(func);
     
     // Verify function.
     rc = LLVMVerifyFunction(func, LLVMPrintMessageAction);
@@ -249,8 +260,9 @@ int eql_ast_function_codegen_args(eql_ast_node *node, eql_module *module)
     
     // Codegen store instructions.
     for(i=0; i<node->function.arg_count; i++) {
-        LLVMValueRef build_value = LLVMBuildStore(builder, LLVMGetParam(module->llvm_function, i), values[i]);
-        check(build_value != NULL, "Unable to create build instruction");
+        LLVMValueRef param = LLVMGetParam(module->llvm_function, i);
+        LLVMValueRef build_value = LLVMBuildStore(builder, param, values[i]);
+        check(build_value != NULL, "Unable to create store instruction");
     }
     
     free(values);

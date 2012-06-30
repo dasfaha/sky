@@ -1,4 +1,5 @@
 # EQL
+- variable initial value
 - for each stmt
   - Enumerable
 - External functions (through metadata)
