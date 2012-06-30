@@ -94,7 +94,6 @@ int test_eql_parse_for_each_stmt() {
 int test_eql_compile_for_each_stmt() {
     mu_assert_eql_compile(
         "[Enumerable]\n"
-        "class Bar { public Int num; }\n"
         "class Foo {\n"
         "  private Int count;\n"
         "\n"
@@ -107,6 +106,7 @@ int test_eql_compile_for_each_stmt() {
         "    return this.count == 5;\n"
         "  }\n"
         "}\n"
+        "class Bar { public Int num; }\n"
         "\n"
         "Int i;\n"
         "Foo foo;\n"
@@ -116,6 +116,41 @@ int test_eql_compile_for_each_stmt() {
         "return i;"
         ,
         "tests/fixtures/eql/ir/for_each_stmt.ll"
+    );
+    return 0;
+}
+
+
+//--------------------------------------
+// Execute
+//--------------------------------------
+
+int test_eql_execute_for_each_stmt() {
+    mu_assert_eql_execute_int(
+        "[Enumerable]\n"
+        "class Foo {\n"
+        "  public Int count;\n"
+        "\n"
+        "  public void next(Bar value) {\n"
+        "    this.count = this.count + 1;\n"
+        "    value.num = (this.count * 2);\n"
+        "    return;\n"
+        "  }\n"
+        "  public Boolean eof() {\n"
+        "    return this.count == 5;\n"
+        "  }\n"
+        "}\n"
+        "class Bar { public Int num; }\n"
+        "\n"
+        "Int i;\n"
+        "Foo foo;\n"
+        "foo.count = 0;\n"
+        "for each(Bar b in foo) {\n"
+        "  i = b.num;\n"
+        "}\n"
+        "return i;"
+        ,
+        10
     );
     return 0;
 }
@@ -133,6 +168,7 @@ int all_tests() {
     mu_run_test(test_eql_ast_for_each_stmt_create);
     mu_run_test(test_eql_parse_for_each_stmt);
     mu_run_test(test_eql_compile_for_each_stmt);
+    mu_run_test(test_eql_execute_for_each_stmt);
     return 0;
 }
 

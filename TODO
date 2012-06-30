@@ -1,7 +1,6 @@
 # EQL
-- variable initial value
-- for each stmt
-  - Enumerable
+- variable decl initial value
+
 - External functions (through metadata)
 
 - Parser
