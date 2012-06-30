@@ -62,11 +62,11 @@ int test_eql_module_scope_variables() {
     eql_ast_block_create(NULL, NULL, 0, &block1);
     eql_ast_block_create(NULL, NULL, 0, &block2);
 
-    eql_ast_var_decl_create(&Int, &foo, &var_decl1);
+    eql_ast_var_decl_create(&Int, &foo, NULL, &var_decl1);
 	LLVMValueRef value1 = LLVMConstInt(LLVMInt64Type(), 10, true);
-    eql_ast_var_decl_create(&Int, &bar, &var_decl2);
+    eql_ast_var_decl_create(&Int, &bar, NULL, &var_decl2);
 	LLVMValueRef value2 = LLVMConstInt(LLVMInt64Type(), 20, true);
-    eql_ast_var_decl_create(&Int, &foo, &var_decl3);
+    eql_ast_var_decl_create(&Int, &foo, NULL, &var_decl3);
 	LLVMValueRef value3 = LLVMConstInt(LLVMInt64Type(), 30, true);
 
 	eql_compiler *compiler = eql_compiler_create();

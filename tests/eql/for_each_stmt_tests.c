@@ -31,7 +31,7 @@ struct tagbstring bar = bsStatic("bar");
 
 int test_eql_ast_for_each_stmt_create() {
     eql_ast_node *node, *var_decl, *enumerator, *block;
-    eql_ast_var_decl_create(&Foo, &foo, &var_decl);
+    eql_ast_var_decl_create(&Foo, &foo, NULL, &var_decl);
     eql_ast_var_ref_create(&bar, &enumerator);
     eql_ast_block_create(NULL, NULL, 0, &block);
     eql_ast_for_each_stmt_create(var_decl, enumerator, block, &node);

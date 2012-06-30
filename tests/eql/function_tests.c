@@ -29,9 +29,9 @@ struct tagbstring bar = bsStatic("bar");
 int test_eql_ast_function_create() {
     eql_ast_node *args[2];
     eql_ast_node *node, *farg1, *var_decl1, *farg2, *var_decl2, *body;
-    eql_ast_var_decl_create(&foo, &bar, &var_decl1);
+    eql_ast_var_decl_create(&foo, &bar, NULL, &var_decl1);
     eql_ast_farg_create(var_decl1, &farg1);
-    eql_ast_var_decl_create(&foo, &bar, &var_decl2);
+    eql_ast_var_decl_create(&foo, &bar, NULL, &var_decl2);
     eql_ast_farg_create(var_decl2, &farg2);
     args[0] = farg1;
     args[1] = farg2;

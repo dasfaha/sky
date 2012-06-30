@@ -23,15 +23,24 @@
 //
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_var_decl_create(bstring type, bstring name,
-                            struct eql_ast_node **ret)
+                            eql_ast_node *initial_value,
+                            eql_ast_node **ret)
 {
     eql_ast_node *node = malloc(sizeof(eql_ast_node)); check_mem(node);
     node->type = EQL_AST_TYPE_VAR_DECL;
     node->parent = NULL;
+
     node->var_decl.type = bstrcpy(type);
     check_mem(node->var_decl.type);
+
     node->var_decl.name = bstrcpy(name);
     check_mem(node->var_decl.name);
+
+    node->var_decl.initial_value = initial_value;
+    if(initial_value != NULL) {
+        initial_value->parent = node;
+    }
+
     *ret = node;
     return 0;
 
@@ -46,15 +55,14 @@ error:
 // node - The AST node to free.
 void eql_ast_var_decl_free(struct eql_ast_node *node)
 {
-    if(node->var_decl.type) {
-        bdestroy(node->var_decl.type);
-    }
+    if(node->var_decl.type) bdestroy(node->var_decl.type);
     node->var_decl.type = NULL;
 
-    if(node->var_decl.name) {
-        bdestroy(node->var_decl.name);
-    }
+    if(node->var_decl.name) bdestroy(node->var_decl.name);
     node->var_decl.name = NULL;
+
+    if(node->var_decl.initial_value) eql_ast_node_free(node->var_decl.initial_value);
+    node->var_decl.initial_value = NULL;
 }
 
 
@@ -121,6 +129,18 @@ int eql_ast_var_decl_codegen(eql_ast_node *node, eql_module *module,
     // Reposition builder at end of original block.
     LLVMPositionBuilderAtEnd(builder, originalBlock);
 
+    // Generate initial value.
+    LLVMValueRef initial_value = NULL;
+    if(node->var_decl.initial_value != NULL) {
+        rc = eql_ast_node_codegen(node->var_decl.initial_value, module, &initial_value);
+        check(rc == 0, "Unable to codegen variable declaration initial value");
+    }
+
+    // Create a store instruction if there is an initial value.
+    if(initial_value != NULL) {
+        LLVMBuildStore(builder, initial_value, *value);
+    }
+
     return 0;
 
 error:
@@ -141,12 +161,19 @@ error:
 // Return 0 if successful, otherwise returns -1.s
 int eql_ast_var_decl_dump(eql_ast_node *node, bstring ret)
 {
+    int rc;
     check(node != NULL, "Node required");
     check(ret != NULL, "String required");
     
     bstring str = bformat("<var-decl type='%s' name='%s'>\n", bdatae(node->var_decl.type, ""), bdatae(node->var_decl.name, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
+
+    // Recursively dump children.
+    if(node->var_decl.initial_value != NULL) {
+        rc = eql_ast_node_dump(node->var_decl.initial_value, ret);
+        check(rc == 0, "Unable to dump initial value");
+    }
 
     return 0;
 

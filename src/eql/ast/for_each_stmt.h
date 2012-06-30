@@ -42,6 +42,14 @@ int eql_ast_for_each_stmt_codegen(eql_ast_node *node, eql_module *module,
 
 
 //--------------------------------------
+// Types
+//--------------------------------------
+
+int eql_ast_for_each_stmt_get_var_decl(eql_ast_node *node, bstring name,
+    eql_ast_node **var_decl);
+
+
+//--------------------------------------
 // Debugging
 //--------------------------------------
 

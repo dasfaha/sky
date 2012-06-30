@@ -28,7 +28,7 @@ struct tagbstring bar = bsStatic("bar");
 
 int test_eql_ast_farg_create() {
     eql_ast_node *node, *var_decl;
-    eql_ast_var_decl_create(&foo, &bar, &var_decl);
+    eql_ast_var_decl_create(&foo, &bar, NULL, &var_decl);
     eql_ast_farg_create(var_decl, &node);
     mu_assert(node->type == EQL_AST_TYPE_FARG, "");
     mu_assert(node->farg.var_decl == var_decl, "");

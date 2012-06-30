@@ -13,6 +13,7 @@
 typedef struct {
     bstring type;
     bstring name;
+    eql_ast_node *initial_value;
 } eql_ast_var_decl;
 
 
@@ -26,7 +27,8 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-int eql_ast_var_decl_create(bstring type, bstring name, struct eql_ast_node **node);
+int eql_ast_var_decl_create(bstring type, bstring name,
+    eql_ast_node *initial_value, struct eql_ast_node **node);
 
 void eql_ast_var_decl_free(struct eql_ast_node *node);
 

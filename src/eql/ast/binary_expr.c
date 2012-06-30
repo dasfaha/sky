@@ -175,7 +175,7 @@ error:
 int codegen_boolean(eql_ast_node *node, eql_module *module, LLVMValueRef lhs,
                     LLVMValueRef rhs, LLVMValueRef *value)
 {
-    LLVMBuilderRef builder = module->compiler->llvm_builder;
+    // LLVMBuilderRef builder = module->compiler->llvm_builder;
 
     switch(node->binary_expr.operator) {
         default: {

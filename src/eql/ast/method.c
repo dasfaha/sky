@@ -113,7 +113,7 @@ int eql_ast_method_generate_this_farg(eql_ast_node *node)
     
         // Create 'this' variable declaration.
         struct tagbstring THIS = bsStatic("this");
-        rc = eql_ast_var_decl_create(type, &THIS, &var_decl);
+        rc = eql_ast_var_decl_create(type, &THIS, NULL, &var_decl);
         check(rc == 0, "Unable to create 'this' variable declaration");
 
         // Link to function argument.

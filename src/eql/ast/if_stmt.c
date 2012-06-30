@@ -154,6 +154,8 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int eql_ast_if_stmt_set_else_block(eql_ast_node *node, eql_ast_node *block)
 {
+    check(node != NULL, "Node required");
+    
     // Assign else block.
     node->if_stmt.else_block = block;
     if(block != NULL) {

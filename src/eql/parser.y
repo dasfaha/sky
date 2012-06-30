@@ -60,7 +60,7 @@
 %type <string> string
 %type <node> block stmt expr
 %type <node> if_stmt else_block for_each_stmt
-%type <node> var_ref var_decl
+%type <node> var_ref var_decl initialized_var_decl uninitialized_var_decl
 %type <node> class method property
 %type <node> function farg fcall
 %type <node> number literal int_literal float_literal boolean_literal
@@ -115,7 +115,13 @@ var_ref : TIDENTIFIER { eql_ast_var_ref_create($1, &$$); bdestroy($1); }
         | var_ref TDOT TIDENTIFIER { eql_ast_staccess_create($1, $3, &$$); bdestroy($3); }
 ;
 
-var_decl : TIDENTIFIER TIDENTIFIER { eql_ast_var_decl_create($1, $2, &$$); bdestroy($1); bdestroy($2); };
+var_decl : initialized_var_decl
+         | uninitialized_var_decl
+;
+
+uninitialized_var_decl : TIDENTIFIER TIDENTIFIER { eql_ast_var_decl_create($1, $2, NULL, &$$); bdestroy($1); bdestroy($2); };
+
+initialized_var_decl : TIDENTIFIER TIDENTIFIER TASSIGN expr { eql_ast_var_decl_create($1, $2, $4, &$$); bdestroy($1); bdestroy($2); };
 
 string : TSTRING;
 
@@ -162,7 +168,7 @@ fargs  : /* empty */        { $$ = eql_array_create(); }
        | fargs TCOMMA farg  { eql_array_push($1, $3); }
 ;
 
-farg   : var_decl  { eql_ast_farg_create($1, &$$); };
+farg   : uninitialized_var_decl  { eql_ast_farg_create($1, &$$); };
 
 if_stmt : if_block else_if_blocks else_block
           {
@@ -187,7 +193,7 @@ else_block : /* empty */                 { $$ = NULL; }
            | TELSE TLBRACE block TRBRACE { $$ = $3; }
 ;
 
-for_each_stmt : TFOR TEACH TLPAREN var_decl TIN expr TRPAREN TLBRACE block TRBRACE
+for_each_stmt : TFOR TEACH TLPAREN uninitialized_var_decl TIN expr TRPAREN TLBRACE block TRBRACE
                 {
                     eql_ast_for_each_stmt_create($4, $6, $9, &$$);
                 }
@@ -214,7 +220,7 @@ class_members : /* empty */             { $$ = eql_array_create(); }
 
 method  : access function { eql_ast_method_create($1, $2, &$$); };
 
-property  : access var_decl TSEMICOLON { eql_ast_property_create($1, $2, &$$); };
+property  : access uninitialized_var_decl TSEMICOLON { eql_ast_property_create($1, $2, &$$); };
         
 metadatas : /* empty */        { $$ = eql_array_create(); }
           | metadatas metadata { eql_array_push($$, $2); }
