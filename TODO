@@ -1,3 +1,10 @@
+# Refactoring
+- Move actions out of block code.
+- Move properties out of block code.
+- Move header out of block code.
+
+
+
 # EQL
 - External functions (through metadata)
 

@@ -9,6 +9,7 @@
 #include "dbg.h"
 #include "mem.h"
 #include "bstring.h"
+#include "file.h"
 #include "database.h"
 #include "block.h"
 #include "table.h"
@@ -18,23 +19,6 @@
 // Functions
 //
 //==============================================================================
-
-//======================================
-// Utility
-//======================================
-
-// Checks if a file exists.
-//
-// path - The path of the file.
-//
-// Returns true if the file exists. Otherwise returns false.
-bool file_exists(bstring path)
-{
-    struct stat buffer;
-    int rc = stat(bdata(path), &buffer);
-    return (rc == 0);
-}
-
 
 //======================================
 // Block Sorting
@@ -198,7 +182,7 @@ int load_header(sky_table *table)
     bstring path = get_header_file_path(table); check_mem(path);
     
     // Read in header file if it exists.
-    if(file_exists(path)) {
+    if(sky_file_exists(path)) {
         file = fopen(bdata(path), "r");
         check(file, "Failed to open header file for reading: %s",  bdata(path));
 
@@ -388,7 +372,7 @@ int load_actions(sky_table *table)
     bstring path = get_actions_file_path(table); check_mem(path);
     
     // Read in actions file if it exists.
-    if(file_exists(path)) {
+    if(sky_file_exists(path)) {
         file = fopen(bdata(path), "r");
         check(file, "Failed to open action file: %s",  bdata(path));
         
@@ -545,7 +529,7 @@ int load_properties(sky_table *table)
     bstring path = get_properties_file_path(table); check_mem(path);
     
     // Read in properties file if it exists.
-    if(file_exists(path)) {
+    if(sky_file_exists(path)) {
         file = fopen(bdata(path), "r");
         check(file, "Failed to open properties file: %s",  bdata(path));
         
@@ -1210,7 +1194,7 @@ int sky_table_open(sky_table *table)
     check(table->state == SKY_OBJECT_FILE_STATE_CLOSED, "Table must be closed to open")
 
     // Create directory if it doesn't exist.
-    if(!file_exists(table->path)) {
+    if(!sky_file_exists(table->path)) {
         rc = mkdir(bdata(table->path), S_IRWXU);
         check(rc == 0, "Unable to create table directory: %s", bdata(table->path));
     }
@@ -1284,7 +1268,7 @@ int sky_table_lock(sky_table *table)
     bstring path = bformat("%s/%s", bdata(table->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
 
     // Raise error if table is already locked.
-    check(!file_exists(path), "Cannot obtain lock: %s", bdata(path));
+    check(!sky_file_exists(path), "Cannot obtain lock: %s", bdata(path));
 
     // Write pid to lock file.
     file = fopen(bdata(path), "w");
@@ -1324,7 +1308,7 @@ int sky_table_unlock(sky_table *table)
     bstring path = bformat("%s/%s", bdata(table->path), SKY_OBJECT_FILE_LOCK_NAME); check_mem(path);
 
     // If file exists, check its PID and then attempt to remove it.
-    if(file_exists(path)) {
+    if(sky_file_exists(path)) {
         // Read PID from lock.
         file = fopen(bdata(path), "r");
         check(file, "Failed to open lock file: %s",  bdata(path));
