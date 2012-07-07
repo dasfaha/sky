@@ -309,8 +309,10 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     // Look up action.
     sky_action_id_t action_id = 0;
     if(message->action_name != NULL) {
-        rc = sky_table_find_or_create_action_id_by_name(table, message->action_name, &action_id);
-        check(rc == 0, "Unable to find or create action id: %s", bdata(message->action_name));
+        sky_action *action = NULL;
+        rc = sky_action_file_find_action_by_name(table->action_file, message->action_name, &action);
+        check(rc == 0 && action != NULL, "Action does not exist: '%s'", bdata(message->action_name));
+        action_id = action->id;
     }
 
     // Create event.

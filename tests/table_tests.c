@@ -107,12 +107,6 @@ int test_sky_table_open() {
     mu_assert_block_info(7, 7, 10, 10, 1333238400000000LL, 1335830400000000LL, true);
     mu_assert_block_info(8, 6, 10, 10, 1335830400000000LL, 1338508800000000LL, true);
 
-    // Verify actions.
-    mu_assert(table->action_count == 3, "Expected 3 actions");
-    mu_assert_action(0, 1, "home_page");
-    mu_assert_action(1, 2, "sign_up");
-    mu_assert_action(2, 3, "sign_in");
-
     // Verify properties.
     mu_assert(table->property_count == 3, "Expected 3 properties");
     mu_assert_property(0, 1, "first_name");

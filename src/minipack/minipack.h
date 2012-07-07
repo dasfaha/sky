@@ -1,11 +1,12 @@
-// minipack v0.1.3
+// minipack v0.3.1
 
 #ifndef _minipack_h
 #define _minipack_h
 
+#include <stdio.h>
+#include <stddef.h>
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stddef.h>
 
 
 //==============================================================================
@@ -20,18 +21,18 @@
 
 bool minipack_is_pos_fixnum(void *ptr);
 
-uint8_t minipack_pos_fixnum_read(void *ptr);
+uint8_t minipack_unpack_pos_fixnum(void *ptr, size_t *sz);
 
-void minipack_pos_fixnum_write(void *ptr, uint8_t value);
+void minipack_pack_pos_fixnum(void *ptr, uint8_t value, size_t *sz);
 
 
 //======================================
 // Negative Fixnum
 //======================================
 
-int8_t minipack_neg_fixnum_read(void *ptr);
+int8_t minipack_unpack_neg_fixnum(void *ptr, size_t *sz);
 
-void minipack_neg_fixnum_write(void *ptr, int8_t value);
+void minipack_pack_neg_fixnum(void *ptr, int8_t value, size_t *sz);
 
 
 
@@ -45,11 +46,17 @@ void minipack_neg_fixnum_write(void *ptr, int8_t value);
 // Unsigned Int
 //======================================
 
-size_t minipack_uint_sizeof(uint64_t value);
+size_t minipack_sizeof_uint(uint64_t value);
 
-uint64_t minipack_uint_read(void *ptr, size_t *sz);
+size_t minipack_sizeof_uint_elem(void *ptr);
 
-void minipack_uint_write(void *ptr, uint64_t value, size_t *sz);
+uint64_t minipack_unpack_uint(void *ptr, size_t *sz);
+
+void minipack_pack_uint(void *ptr, uint64_t value, size_t *sz);
+
+uint64_t minipack_fread_uint(FILE *file, size_t *sz);
+
+int minipack_fwrite_uint(FILE *file, uint64_t value, size_t *sz);
 
 
 //======================================
@@ -58,9 +65,9 @@ void minipack_uint_write(void *ptr, uint64_t value, size_t *sz);
 
 bool minipack_is_uint8(void *ptr);
 
-uint8_t minipack_uint8_read(void *ptr);
+uint8_t minipack_unpack_uint8(void *ptr, size_t *sz);
 
-void minipack_uint8_write(void *ptr, uint8_t value);
+void minipack_pack_uint8(void *ptr, uint8_t value, size_t *sz);
 
 
 //======================================
@@ -69,9 +76,9 @@ void minipack_uint8_write(void *ptr, uint8_t value);
 
 bool minipack_is_uint16(void *ptr);
 
-uint16_t minipack_uint16_read(void *ptr);
+uint16_t minipack_unpack_uint16(void *ptr, size_t *sz);
 
-void minipack_uint16_write(void *ptr, uint16_t value);
+void minipack_pack_uint16(void *ptr, uint16_t value, size_t *sz);
 
 
 //======================================
@@ -80,9 +87,9 @@ void minipack_uint16_write(void *ptr, uint16_t value);
 
 bool minipack_is_uint32(void *ptr);
 
-uint32_t minipack_uint32_read(void *ptr);
+uint32_t minipack_unpack_uint32(void *ptr, size_t *sz);
 
-void minipack_uint32_write(void *ptr, uint32_t value);
+void minipack_pack_uint32(void *ptr, uint32_t value, size_t *sz);
 
 
 //======================================
@@ -91,9 +98,9 @@ void minipack_uint32_write(void *ptr, uint32_t value);
 
 bool minipack_is_uint64(void *ptr);
 
-uint64_t minipack_uint64_read(void *ptr);
+uint64_t minipack_unpack_uint64(void *ptr, size_t *sz);
 
-void minipack_uint64_write(void *ptr, uint64_t value);
+void minipack_pack_uint64(void *ptr, uint64_t value, size_t *sz);
 
 
 
@@ -109,9 +116,15 @@ void minipack_uint64_write(void *ptr, uint64_t value);
 
 size_t minipack_int_sizeof(int64_t value);
 
-int64_t minipack_int_read(void *ptr, size_t *sz);
+size_t minipack_sizeof_int_elem(void *ptr);
 
-void minipack_int_write(void *ptr, int64_t value, size_t *sz);
+int64_t minipack_unpack_int(void *ptr, size_t *sz);
+
+void minipack_pack_int(void *ptr, int64_t value, size_t *sz);
+
+int64_t minipack_fread_int(FILE *file, size_t *sz);
+
+int minipack_fwrite_int(FILE *file, int64_t value, size_t *sz);
 
 
 //======================================
@@ -120,9 +133,9 @@ void minipack_int_write(void *ptr, int64_t value, size_t *sz);
 
 bool minipack_is_int8(void *ptr);
 
-int8_t minipack_int8_read(void *ptr);
+int8_t minipack_unpack_int8(void *ptr, size_t *sz);
 
-void minipack_int8_write(void *ptr, int8_t value);
+void minipack_pack_int8(void *ptr, int8_t value, size_t *sz);
 
 
 //======================================
@@ -131,9 +144,9 @@ void minipack_int8_write(void *ptr, int8_t value);
 
 bool minipack_is_int16(void *ptr);
 
-int16_t minipack_int16_read(void *ptr);
+int16_t minipack_unpack_int16(void *ptr, size_t *sz);
 
-void minipack_int16_write(void *ptr, int16_t value);
+void minipack_pack_int16(void *ptr, int16_t value, size_t *sz);
 
 
 //======================================
@@ -142,9 +155,9 @@ void minipack_int16_write(void *ptr, int16_t value);
 
 bool minipack_is_int32(void *ptr);
 
-int32_t minipack_int32_read(void *ptr);
+int32_t minipack_unpack_int32(void *ptr, size_t *sz);
 
-void minipack_int32_write(void *ptr, int32_t value);
+void minipack_pack_int32(void *ptr, int32_t value, size_t *sz);
 
 
 //======================================
@@ -153,9 +166,9 @@ void minipack_int32_write(void *ptr, int32_t value);
 
 bool minipack_is_int64(void *ptr);
 
-int64_t minipack_int64_read(void *ptr);
+int64_t minipack_unpack_int64(void *ptr, size_t *sz);
 
-void minipack_int64_write(void *ptr, int64_t value);
+void minipack_pack_int64(void *ptr, int64_t value, size_t *sz);
 
 
 //==============================================================================
@@ -170,7 +183,13 @@ void minipack_int64_write(void *ptr, int64_t value);
 
 bool minipack_is_nil(void *ptr);
 
-void minipack_nil_write(void *ptr);
+void minipack_pack_nil(void *ptr, size_t *sz);
+
+void minipack_unpack_nil(void *ptr, size_t *sz);
+
+void minipack_fread_nil(FILE *file, size_t *sz);
+
+int minipack_fwrite_nil(FILE *file, size_t *sz);
 
 
 //==============================================================================
@@ -189,9 +208,13 @@ bool minipack_is_true(void *ptr);
 
 bool minipack_is_false(void *ptr);
 
-bool minipack_bool_read(void *ptr);
+bool minipack_unpack_bool(void *ptr, size_t *sz);
 
-void minipack_bool_write(void *ptr, bool value);
+void minipack_pack_bool(void *ptr, bool value, size_t *sz);
+
+bool minipack_fread_bool(FILE *file, size_t *sz);
+
+int minipack_fwrite_bool(FILE *file, bool value, size_t *sz);
 
 
 //==============================================================================
@@ -206,9 +229,13 @@ void minipack_bool_write(void *ptr, bool value);
 
 bool minipack_is_float(void *ptr);
 
-float minipack_float_read(void *ptr);
+float minipack_unpack_float(void *ptr, size_t *sz);
 
-void minipack_float_write(void *ptr, float value);
+void minipack_pack_float(void *ptr, float value, size_t *sz);
+
+float minipack_fread_float(FILE *file, size_t *sz);
+
+int minipack_fwrite_float(FILE *file, float value, size_t *sz);
 
 
 //======================================
@@ -217,10 +244,13 @@ void minipack_float_write(void *ptr, float value);
 
 bool minipack_is_double(void *ptr);
 
-double minipack_double_read(void *ptr);
+double minipack_unpack_double(void *ptr, size_t *sz);
 
-void minipack_double_write(void *ptr, double value);
+void minipack_pack_double(void *ptr, double value, size_t *sz);
 
+double minipack_fread_double(FILE *file, size_t *sz);
+
+int minipack_fwrite_double(FILE *file, double value, size_t *sz);
 
 
 //==============================================================================
@@ -235,11 +265,17 @@ void minipack_double_write(void *ptr, double value);
 
 bool minipack_is_raw(void *ptr);
 
-size_t minipack_raw_hdr_sizeof(uint32_t length);
+size_t minipack_sizeof_raw(uint32_t length);
 
-uint32_t minipack_raw_read_hdr(void *ptr, size_t *hdrsz);
+size_t minipack_sizeof_raw_elem(void *ptr);
 
-void minipack_raw_write(void *ptr, uint32_t length, void *bytes, size_t *sz);
+uint32_t minipack_unpack_raw(void *ptr, size_t *sz);
+
+void minipack_pack_raw(void *ptr, uint32_t length, size_t *sz);
+
+uint32_t minipack_fread_raw(FILE *file, size_t *sz);
+
+int minipack_fwrite_raw(FILE *file, uint32_t length, size_t *sz);
 
 
 //======================================
@@ -248,9 +284,9 @@ void minipack_raw_write(void *ptr, uint32_t length, void *bytes, size_t *sz);
 
 bool minipack_is_fixraw(void *ptr);
 
-uint8_t minipack_fixraw_read_length(void *ptr);
+uint8_t minipack_unpack_fixraw(void *ptr, size_t *sz);
 
-void minipack_fixraw_write(void *ptr, uint8_t length, void *bytes);
+void minipack_pack_fixraw(void *ptr, uint8_t length, size_t *sz);
 
 
 //======================================
@@ -259,9 +295,9 @@ void minipack_fixraw_write(void *ptr, uint8_t length, void *bytes);
 
 bool minipack_is_raw16(void *ptr);
 
-uint16_t minipack_raw16_read_length(void *ptr);
+uint16_t minipack_unpack_raw16(void *ptr, size_t *sz);
 
-void minipack_raw16_write(void *ptr, uint16_t length, void *bytes);
+void minipack_pack_raw16(void *ptr, uint16_t length, size_t *sz);
 
 
 //======================================
@@ -270,9 +306,9 @@ void minipack_raw16_write(void *ptr, uint16_t length, void *bytes);
 
 bool minipack_is_raw32(void *ptr);
 
-uint32_t minipack_raw32_read_length(void *ptr);
+uint32_t minipack_unpack_raw32(void *ptr, size_t *sz);
 
-void minipack_raw32_write(void *ptr, uint32_t length, void *bytes);
+void minipack_pack_raw32(void *ptr, uint32_t length, size_t *sz);
 
 
 
@@ -288,11 +324,17 @@ void minipack_raw32_write(void *ptr, uint32_t length, void *bytes);
 
 bool minipack_is_array(void *ptr);
 
-size_t minipack_array_hdr_sizeof(uint32_t count);
+size_t minipack_sizeof_array(uint32_t count);
 
-uint32_t minipack_array_read_hdr(void *ptr, size_t *hdrsz);
+size_t minipack_sizeof_array_elem(void *ptr);
 
-void minipack_array_write_hdr(void *ptr, uint32_t count, size_t *sz);
+uint32_t minipack_unpack_array(void *ptr, size_t *sz);
+
+void minipack_pack_array(void *ptr, uint32_t count, size_t *sz);
+
+uint32_t minipack_fread_array(FILE *file, size_t *sz);
+
+int minipack_fwrite_array(FILE *file, uint32_t length, size_t *sz);
 
 
 //======================================
@@ -301,9 +343,9 @@ void minipack_array_write_hdr(void *ptr, uint32_t count, size_t *sz);
 
 bool minipack_is_fixarray(void *ptr);
 
-uint8_t minipack_fixarray_read_count(void *ptr);
+uint8_t minipack_unpack_fixarray(void *ptr, size_t *sz);
 
-void minipack_fixarray_write_hdr(void *ptr, uint8_t count);
+void minipack_pack_fixarray(void *ptr, uint8_t count, size_t *sz);
 
 
 //======================================
@@ -312,9 +354,9 @@ void minipack_fixarray_write_hdr(void *ptr, uint8_t count);
 
 bool minipack_is_array16(void *ptr);
 
-uint16_t minipack_array16_read_count(void *ptr);
+uint16_t minipack_unpack_array16(void *ptr, size_t *sz);
 
-void minipack_array16_write_hdr(void *ptr, uint16_t count);
+void minipack_pack_array16(void *ptr, uint16_t count, size_t *sz);
 
 
 //======================================
@@ -323,9 +365,9 @@ void minipack_array16_write_hdr(void *ptr, uint16_t count);
 
 bool minipack_is_array32(void *ptr);
 
-uint32_t minipack_array32_read_count(void *ptr);
+uint32_t minipack_unpack_array32(void *ptr, size_t *sz);
 
-void minipack_array32_write_hdr(void *ptr, uint32_t count);
+void minipack_pack_array32(void *ptr, uint32_t count, size_t *sz);
 
 
 
@@ -341,11 +383,17 @@ void minipack_array32_write_hdr(void *ptr, uint32_t count);
 
 bool minipack_is_map(void *ptr);
 
-size_t minipack_map_hdr_sizeof(uint32_t count);
+size_t minipack_sizeof_map(uint32_t count);
 
-uint32_t minipack_map_read_hdr(void *ptr, size_t *hdrsz);
+size_t minipack_sizeof_map_elem(void *ptr);
 
-void minipack_map_write_hdr(void *ptr, uint32_t count, size_t *sz);
+uint32_t minipack_unpack_map(void *ptr, size_t *sz);
+
+void minipack_pack_map(void *ptr, uint32_t count, size_t *sz);
+
+uint32_t minipack_fread_map(FILE *file, size_t *sz);
+
+int minipack_fwrite_map(FILE *file, uint32_t length, size_t *sz);
 
 
 //======================================
@@ -354,9 +402,9 @@ void minipack_map_write_hdr(void *ptr, uint32_t count, size_t *sz);
 
 bool minipack_is_fixmap(void *ptr);
 
-uint8_t minipack_fixmap_read_count(void *ptr);
+uint8_t minipack_unpack_fixmap(void *ptr, size_t *sz);
 
-void minipack_fixmap_write_hdr(void *ptr, uint8_t count);
+void minipack_pack_fixmap(void *ptr, uint8_t count, size_t *sz);
 
 
 //======================================
@@ -365,9 +413,9 @@ void minipack_fixmap_write_hdr(void *ptr, uint8_t count);
 
 bool minipack_is_map16(void *ptr);
 
-uint16_t minipack_map16_read_count(void *ptr);
+uint16_t minipack_unpack_map16(void *ptr, size_t *sz);
 
-void minipack_map16_write_hdr(void *ptr, uint16_t count);
+void minipack_pack_map16(void *ptr, uint16_t count, size_t *sz);
 
 
 //======================================
@@ -376,9 +424,10 @@ void minipack_map16_write_hdr(void *ptr, uint16_t count);
 
 bool minipack_is_map32(void *ptr);
 
-uint32_t minipack_map32_read_count(void *ptr);
+uint32_t minipack_unpack_map32(void *ptr, size_t *sz);
 
-void minipack_map32_write_hdr(void *ptr, uint32_t count);
+void minipack_pack_map32(void *ptr, uint32_t count, size_t *sz);
+
 
 
 #endif

@@ -6,8 +6,11 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+typedef struct sky_table sky_table;
+
 #include "bstring.h"
 #include "database.h"
+#include "action.h"
 #include "event.h"
 #include "types.h"
 
@@ -79,14 +82,14 @@ typedef enum sky_table_state_e {
 #define sky_table_version_t uint32_t
 #define sky_table_block_size_t uint32_t
 #define sky_table_block_count_t uint32_t
-#define sky_table_action_count_t uint32_t
 #define sky_table_property_count_t uint16_t
 
 // The table is a reference to the disk location where data is stored. The
 // table also maintains a cache of block info and predefined actions and
 // properties.
-typedef struct sky_table {
+struct sky_table {
     sky_database *database;
+    sky_action_file *action_file;
     bstring name;
     bstring path;
     sky_table_state_e state;
@@ -95,13 +98,12 @@ typedef struct sky_table {
     sky_table_block_count_t block_count;
     sky_block_info **infos;
     sky_action **actions;
-    sky_table_action_count_t action_count;
     sky_property **properties;
     sky_table_property_count_t property_count;
     int data_fd;
     void *data;
     size_t data_length;
-} sky_table;
+};
 
 
 //==============================================================================
@@ -152,19 +154,11 @@ int sky_table_add_event(sky_table *table, sky_event *event);
 
 
 //======================================
-// Action Management
-//======================================
-
-int sky_table_find_or_create_action_id_by_name(sky_table *table,
-                                                     bstring name,
-                                                     sky_action_id_t *action_id);
-
-//======================================
 // Property Management
 //======================================
 
 int sky_table_find_or_create_property_id_by_name(sky_table *table,
-                                                       bstring name,
-                                                       sky_property_id_t *property_id);
+                                                 bstring name,
+                                                 sky_property_id_t *property_id);
 
 #endif

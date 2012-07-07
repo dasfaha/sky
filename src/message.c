@@ -121,7 +121,7 @@ int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
     ptr += SKY_MESSAGE_HEADER_LENGTH;
 
     // Determine end of message.
-    void *maxptr = ptr + header->length;
+    //void *maxptr = ptr + header->length;
     
     // TODO: Check for EOF of message before each read.
 

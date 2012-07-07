@@ -292,161 +292,6 @@ int unload_header(sky_table *table)
 
 
 
-//======================================
-// Action Management
-//======================================
-
-// Retrieves the file path of an table's actions file.
-//
-// table - The table who owns the header file.
-bstring get_actions_file_path(sky_table *table)
-{
-    return bformat("%s/actions", bdata(table->path)); 
-}
-
-// Saves action information to file.
-//
-// table - The table where the action information is stored.
-//
-// Returns 0 if successful, otherwise returns -1.
-int save_actions(sky_table *table)
-{
-    int rc;
-
-    // Open the actions file.
-    bstring path = get_actions_file_path(table); check_mem(path);
-    FILE *file = fopen(bdata(path), "w");
-    check(file, "Failed to open actions file for writing: %s", bdata(path));
-
-    // Write action count.
-    rc = fwrite(&table->action_count, sizeof(table->action_count), 1, file);
-    check(rc == 1, "Unable to write action count");
-
-    // Write actions to file.
-    sky_table_action_count_t i;
-    for(i=0; i<table->action_count; i++) {
-        sky_action *action = table->actions[i];
-        
-        // Write action id.
-        rc = fwrite(&action->id, sizeof(sky_action_id_t), 1, file);
-        check(rc == 1, "Unable to write action id");
-
-        // Write action name length.
-        uint16_t action_name_length = blength(action->name);
-        rc = fwrite(&action_name_length, sizeof(action_name_length), 1, file);
-        check(rc == 1, "Unable to write action name length");
-
-        // Write action name.
-        char *name = bdata(action->name);
-        rc = fwrite(name, action_name_length, 1, file);
-        check(rc == 1, "Unable to write action name");
-    }
-
-    // Close the file.
-    fclose(file);
-
-    // Clean up.
-    bdestroy(path);
-
-    return 0;
-
-error:
-    bdestroy(path);
-    if(file) fclose(file);
-    return -1;
-}
-
-// Loads action information from file.
-//
-// table - The table where the action information is stored.
-//
-// Returns 0 if successful, otherwise returns -1.
-int load_actions(sky_table *table)
-{
-    FILE *file;
-    sky_action **actions = NULL;
-    char *buffer;
-    sky_table_action_count_t count = 0;
-    
-    // Retrieve file stats on actions file
-    bstring path = get_actions_file_path(table); check_mem(path);
-    
-    // Read in actions file if it exists.
-    if(sky_file_exists(path)) {
-        file = fopen(bdata(path), "r");
-        check(file, "Failed to open action file: %s",  bdata(path));
-        
-        // Read action count.
-        fread(&count, sizeof(count), 1, file);
-        actions = malloc(sizeof(sky_action*) * count);
-        if(count > 0) check_mem(actions);
-        
-        // Read actions until end of file.
-        uint32_t i;
-        uint16_t length;
-        for(i=0; i<count && !feof(file); i++) {
-            sky_action *action = malloc(sizeof(sky_action)); check_mem(action);
-            
-            // Read action id and name length.
-            check(fread(&action->id, sizeof(int32_t), 1, file) == 1, "Corrupt actions file");
-            check(fread(&length, sizeof(length), 1, file) == 1, "Corrupt actions file");
-
-            // Read action name.
-            buffer = calloc(1, length+1); check_mem(buffer);
-            check(fread(buffer, length, 1, file) == 1, "Corrupt actions file");
-            action->name = bfromcstr(buffer); check_mem(action->name);
-            free(buffer);
-            
-            // Append to array.
-            actions[i] = action;
-        }
-        
-        // Close the file.
-        fclose(file);
-    }
-
-    // Store action list on table.
-    table->actions = actions;
-    table->action_count = count;
-    
-    // Clean up.
-    bdestroy(path);
-    
-    return 0;
-
-error:
-    if(file) fclose(file);
-    if(buffer) free(buffer);
-    bdestroy(path);
-    return -1;
-}
-
-// Unloads the action data.
-//
-// table - The table where the action data is stored.
-//
-// Returns 0 if successful, otherwise returns -1.
-int unload_actions(sky_table *table)
-{
-    if(table) {
-        // Release actions.
-        if(table->actions) {
-            uint32_t i=0;
-            for(i=0; i<table->action_count; i++) {
-                bdestroy(table->actions[i]->name);
-                free(table->actions[i]);
-                table->actions[i] = NULL;
-            }
-            free(table->actions);
-            table->actions = NULL;
-        }
-        
-        table->action_count = 0;
-    }
-    
-    return 0;
-}
-
 
 //======================================
 // Property Management
@@ -1147,8 +992,8 @@ sky_table *sky_table_create(sky_database *database, bstring name)
     table->infos = NULL;
     table->block_count = 0;
 
-    table->actions = NULL;
-    table->action_count = 0;
+    table->action_file = sky_action_file_create(table);
+    check_mem(table->action_file);
 
     table->properties = NULL;
     table->property_count = 0;
@@ -1171,6 +1016,8 @@ void sky_table_free(sky_table *table)
     if(table) {
         bdestroy(table->name);
         bdestroy(table->path);
+        sky_action_file_free(table->action_file);
+        table->action_file = NULL;
         free(table);
     }
 }
@@ -1199,9 +1046,14 @@ int sky_table_open(sky_table *table)
         check(rc == 0, "Unable to create table directory: %s", bdata(table->path));
     }
 
-    // Load header, action and properties data.
+    // Load header.
     check(load_header(table) == 0, "Unable to load header data");
-    check(load_actions(table) == 0, "Unable to load action data");
+    
+    // Load action data.
+    rc = sky_action_file_load(table->action_file);
+    check(rc == 0, "Unable to load actions");
+    
+    // Load properties.
     check(load_properties(table) == 0, "Unable to load property data");
 
     // Map the data file.
@@ -1230,7 +1082,10 @@ int sky_table_close(sky_table *table)
 
     // Unload header, action and properties data.
     check(unload_header(table) == 0, "Unable to unload header data");
-    check(unload_actions(table) == 0, "Unable to unload action data");
+
+    // Unload action data.
+    sky_action_file_unload(table->action_file);
+
     check(unload_properties(table) == 0, "Unable to unload property data");
 
     // Unmap data file.
@@ -1445,64 +1300,6 @@ error:
     return -1;
 }
 
-
-//======================================
-// Action Management
-//======================================
-
-// Retrieves the id for an action with a given name.
-//
-// table - The table that the action belongs to.
-// name        - The name of the action.
-// action_id   - A pointer to where the action id should be returned to.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_table_find_or_create_action_id_by_name(sky_table *table,
-                                                     bstring name,
-                                                     sky_action_id_t *action_id)
-{
-    check(table != NULL, "Table required");
-    check(table->state == SKY_OBJECT_FILE_STATE_LOCKED, "Table must be open to retrieve action");
-    check(name != NULL, "Action name required");
-    check(blength(name) > 0, "Action name cannot be blank");
-    
-    // Initialize action id to zero.
-    *action_id = 0;
-    
-    // Loop over actions to find matching name.
-    sky_table_action_count_t i;
-    for(i=0; i<table->action_count; i++) {
-        if(biseq(table->actions[i]->name, name) == 1) {
-            *action_id = table->actions[i]->id;
-            break;
-        }
-    }
-    
-    // If no action was found then create one.
-    if(*action_id == 0) {
-        // Create action.
-        sky_action *action = malloc(sizeof(sky_action)); check_mem(action);
-        action->id = table->action_count+1;
-        action->name = bstrcpy(name);
-        
-        // Append to actions.
-        table->action_count++;
-        table->actions = realloc(table->actions, sizeof(sky_action*) * table->action_count);
-        table->actions[table->action_count-1] = action;
-        
-        // Save actions file.
-        save_actions(table);
-        
-        // Return action id to caller.
-        *action_id = action->id;
-    }
-    
-    return 0;
-
-error:
-    *action_id = 0;
-    return -1;
-}
 
 
 //======================================

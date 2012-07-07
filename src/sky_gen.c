@@ -205,7 +205,7 @@ void generate(Options *options)
             sky_action_id_t action_id = (random() % options->action_count) + 1;
             event = sky_event_create(timestamp, object_id, action_id);
             rc = sky_table_add_event(table, event);
-            check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%d", event->timestamp, event->object_id, event->action_id);
+            check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%lld", event->timestamp, event->object_id, event->action_id);
             sky_event_free(event);
         }
     }
