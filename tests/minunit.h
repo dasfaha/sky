@@ -49,9 +49,6 @@ int tests_run;
 // The temporary file used for file operations in the test suite.
 #define TEMPFILE "/tmp/skytemp"
 
-// The dump file for EQL IR.
-struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
-
 
 //==============================================================================
 //
@@ -112,92 +109,3 @@ struct tagbstring DUMPFILE = bsStatic("/tmp/eqldump");
 // Asserts the contents of the temp file.
 #define mu_assert_tempfile(EXP_FILENAME) \
     mu_assert_file(TEMPFILE, EXP_FILENAME)
-
-// Asserts the contents of the eql AST dump.
-#define mu_assert_eql_ast_dump(QUERY, EXPECTED) \
-    eql_ast_node *module = NULL; \
-    bstring text = bfromcstr(QUERY); \
-    eql_parse(NULL, text, &module); \
-    mu_assert_eql_node_dump(module, EXPECTED); \
-    eql_ast_node_free(module); \
-    bdestroy(text);
-
-// Asserts the contents of the eql dump file.
-#define mu_assert_eql_compile(QUERY, EXP_FILENAME) \
-    eql_module *module; \
-    bstring module_name = bfromcstr("foo"); \
-    bstring text = bfromcstr(QUERY); \
-    eql_compiler *compiler = eql_compiler_create(); \
-    int rc = eql_compiler_compile(compiler, module_name, text, &module); \
-    mu_assert(rc == 0, "Unable to compile"); \
-    eql_module_dump_to_file(module, &DUMPFILE); \
-    mu_assert_file(bdata(&DUMPFILE), EXP_FILENAME); \
-    eql_module_free(module); \
-    eql_compiler_free(compiler); \
-    bdestroy(module_name); \
-    bdestroy(text);
-
-// Executes an EQL query that returns an Int.
-#define mu_assert_eql_execute_int(QUERY, EXPECTED) \
-    int rc; \
-    int64_t ret; \
-    eql_module *module; \
-    bstring module_name = bfromcstr("eql"); \
-    bstring text = bfromcstr(QUERY); \
-    eql_compiler *compiler = eql_compiler_create(); \
-    rc = eql_compiler_compile(compiler, module_name, text, &module); \
-    mu_assert(rc == 0, "Unable to compile"); \
-    rc = eql_module_execute_int(module, &ret); \
-    mu_assert(rc == 0, "Unable to execute"); \
-    mu_assert(ret == EXPECTED, "Unexpected return value: %lld", ret); \
-    eql_module_free(module); \
-    eql_compiler_free(compiler); \
-    bdestroy(module_name); \
-    bdestroy(text);
-
-// Executes an EQL query that returns an Boolean.
-#define mu_assert_eql_execute_boolean(QUERY, EXPECTED) \
-    int rc; \
-    bool ret; \
-    eql_module *module; \
-    bstring module_name = bfromcstr("eql"); \
-    bstring text = bfromcstr(QUERY); \
-    eql_compiler *compiler = eql_compiler_create(); \
-    rc = eql_compiler_compile(compiler, module_name, text, &module); \
-    mu_assert(rc == 0, "Unable to compile"); \
-    rc = eql_module_execute_boolean(module, &ret); \
-    mu_assert(rc == 0, "Unable to execute"); \
-    mu_assert(ret == EXPECTED, "Unexpected return value: %d", ret); \
-    eql_module_free(module); \
-    eql_compiler_free(compiler); \
-    bdestroy(module_name); \
-    bdestroy(text);
-
-// Executes an EQL query that returns a Float.
-#define mu_assert_eql_execute_float(QUERY, EXPECTED) \
-    int rc; \
-    double ret; \
-    eql_module *module; \
-    bstring module_name = bfromcstr("eql"); \
-    bstring text = bfromcstr(QUERY); \
-    eql_compiler *compiler = eql_compiler_create(); \
-    rc = eql_compiler_compile(compiler, module_name, text, &module); \
-    mu_assert(rc == 0, "Unable to compile"); \
-    rc = eql_module_execute_float(module, &ret); \
-    mu_assert(rc == 0, "Unable to execute"); \
-    mu_assert(ret == EXPECTED, "Unexpected return value: %f", ret); \
-    eql_module_free(module); \
-    eql_compiler_free(compiler); \
-    bdestroy(module_name); \
-    bdestroy(text);
-
-// Asserts the contents of an EQL AST dump.
-#define mu_assert_eql_node_dump(NODE, EXPECTED) \
-    bstring actual = bfromcstr(""); \
-    bstring expected = bfromcstr(EXPECTED); \
-    int rc = eql_ast_node_dump(NODE, actual); \
-    mu_assert(rc == 0, "Unable to dump"); \
-    mu_assert(biseq(actual, expected), "Unexpected dump.\n\nExpected:\n%s\nActual:\n%s", bdata(expected), bdata(actual)); \
-    bdestroy(actual); \
-    bdestroy(expected);
-

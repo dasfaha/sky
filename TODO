@@ -4,31 +4,8 @@
 - Move header out of block code.
 
 
-
-# EQL
-- External functions (through metadata)
-
-- Parser
-  - Maintain a listing of referenced classes.
-
-- Compiler
-  - eql_compile
-    - Create module (DONE)
-    - Parse text into AST (DONE)
-    - Link modules
-    - Validate AST
-    - Codegen (DONE)
-    - Return module (DONE)
-- Line #'s in AST.
-- Error messages.
-- HashMap impl
-- Msgpack
-  - Generate class serialization.
-- Add server support
-
 # Client API (hisky)
 - Add event
-- EQL query
 - Ruby impl
 
 # Technical Debt

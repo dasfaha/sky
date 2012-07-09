@@ -36,7 +36,6 @@ Complexity can be offloaded to an external language on a per case basis.
 Sky is a young project but this road map is meant to provide an overview of
 where it is headed. The following is what is coming up:
 
-1. EQL Query Engine - Parsing, lexing and execution of an EQL query.
 1. Multi-Threaded Server - Daemon server for production use.
 1. Write Ahead Log - Periodically write events to the database to improve write
    performance.
@@ -47,20 +46,6 @@ where it is headed. The following is what is coming up:
 1. Distribution - Distribute paths across multiple machines with built-in
    sharding and failover.
 
-
-
-## Event Query Language (EQL)
-
-The SQL language was built to query or alter the current state of an object in a
-relational database. Sky, on the other hand, is meant to query the state and
-actions of objects across time. Because of this a new query language is needed.
-
-The Event Query Language (EQL) is designed with these specific aims:
-
-1. Encapsulated - Only a single path is queried at a time.
-1. High-Level - The language only works with high level objects - events & paths.
-1. Aggregation Only - The language on queries the database. It does not change
-   or add data to the database.
 
 
 ## Contribute
