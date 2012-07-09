@@ -6,6 +6,7 @@
 #include "bstring.h"
 #include "event.h"
 #include "mem.h"
+#include "minipack.h"
 
 //==============================================================================
 //
@@ -241,7 +242,7 @@ uint32_t sky_event_get_serialized_length(sky_event *event)
     
     // Add action if one is set.
     if(has_action(event)) {
-        length += sizeof(event->action_id);
+        length += minipack_sizeof_int(event->action_id);
     }
     
     // Add data if set.
@@ -265,6 +266,7 @@ uint32_t sky_event_get_serialized_length(sky_event *event)
 int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length)
 {
     int rc;
+    size_t sz;
     void *start = addr;
     
     // Validate.
@@ -280,7 +282,9 @@ int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length)
     
     // Write action if set.
     if(has_action(event)) {
-        memwrite(addr, &event->action_id, sizeof(event->action_id), "event action");
+        minipack_pack_int(addr, event->action_id, &sz);
+        check(sz != 0, "Unable to serialize event action id");
+        addr += sz;
     }
 
     // Write data if set.
@@ -321,6 +325,7 @@ error:
 int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length)
 {
     int rc;
+    size_t sz;
     void *start = addr;
 
     // Validate.
@@ -336,7 +341,9 @@ int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length)
 
     // Read action if one exists.
     if(flag & SKY_EVENT_FLAG_ACTION) {
-        memread(addr, &event->action_id, sizeof(event->action_id), "event action");
+        event->action_id = minipack_unpack_int(addr, &sz);
+        check(sz != 0, "Unable to deserialize event action id");
+        addr += sz;
     }
 
     // Clear existing data.

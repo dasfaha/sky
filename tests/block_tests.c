@@ -119,7 +119,7 @@ int test_sky_block_add_remove_events() {
 
 int test_sky_block_get_serialized_length() {
     sky_block *block = create_test_block0();
-    mu_assert(sky_block_get_serialized_length(block) == 79, "");
+    mu_assert(sky_block_get_serialized_length(block) == 73, "");
     sky_block_free(block);
     return 0;
 }
@@ -135,7 +135,8 @@ int test_sky_block_serialize() {
     sky_block *block = create_test_block0();
     sky_block_serialize(block, addr, &ptrdiff);
     sky_block_free(block);
-    mu_assert(ptrdiff == 79, "");
+    mu_assert(ptrdiff == 73, "");
+    memdump(addr, DATA_LENGTH);
     mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
     free(addr);
     return 0;
