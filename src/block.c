@@ -124,6 +124,7 @@ size_t sky_block_sizeof(sky_block *block)
 {
     size_t sz = 0;
     sz += minipack_sizeof_array(block->path_count);
+    sz += get_paths_length(block);
     return sz;
 }
 
@@ -157,15 +158,15 @@ int sky_block_pack(sky_block *block, void *ptr, size_t *sz)
     check(ptr != NULL, "Pointer required");
 
     // Write path count.
-    minipack_pack_int(ptr, block->path_count, &_sz);
-    check(_sz != 0, "Unable to pack block path count");
+    minipack_pack_array(ptr, block->path_count, &_sz);
+    check(_sz != 0, "Unable to pack block path count at %p", ptr);
     ptr += _sz;
     
     // Loop over paths and delegate serialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
         rc = sky_path_pack(block->paths[i], ptr, &_sz);
-        check(rc == 0, "Unable to pack block path: %d", i);
+        check(rc == 0, "Unable to pack block path at %p", ptr);
         ptr += _sz;
     }
     
@@ -204,7 +205,7 @@ int sky_block_unpack(sky_block *block, void *ptr, size_t *sz)
 
     // Read path count.
     block->path_count = minipack_unpack_array(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack block path count");
+    check(_sz != 0, "Unable to unpack block path count at %p", ptr);
     ptr += _sz;
 
     // Allocate paths.
@@ -218,7 +219,7 @@ int sky_block_unpack(sky_block *block, void *ptr, size_t *sz)
         block->paths[i] = path;
         
         rc = sky_path_unpack(path, ptr, &_sz);
-        check(rc == 0, "Unable to unpack block path: %d", i);
+        check(rc == 0, "Unable to unpack block path at %p", ptr);
         ptr += _sz;
     }
 

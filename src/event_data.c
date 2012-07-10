@@ -102,12 +102,12 @@ int sky_event_data_pack(sky_event_data *data, void *ptr, size_t *sz)
     
     // Write key.
     minipack_pack_int(ptr, data->key, &_sz);
-    check(_sz != 0, "Unable to pack event data key");
+    check(_sz != 0, "Unable to pack event data key at %p", ptr);
     ptr += _sz;
     
     // Write value header.
     minipack_pack_raw(ptr, blength(data->value), &_sz);
-    check(_sz != 0, "Unable to pack event data value header");
+    check(_sz != 0, "Unable to pack event data value header at %p", ptr);
     ptr += _sz;
 
     // Write value.
@@ -143,16 +143,17 @@ int sky_event_data_unpack(sky_event_data *data, void *ptr, size_t *sz)
 
     // Read key.
     data->key = minipack_unpack_int(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack event data key");
+    check(_sz != 0, "Unable to unpack event data key at %p", ptr);
     ptr += _sz;
 
     // Read value header.
     uint32_t value_length = minipack_unpack_raw(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack event value header");
+    check(_sz != 0, "Unable to unpack event value header at %p", ptr);
     ptr += _sz;
 
     // Read value.
     data->value = blk2bstr(ptr, value_length); check_mem(data->value);
+    ptr += value_length;
 
     // Store number of bytes read.
     if(sz != NULL) {

@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include "dbg.h"
+#include "endian.h"
 #include "bstring.h"
 #include "event.h"
 #include "mem.h"
@@ -321,12 +322,13 @@ int sky_event_pack(sky_event *event, void *ptr, size_t *sz)
     memwrite(ptr, &flag, sizeof(flag), "event flag");
     
     // Write timestamp.
-    memwrite(ptr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
+    sky_timestamp_t timestamp = htonll(event->timestamp);
+    memwrite(ptr, &timestamp, sizeof(timestamp), "event timestamp");
     
     // Write action if set.
     if(has_action(event)) {
         minipack_pack_int(ptr, event->action_id, &_sz);
-        check(_sz != 0, "Unable to pack event action id");
+        check(_sz != 0, "Unable to pack event action id at %p", ptr);
         ptr += _sz;
     }
 
@@ -335,14 +337,14 @@ int sky_event_pack(sky_event *event, void *ptr, size_t *sz)
         // Write data length.
         size_t data_length = sky_event_sizeof_data(event);
         minipack_pack_raw(ptr, data_length, &_sz);
-        check(_sz != 0, "Unable to pack event data length");
+        check(_sz != 0, "Unable to pack event data length at %p", ptr);
         ptr += _sz;
         
         // Pack data.
         uint64_t i;
         for(i=0; i<event->data_count; i++) {
             rc = sky_event_data_pack(event->data[i], ptr, &_sz);
-            check(rc == 0, "Unable to pack event data: %lld", i);
+            check(rc == 0, "Unable to pack event data at %p", ptr);
             ptr += _sz;
         }
     }
@@ -381,12 +383,14 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     memread(ptr, &flag, sizeof(flag), "event flag");
 
     // Read timestamp.
-    memread(ptr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
-
+    sky_timestamp_t timestamp;
+    memread(ptr, &timestamp, sizeof(timestamp), "event timestamp");
+    event->timestamp = ntohll(timestamp);
+    
     // Read action if one exists.
     if(flag & SKY_EVENT_FLAG_ACTION) {
         event->action_id = minipack_unpack_int(ptr, &_sz);
-        check(_sz != 0, "Unable to unpack event action id");
+        check(_sz != 0, "Unable to unpack event action id at %p", ptr);
         ptr += _sz;
     }
 
@@ -397,7 +401,7 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     if(flag & SKY_EVENT_FLAG_DATA) {
         // Read data length.
         size_t data_length = minipack_unpack_raw(ptr, &_sz);
-        check(_sz != 0, "Unable to unpack event data length");
+        check(_sz != 0, "Unable to unpack event data length at %p", ptr);
         ptr += _sz;
 
         // Unpack data.
@@ -408,7 +412,7 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
             event->data[index] = sky_event_data_create(0, NULL);
 
             rc = sky_event_data_unpack(event->data[index], ptr, &_sz);
-            check(rc == 0, "Unable to unpack event data: %d", index);
+            check(rc == 0, "Unable to unpack event data at %p", ptr);
             ptr += _sz;
 
             index++;

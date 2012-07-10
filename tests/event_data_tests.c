@@ -14,8 +14,8 @@
 //
 //==============================================================================
 
-char DATA[] = {0x0A, 0x00, 0x03, 0x66, 0x6F, 0x6F};
-size_t DATA_LENGTH = 6;
+size_t DATA_LENGTH = 5;
+char DATA[] = "\x0a\xa3\x66\x6f\x6f";
 
 
 //==============================================================================
@@ -51,8 +51,8 @@ int test_sky_event_data_sizeof() {
     sky_event_data *data;
     
     data = sky_event_data_create(10, &value);
-    uint32_t length = sky_event_data_sizeof(data);
-    mu_assert(length == 6, "Expected length of 6 for 'foo'");
+    size_t sz = sky_event_data_sizeof(data);
+    mu_assert_long_equals(sz, 5L);
     sky_event_data_free(data);
 
     return 0;
@@ -67,7 +67,7 @@ int test_sky_event_data_pack() {
     sky_event_data_pack(data, addr, &sz);
     sky_event_data_free(data);
     
-    mu_assert(sz == DATA_LENGTH, "");
+    mu_assert_long_equals(sz, DATA_LENGTH);
     mu_assert_mem(addr, &DATA, DATA_LENGTH);
 
     free(addr);
@@ -81,7 +81,7 @@ int test_sky_event_data_unpack() {
     sky_event_data *data = sky_event_data_create(0, NULL);
     sky_event_data_unpack(data, &DATA, &sz);
 
-    mu_assert(sz == DATA_LENGTH, "");
+    mu_assert_long_equals(sz, DATA_LENGTH);
     mu_assert(data->key == 10, "");
     mu_assert(biseqcstr(data->value, "foo"), "");
 

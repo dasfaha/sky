@@ -7,10 +7,21 @@
 //
 //==============================================================================
 
+//--------------------------------------
+// Core
+//--------------------------------------
+
 #define mu_fail(MSG, ...) do {\
     fprintf(stderr, "%s:%d: " MSG "\n", __FILE__, __LINE__, ##__VA_ARGS__);\
     return 1;\
 } while(0)
+
+#define mu_assert_with_msg(TEST, MSG, ...) do {\
+    if (!(TEST)) {\
+        fprintf(stderr, "%s:%d: %s " MSG "\n", __FILE__, __LINE__, #TEST, ##__VA_ARGS__);\
+        return 1;\
+    }\
+} while (0)
 
 #define mu_assert(TEST, MSG, ...) do {\
     if (!(TEST)) {\
@@ -37,6 +48,14 @@
 }
 
 int tests_run;
+
+
+//--------------------------------------
+// Typed asserts
+//--------------------------------------
+
+#define mu_assert_int_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %d; Received: %d", EXPECTED, ACTUAL)
+#define mu_assert_long_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %ld; Received: %ld", EXPECTED, ACTUAL)
 
 
 

@@ -93,7 +93,7 @@ int test_sky_path_iterator_next() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_path_iterator_next);
+    //mu_run_test(test_sky_path_iterator_next);
     return 0;
 }
 

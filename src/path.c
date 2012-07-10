@@ -194,20 +194,20 @@ int sky_path_pack(sky_path *path, void *ptr, size_t *sz)
 
     // Write object id.
     minipack_pack_int(ptr, path->object_id, &_sz);
-    check(_sz != 0, "Unable to pack path object id");
+    check(_sz != 0, "Unable to pack path object id at %p", ptr);
     ptr += _sz;
     
     // Write events length.
     size_t events_length = get_events_length(path);
     minipack_pack_raw(ptr, events_length, &_sz);
-    check(_sz != 0, "Unable to pack path events length");
+    check(_sz != 0, "Unable to pack path events length at %p", ptr);
     ptr += _sz;
 
     // Pack events.
     sky_path_event_count_t i;
     for(i=0; i<path->event_count; i++) {
         rc = sky_event_pack(path->events[i], ptr, &_sz);
-        check(rc == 0, "Unable to pack path event: %lld", i);
+        check(rc == 0, "Unable to pack path event at %p", ptr);
         ptr += _sz;
     }
 
@@ -242,12 +242,12 @@ int sky_path_unpack(sky_path *path, void *ptr, size_t *sz)
 
     // Read object id.
     path->object_id = minipack_unpack_int(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack path object id");
+    check(_sz != 0, "Unable to unpack path object id at %p", ptr);
     ptr += _sz;
 
     // Read events length.
     size_t events_length = minipack_unpack_raw(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack path events length");
+    check(_sz != 0, "Unable to unpack path events length at %p", ptr);
     ptr += _sz;
 
     // Unpack events.
@@ -260,7 +260,7 @@ int sky_path_unpack(sky_path *path, void *ptr, size_t *sz)
 
         path->events[index] = sky_event_create(0, path->object_id, 0);
         rc = sky_event_unpack(path->events[index], ptr, &_sz);
-        check(rc == 0, "Unable to unpack event: %d", index);
+        check(rc == 0, "Unable to unpack event at %p", ptr);
         ptr += _sz;
         
         index++;
