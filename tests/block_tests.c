@@ -117,9 +117,9 @@ int test_sky_block_add_remove_events() {
 // Serialization length
 //--------------------------------------
 
-int test_sky_block_get_serialized_length() {
+int test_sky_block_sizeof() {
     sky_block *block = create_test_block0();
-    mu_assert(sky_block_get_serialized_length(block) == 73, "");
+    mu_assert(sky_block_sizeof(block) == 73, "");
     sky_block_free(block);
     return 0;
 }
@@ -129,15 +129,14 @@ int test_sky_block_get_serialized_length() {
 // Serialization
 //--------------------------------------
 
-int test_sky_block_serialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_block_pack() {
+    size_t sz;
     void *addr = calloc(DATA_LENGTH, 1);
     sky_block *block = create_test_block0();
-    sky_block_serialize(block, addr, &ptrdiff);
+    sky_block_pack(block, addr, &sz);
     sky_block_free(block);
-    mu_assert(ptrdiff == 73, "");
-    memdump(addr, DATA_LENGTH);
-    mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
+    mu_assert(sz == 73, "");
+    mu_assert_mem(addr, &DATA, DATA_LENGTH);
     free(addr);
     return 0;
 }
@@ -146,8 +145,8 @@ int test_sky_block_serialize() {
 // Deserialization
 //--------------------------------------
 
-int test_sky_block_deserialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_block_unpack() {
+    size_t sz;
 
     sky_event_data *data;
     sky_path *path;
@@ -158,9 +157,9 @@ int test_sky_block_deserialize() {
     table->block_size = 0x10000;  // 64K
 
     sky_block *block = sky_block_create(table, &info);
-    sky_block_deserialize(block, &DATA, &ptrdiff);
+    sky_block_unpack(block, &DATA, &sz);
 
-    mu_assert(ptrdiff == 79, "");
+    mu_assert(sz == 79, "");
 
     // Block
     mu_assert(block->path_count == 2, "");
@@ -207,9 +206,9 @@ int test_sky_block_deserialize() {
 
 int all_tests() {
     mu_run_test(test_sky_block_add_remove_events);
-    mu_run_test(test_sky_block_get_serialized_length);
-    mu_run_test(test_sky_block_serialize);
-    mu_run_test(test_sky_block_deserialize);
+    mu_run_test(test_sky_block_sizeof);
+    mu_run_test(test_sky_block_pack);
+    mu_run_test(test_sky_block_unpack);
 
     return 0;
 }

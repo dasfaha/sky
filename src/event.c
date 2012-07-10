@@ -7,6 +7,7 @@
 #include "event.h"
 #include "mem.h"
 #include "minipack.h"
+#include "minipack.h"
 
 //==============================================================================
 //
@@ -186,7 +187,7 @@ int sky_event_copy(sky_event *source, sky_event **target)
         check_mem(event->data);
 
         // Copy each event data item.
-        int i;
+        uint64_t i;
         for(i=0; i<event->data_count; i++) {
             rc = sky_event_data_copy(source->data[i], &data);
             check(rc == 0, "Unable to copy event data");
@@ -209,141 +210,184 @@ error:
 
 
 //======================================
-// Serialization
+// Sizeof
 //======================================
-
-// Calculates the total number of bytes needed to store just the data section
-// of the event.
-uint16_t get_data_length(sky_event *event)
-{
-    uint16_t i;
-    uint16_t length = 0;
-    
-    // Add size for each data item.
-    for(i=0; i<event->data_count; i++) {
-        length += sky_event_data_get_serialized_length(event->data[i]);
-    }
-    
-    return length;
-}
 
 // Calculates the total number of bytes needed to store an event.
 //
 // event - The event.
-uint32_t sky_event_get_serialized_length(sky_event *event)
+size_t sky_event_sizeof(sky_event *event)
 {
-    uint32_t length = 0;
+    size_t sz = 0;
     
     // Add event flag.
-    length += 1;
+    sz += 1;
     
     // Add timestamp.
-    length += sizeof(event->timestamp);
+    sz += sizeof(event->timestamp);
     
     // Add action if one is set.
     if(has_action(event)) {
-        length += minipack_sizeof_int(event->action_id);
+        sz += minipack_sizeof_int(event->action_id);
     }
     
     // Add data if set.
     if(has_data(event)) {
-        uint16_t data_length = get_data_length(event);
-
-        length += sizeof(data_length);
-        length += data_length;
+        size_t data_length = sky_event_sizeof_data(event);
+        sz += minipack_sizeof_raw(data_length);
+        sz += data_length;
     }
 
-    return length;
+    return sz;
 }
+
+// Calculates the total number of bytes needed to store just the data section
+// of the event.
+size_t sky_event_sizeof_data(sky_event *event)
+{
+    size_t sz = 0;
+    
+    // Add size for each data item.
+    uint64_t i;
+    for(i=0; i<event->data_count; i++) {
+        sz += sky_event_data_sizeof(event->data[i]);
+    }
+    
+    return sz;
+}
+
+// Calculates the total length of an event element stored in raw format at the
+// given pointer.
+//
+// ptr - A pointer to the raw event data.
+//
+// Returns the length of the raw event data.
+size_t sky_event_sizeof_raw(void *ptr)
+{
+    size_t _sz;
+    size_t sz = 0;
+    char event_flag = *((char*)ptr);
+
+    // Add event flag and timestamp.
+    sz += sizeof(sky_event_flag_t);
+    sz += sizeof(sky_timestamp_t);
+
+    // Add action length.
+    if(event_flag & SKY_EVENT_FLAG_ACTION) {
+        _sz = minipack_sizeof_int_elem(ptr);
+        if(_sz == 0) {
+            return 0;
+        }
+        sz += sz;
+    }
+
+    // Add data length.
+    if(event_flag & SKY_EVENT_FLAG_DATA) {
+        size_t data_length = minipack_unpack_raw(ptr+sz, &_sz);
+        if(_sz == 0) {
+            return 0;
+        }
+        sz += data_length;
+    }
+    
+    return sz;
+}    
+
+
+
+//======================================
+// Pack
+//======================================
 
 // Serializes an event to memory at a given pointer location.
 //
-// event  - The event to serialize.
-// addr   - The pointer to the current location.
-// length - The number of bytes written.
+// event - The event to pack.
+// ptr   - The pointer to the current location.
+// sz    - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length)
+int sky_event_pack(sky_event *event, void *ptr, size_t *sz)
 {
     int rc;
-    size_t sz;
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
     
     // Validate.
     check(event != NULL, "Event required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
     
     // Write event flag.
     uint8_t flag = get_event_flag(event);
-    memwrite(addr, &flag, sizeof(flag), "event flag");
+    memwrite(ptr, &flag, sizeof(flag), "event flag");
     
     // Write timestamp.
-    memwrite(addr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
+    memwrite(ptr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
     
     // Write action if set.
     if(has_action(event)) {
-        minipack_pack_int(addr, event->action_id, &sz);
-        check(sz != 0, "Unable to serialize event action id");
-        addr += sz;
+        minipack_pack_int(ptr, event->action_id, &_sz);
+        check(_sz != 0, "Unable to pack event action id");
+        ptr += _sz;
     }
 
     // Write data if set.
     if(has_data(event)) {
         // Write data length.
-        uint16_t data_length = get_data_length(event);
-        memwrite(addr, &data_length, sizeof(data_length), "event data length");
+        size_t data_length = sky_event_sizeof_data(event);
+        minipack_pack_raw(ptr, data_length, &_sz);
+        check(_sz != 0, "Unable to pack event data length");
+        ptr += _sz;
         
-        // Serialize data.
-        int i;
+        // Pack data.
+        uint64_t i;
         for(i=0; i<event->data_count; i++) {
-            ptrdiff_t ptrdiff;
-            rc = sky_event_data_serialize(event->data[i], addr, &ptrdiff);
-            check(rc == 0, "Unable to serialize event data: %d", i);
-            addr += ptrdiff;
+            rc = sky_event_data_pack(event->data[i], ptr, &_sz);
+            check(rc == 0, "Unable to pack event data: %lld", i);
+            ptr += _sz;
         }
     }
     
     // Store number of bytes written.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
     
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }
 
 // Deserializes an event from a given file at the file's current offset.
 //
-// event  - The event to serialize.
-// addr   - The pointer to the current location.
-// length - The number of bytes written.
+// event - The event to unpack into.
+// ptr   - The pointer to the current location.
+// sz    - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length)
+int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
 {
     int rc;
-    size_t sz;
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
 
     // Validate.
     check(event != NULL, "Event required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
 
     // Read event flag.
     uint8_t flag;
-    memread(addr, &flag, sizeof(flag), "event flag");
+    memread(ptr, &flag, sizeof(flag), "event flag");
 
     // Read timestamp.
-    memread(addr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
+    memread(ptr, &event->timestamp, sizeof(event->timestamp), "event timestamp");
 
     // Read action if one exists.
     if(flag & SKY_EVENT_FLAG_ACTION) {
-        event->action_id = minipack_unpack_int(addr, &sz);
-        check(sz != 0, "Unable to deserialize event action id");
-        addr += sz;
+        event->action_id = minipack_unpack_int(ptr, &_sz);
+        check(_sz != 0, "Unable to unpack event action id");
+        ptr += _sz;
     }
 
     // Clear existing data.
@@ -352,35 +396,34 @@ int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length)
     // Read data if set.
     if(flag & SKY_EVENT_FLAG_DATA) {
         // Read data length.
-        uint16_t data_length;
-        memread(addr, &data_length, sizeof(data_length), "event data length");
+        size_t data_length = minipack_unpack_raw(ptr, &_sz);
+        check(_sz != 0, "Unable to unpack event data length");
+        ptr += _sz;
 
-        // Deserialize data.
+        // Unpack data.
         int index = 0;
-        void *endptr = addr + data_length;
-        while(addr < endptr) {
-            ptrdiff_t ptrdiff;
-
+        void *endptr = ptr + data_length;
+        while(ptr < endptr) {
             check(allocate_data(event) == 0, "Unable to append event data");
             event->data[index] = sky_event_data_create(0, NULL);
 
-            rc = sky_event_data_deserialize(event->data[index], addr, &ptrdiff);
-            check(rc == 0, "Unable to deserialize event data: %d", index);
-            addr += ptrdiff;
+            rc = sky_event_data_unpack(event->data[index], ptr, &_sz);
+            check(rc == 0, "Unable to unpack event data: %d", index);
+            ptr += _sz;
 
             index++;
         }
     }
 
     // Store number of bytes read.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
 
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }
 
@@ -400,7 +443,7 @@ error:
 // Returns 0 if successful, otherwise -1.
 int sky_event_get_data(sky_event *event, int16_t key, sky_event_data **data)
 {
-    int i;
+    uint64_t i;
     bool found = false;
     
     // Validation.
@@ -474,7 +517,7 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_event_unset_data(sky_event *event, int16_t key)
 {
-    int i, j;
+    uint64_t i, j;
     
     // Validation.
     check(event != NULL, "Event required");

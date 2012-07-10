@@ -49,6 +49,9 @@ int tests_run;
 // The temporary file used for file operations in the test suite.
 #define TEMPFILE "/tmp/skytemp"
 
+// The path where memory dumps are directed to.
+#define MEMDUMPFILE "/tmp/memdump"
+
 
 //==============================================================================
 //
@@ -109,3 +112,14 @@ int tests_run;
 // Asserts the contents of the temp file.
 #define mu_assert_tempfile(EXP_FILENAME) \
     mu_assert_file(TEMPFILE, EXP_FILENAME)
+
+// Asserts the contents of memory. If an error occurs then the memory is
+// dumped to file.
+#define mu_assert_mem(ACTUAL, EXPECTED, N) \
+    int rc = memcmp(ACTUAL, EXPECTED, N); \
+    if(rc != 0) { \
+        FILE *file = fopen(MEMDUMPFILE, "w"); \
+        fwrite(ACTUAL, N, sizeof(char), file); \
+        fclose(file); \
+        mu_fail("Memory contents do not match. Memory dumped to: " MEMDUMPFILE); \
+    }

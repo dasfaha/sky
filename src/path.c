@@ -5,6 +5,7 @@
 #include "dbg.h"
 #include "path.h"
 #include "mem.h"
+#include "minipack.h"
 
 //==============================================================================
 //
@@ -110,144 +111,170 @@ void sky_path_free(sky_path *path)
 
 // Calculates the total number of bytes needed to store just the events section
 // of the path.
-sky_path_events_length_t get_events_length(sky_path *path)
+size_t get_events_length(sky_path *path)
 {
-    sky_path_event_count_t i;
-    sky_path_events_length_t length = 0;
+    uint64_t i;
+    size_t sz = 0;
     
     // Add size for each event.
     for(i=0; i<path->event_count; i++) {
-        length += sky_event_get_serialized_length(path->events[i]);
+        sz += sky_event_sizeof(path->events[i]);
     }
     
-    return length;
+    return sz;
 }
 
 // Calculates the total number of bytes needed to store a path and its events.
 //
 // path - The path.
-uint32_t sky_path_get_serialized_length(sky_path *path)
+size_t sky_path_sizeof(sky_path *path)
 {
-    sky_path_events_length_t length = 0;
+    size_t sz = 0;
 
-    // Add header length
-    length += SKY_PATH_HEADER_LENGTH;
+    // Compute total event length.
+    size_t events_length = get_events_length(path);
 
-    // Add event length.
-    sky_path_events_length_t events_length = get_events_length(path);
-    length += events_length;
+    // Add lengths.
+    sz += minipack_sizeof_int(path->object_id);
+    sz += minipack_sizeof_raw(events_length);
+    sz += events_length;
     
-    return length;
+    return sz;
 }
 
 // Calculates the full length of a path at a given pointer address.
 // 
-// ptr - A pointer to raw, serialized path data.
+// ptr - A pointer to raw, packed path data.
 //
 // Returns the length of the path.
-uint32_t sky_path_get_length(const void *ptr)
+size_t sky_path_sizeof_raw(void *ptr)
 {
-    // Read events length from raw data.
-    sky_path_events_length_t events_length;
-    memcpy(&events_length, ptr+sizeof(sky_object_id_t), sizeof(events_length));
+    size_t _sz;
+    size_t sz = 0;
+        
+    // Read object id to determine element size.
+    sz += sky_path_sizeof_raw_hdr(ptr);
     
-    return SKY_PATH_HEADER_LENGTH + events_length;
+    // Read events length.
+    size_t events_length = minipack_unpack_raw(ptr+sz, &_sz);
+    sz += events_length;
+    sz += _sz;
+    
+    return sz;
+}
+
+// Calculates the size of the path's header.
+// 
+// ptr - A pointer to raw, packed path data.
+//
+// Returns the length of the path.
+size_t sky_path_sizeof_raw_hdr(void *ptr)
+{
+    size_t sz = 0;
+    sz += minipack_sizeof_int_elem(ptr);
+    return sz;
 }
 
 // Serializes a path at a given memory location.
 //
-// path   - The path to serialize.
-// addr   - The pointer to the current location.
-// length - The number of bytes written.
+// path - The path to pack.
+// ptr  - The pointer to the current location.
+// sz   - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_path_serialize(sky_path *path, void *addr, ptrdiff_t *length)
+int sky_path_pack(sky_path *path, void *ptr, size_t *sz)
 {
     int rc;
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
     
     // Validate.
     check(path != NULL, "Path required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
 
     // Write object id.
-    memwrite(addr, &path->object_id, sizeof(path->object_id), "path object id");
+    minipack_pack_int(ptr, path->object_id, &_sz);
+    check(_sz != 0, "Unable to pack path object id");
+    ptr += _sz;
     
     // Write events length.
-    uint32_t events_length = get_events_length(path);
-    memwrite(addr, &events_length, sizeof(events_length), "path events length");
+    size_t events_length = get_events_length(path);
+    minipack_pack_raw(ptr, events_length, &_sz);
+    check(_sz != 0, "Unable to pack path events length");
+    ptr += _sz;
 
-    // Serialize events.
+    // Pack events.
     sky_path_event_count_t i;
     for(i=0; i<path->event_count; i++) {
-        ptrdiff_t ptrdiff;
-        rc = sky_event_serialize(path->events[i], addr, &ptrdiff);
-        check(rc == 0, "Unable to serialize path event: %d", i);
-        addr += ptrdiff;
+        rc = sky_event_pack(path->events[i], ptr, &_sz);
+        check(rc == 0, "Unable to pack path event: %lld", i);
+        ptr += _sz;
     }
 
     // Store number of bytes written.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
 
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }
 
 // Deserializes a path to a memory location.
 //
-// path   - The path to serialize.
-// addr   - The pointer to the current location.
-// length - The number of bytes written.
+// path - The path to unpack.
+// ptr  - The pointer to the current location.
+// sz   - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_path_deserialize(sky_path *path, void *addr, ptrdiff_t *length)
+int sky_path_unpack(sky_path *path, void *ptr, size_t *sz)
 {
     int rc;
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
 
     // Validate.
     check(path != NULL, "Path required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
 
     // Read object id.
-    memread(addr, &path->object_id, sizeof(path->object_id), "path object id");
+    path->object_id = minipack_unpack_int(ptr, &_sz);
+    check(_sz != 0, "Unable to unpack path object id");
+    ptr += _sz;
 
     // Read events length.
-    sky_path_events_length_t events_length;
-    memread(addr, &events_length, sizeof(events_length), "path events length");
+    size_t events_length = minipack_unpack_raw(ptr, &_sz);
+    check(_sz != 0, "Unable to unpack path events length");
+    ptr += _sz;
 
-    // Deserialize events.
+    // Unpack events.
     int index = 0;
-    void *endptr = addr + events_length;
-    while(addr < endptr) {
-        ptrdiff_t ptrdiff;
-        
+    void *endptr = ptr + events_length;
+    while(ptr < endptr) {
         path->event_count++;
         path->events = realloc(path->events, sizeof(sky_event*) * path->event_count);
         check_mem(path->events);
 
         path->events[index] = sky_event_create(0, path->object_id, 0);
-        rc = sky_event_deserialize(path->events[index], addr, &ptrdiff);
-        check(rc == 0, "Unable to deserialize event: %d", index);
-        addr += ptrdiff;
+        rc = sky_event_unpack(path->events[index], ptr, &_sz);
+        check(rc == 0, "Unable to unpack event: %d", index);
+        ptr += _sz;
         
         index++;
     }
 
     // Store number of bytes read.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
 
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }
 

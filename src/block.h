@@ -25,11 +25,8 @@
 //
 //==============================================================================
 
-// Stores the number of paths that a block contains.
-#define sky_path_count_t uint32_t
-
-// The length of non-path data in the block.
-#define BLOCK_HEADER_LENGTH sizeof(sky_path_count_t)
+// The maximum size the header can be.
+#define MAX_BLOCK_HEADER_LENGTH 9
 
 
 //==============================================================================
@@ -41,7 +38,7 @@
 typedef struct sky_block {
     sky_table *table;
     sky_block_info *info;
-    sky_path_count_t path_count;
+    uint32_t path_count;
     sky_path **paths;
 } sky_block;
 
@@ -65,11 +62,13 @@ void sky_block_free(sky_block *block);
 // Serialization
 //======================================
 
-uint32_t sky_block_get_serialized_length(sky_block *block);
+size_t sky_block_sizeof(sky_block *block);
 
-int sky_block_serialize(sky_block *block, void *addr, ptrdiff_t *length);
+size_t sky_block_sizeof_raw_hdr(void *ptr);
 
-int sky_block_deserialize(sky_block *block, void *addr, ptrdiff_t *length);
+int sky_block_pack(sky_block *block, void *addr, size_t *length);
+
+int sky_block_unpack(sky_block *block, void *addr, size_t *length);
 
 
 //======================================

@@ -22,11 +22,8 @@
 //
 //==============================================================================
 
-#define sky_path_event_count_t uint32_t
-#define sky_path_events_length_t uint32_t
-
-// The length of non-event data bytes in a serialized path.
-#define SKY_PATH_HEADER_LENGTH sizeof(sky_object_id_t) + sizeof(sky_path_event_count_t)
+#define sky_path_event_count_t uint64_t
+#define sky_path_events_length_t uint64_t
 
 
 //==============================================================================
@@ -37,7 +34,7 @@
 
 typedef struct sky_path {
     sky_object_id_t object_id;
-    sky_path_event_count_t event_count;
+    uint32_t event_count;
     sky_event **events;
 } sky_path;
 
@@ -61,13 +58,15 @@ void sky_path_free(sky_path *path);
 // Serialization
 //======================================
 
-uint32_t sky_path_get_serialized_length(sky_path *path);
+size_t sky_path_sizeof(sky_path *path);
 
-uint32_t sky_path_get_length(const void *ptr);
+size_t sky_path_sizeof_raw(void *ptr);
 
-int sky_path_serialize(sky_path *path, void *addr, ptrdiff_t *length);
+size_t sky_path_sizeof_raw_hdr(void *ptr);
 
-int sky_path_deserialize(sky_path *path, void *addr, ptrdiff_t *length);
+int sky_path_pack(sky_path *path, void *addr, size_t *length);
+
+int sky_path_unpack(sky_path *path, void *addr, size_t *length);
 
 
 //======================================

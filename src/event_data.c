@@ -6,27 +6,13 @@
 #include "bstring.h"
 #include "event.h"
 #include "mem.h"
+#include "minipack.h"
 
 //==============================================================================
 //
 // Functions
 //
 //==============================================================================
-
-//======================================
-// Utility
-//======================================
-
-// Cleans the event data so that it conforms to max length standards.
-void clean(sky_event_data *data)
-{
-    if(blength(data->value) > 127) {
-        bstring tmp = bmidstr(data->value, 0, 127);
-        bdestroy(data->value);
-        data->value = tmp;
-    }
-}
-
 
 //======================================
 // Lifecycle
@@ -89,50 +75,48 @@ error:
 // Calculates the total number of bytes needed to store an event data.
 //
 // data - The event data item.
-uint32_t sky_event_data_get_serialized_length(sky_event_data *data)
+size_t sky_event_data_sizeof(sky_event_data *data)
 {
-    uint32_t length = 0;
-
-    clean(data);
-    
-    length += sizeof(data->key);
-    length += sizeof(uint8_t);
-    length += blength(data->value);
-
-    return length;
+    size_t sz = 0;
+    sz += minipack_sizeof_int(data->key);
+    sz += minipack_sizeof_raw(blength(data->value));
+    sz += blength(data->value);
+    return sz;
 }
 
 // Serializes event data to memory at a given pointer.
 //
-// data   - The event data to serialize.
-// addr   - The pointer to the current location.
+// data   - The event data to pack.
+// ptr    - The pointer to the current location.
 // length - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_event_data_serialize(sky_event_data *data, void *addr, ptrdiff_t *length)
+int sky_event_data_pack(sky_event_data *data, void *ptr, size_t *sz)
 {
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
 
     // Validate.
     check(data != NULL, "Event data required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
     
-    // Clean data structure.
-    clean(data);
-
     // Write key.
-    memwrite(addr, &data->key, sizeof(data->key), "event data key");
+    minipack_pack_int(ptr, data->key, &_sz);
+    check(_sz != 0, "Unable to pack event data key");
+    ptr += _sz;
     
-    // Write value length.
-    uint8_t value_length = blength(data->value);
-    memwrite(addr, &value_length, sizeof(value_length), "event data value length");
+    // Write value header.
+    minipack_pack_raw(ptr, blength(data->value), &_sz);
+    check(_sz != 0, "Unable to pack event data value header");
+    ptr += _sz;
 
     // Write value.
-    memwrite_bstr(addr, data->value, value_length, "event data value");
+    memmove(ptr, bdata(data->value), blength(data->value));
+    ptr += blength(data->value);
 
     // Store number of bytes written.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
     
     return 0;
@@ -143,37 +127,41 @@ error:
 
 // Deserializes event data from memory at the current pointer.
 //
-// data   - The event data to deserialize into.
-// addr   - The pointer to the current location.
-// length - The number of bytes read.
+// data - The event data to unpack into.
+// ptr  - The pointer to the current location.
+// sz   - The number of bytes read.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_event_data_deserialize(sky_event_data *data, void *addr, ptrdiff_t *length)
+int sky_event_data_unpack(sky_event_data *data, void *ptr, size_t *sz)
 {
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
     
     // Validate.
     check(data != NULL, "Event data required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
 
     // Read key.
-    memread(addr, &data->key, sizeof(data->key), "event data key");
-    
-    // Read value length.
-    uint8_t value_length;
-    memread(addr, &value_length, sizeof(value_length), "event data value length");
+    data->key = minipack_unpack_int(ptr, &_sz);
+    check(_sz != 0, "Unable to unpack event data key");
+    ptr += _sz;
+
+    // Read value header.
+    uint32_t value_length = minipack_unpack_raw(ptr, &_sz);
+    check(_sz != 0, "Unable to unpack event value header");
+    ptr += _sz;
 
     // Read value.
-    memread_bstr(addr, data->value, value_length, "event data value");
-    
+    data->value = blk2bstr(ptr, value_length); check_mem(data->value);
+
     // Store number of bytes read.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
     
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }

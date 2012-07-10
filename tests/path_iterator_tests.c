@@ -26,7 +26,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 
 #define mu_assert_int64(PTR, VALUE) do {\
     int64_t num = VALUE;\
-    mu_assert(memcmp(&num, PTR, sizeof(num)) == 0, "Expected: " #VALUE);\
+    mu_assert_mem(&num, PTR, sizeof(num));\
 } while(0)
 
 //==============================================================================

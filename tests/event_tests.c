@@ -18,20 +18,20 @@ struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
 
-int ACTION_EVENT_DATA_LENGTH = 13;
+size_t ACTION_EVENT_DATA_LENGTH = 13;
 char ACTION_EVENT_DATA[] = {
     0x01, 0x00, 0xD0, 0x90, 0x96, 0x34, 0x01, 0x00,
     0x00, 0x14, 0x00, 0x00, 0x00
 };
 
-int DATA_EVENT_DATA_LENGTH = 23;
+size_t DATA_EVENT_DATA_LENGTH = 23;
 char DATA_EVENT_DATA[] = {
     0x02, 0x00, 0xD0, 0x90, 0x96, 0x34, 0x01, 0x00,
     0x00, 0x0C, 0x00, 0x01, 0x00, 0x03, 0x66, 0x6F,
     0x6F, 0x02, 0x00, 0x03, 0x62, 0x61, 0x72
 };
 
-int ACTION_DATA_EVENT_DATA_LENGTH = 27;
+size_t ACTION_DATA_EVENT_DATA_LENGTH = 27;
 char ACTION_DATA_EVENT_DATA[] = {
     0x03, 0x00, 0xD0, 0x90, 0x96, 0x34, 0x01, 0x00,
     0x00, 0x14, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x01,
@@ -116,29 +116,29 @@ int test_sky_event_unset_data() {
 //--------------------------------------
 
 // Action-only event.
-int test_sky_event_action_event_get_serialized_length() {
+int test_sky_event_action_event_sizeof() {
     sky_event *event = sky_event_create(1325376000000LL, 0, 20);
-    mu_assert(sky_event_get_serialized_length(event) == 13, "Unexpected length for action-only event.");
+    mu_assert(sky_event_sizeof(event) == 13, "Unexpected length for action-only event.");
     sky_event_free(event);
     return 0;
 }
 
 // Data-only event.
-int test_sky_event_data_event_get_serialized_length() {
+int test_sky_event_data_event_sizeof() {
     sky_event *event = sky_event_create(1325376000000LL, 0, 0);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
-    mu_assert(sky_event_get_serialized_length(event) == 23, "Unexpected length for data-only event.");
+    mu_assert(sky_event_sizeof(event) == 23, "Unexpected length for data-only event.");
     sky_event_free(event);
     return 0;
 }
 
 // Action + data event.
-int test_sky_event_action_data_event_get_serialized_length() {
+int test_sky_event_action_data_event_sizeof() {
     sky_event *event = sky_event_create(1325376000000LL, 0, 100);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
-    mu_assert(sky_event_get_serialized_length(event) == 27, "Unexpected length for action+data event.");
+    mu_assert(sky_event_sizeof(event) == 27, "Unexpected length for action+data event.");
     sky_event_free(event);
     return 0;
 }
@@ -148,44 +148,44 @@ int test_sky_event_action_data_event_get_serialized_length() {
 //--------------------------------------
 
 // Action event.
-int test_sky_event_action_event_serialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_event_action_event_pack() {
+    size_t sz;
     void *addr = calloc(ACTION_EVENT_DATA_LENGTH, 1);
     sky_event *event = sky_event_create(1325376000000LL, 0, 20);
-    sky_event_serialize(event, addr, &ptrdiff);
+    sky_event_pack(event, addr, &sz);
     sky_event_free(event);
-    mu_assert(ptrdiff == ACTION_EVENT_DATA_LENGTH, "");
-    mu_assert(memcmp(addr, &ACTION_EVENT_DATA, ACTION_EVENT_DATA_LENGTH) == 0, "");
+    mu_assert(sz == ACTION_EVENT_DATA_LENGTH, "");
+    mu_assert_mem(addr, &ACTION_EVENT_DATA, ACTION_EVENT_DATA_LENGTH);
     free(addr);
     return 0;
 }
 
 // Data event.
-int test_sky_event_data_event_serialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_event_data_event_pack() {
+    size_t sz;
     void *addr = calloc(DATA_EVENT_DATA_LENGTH, 1);
     sky_event *event = sky_event_create(1325376000000LL, 0, 0);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
-    sky_event_serialize(event, addr, &ptrdiff);
+    sky_event_pack(event, addr, &sz);
     sky_event_free(event);
-    mu_assert(ptrdiff == DATA_EVENT_DATA_LENGTH, "");
-    mu_assert(memcmp(addr, &DATA_EVENT_DATA, DATA_EVENT_DATA_LENGTH) == 0, "");
+    mu_assert(sz == DATA_EVENT_DATA_LENGTH, "");
+    mu_assert_mem(addr, &DATA_EVENT_DATA, DATA_EVENT_DATA_LENGTH);
     free(addr);
     return 0;
 }
 
 // Action+Data event.
-int test_sky_event_action_data_event_serialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_event_action_data_event_pack() {
+    size_t sz;
     void *addr = calloc(ACTION_DATA_EVENT_DATA_LENGTH, 1);
     sky_event *event = sky_event_create(1325376000000LL, 0, 20);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
-    sky_event_serialize(event, addr, &ptrdiff);
+    sky_event_pack(event, addr, &sz);
     sky_event_free(event);
-    mu_assert(ptrdiff == ACTION_DATA_EVENT_DATA_LENGTH, "");
-    mu_assert(memcmp(addr, &ACTION_DATA_EVENT_DATA, ACTION_DATA_EVENT_DATA_LENGTH) == 0, "");
+    mu_assert(sz == ACTION_DATA_EVENT_DATA_LENGTH, "");
+    mu_assert_mem(addr, &ACTION_DATA_EVENT_DATA, ACTION_DATA_EVENT_DATA_LENGTH);
     free(addr);
     return 0;
 }
@@ -195,12 +195,12 @@ int test_sky_event_action_data_event_serialize() {
 //--------------------------------------
 
 // Action event.
-int test_sky_event_action_event_deserialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_event_action_event_unpack() {
+    size_t sz;
     sky_event *event = sky_event_create(0, 0, 0);
-    sky_event_deserialize(event, &ACTION_EVENT_DATA, &ptrdiff);
+    sky_event_unpack(event, &ACTION_EVENT_DATA, &sz);
 
-    mu_assert(ptrdiff == ACTION_EVENT_DATA_LENGTH, "");
+    mu_assert(sz == ACTION_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
     mu_assert(event->action_id == 20, "Expected action id to equal 20");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
@@ -213,12 +213,12 @@ int test_sky_event_action_event_deserialize() {
 }
 
 // Data event.
-int test_sky_event_data_event_deserialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_event_data_event_unpack() {
+    size_t sz;
     sky_event *event = sky_event_create(0, 0, 0);
-    sky_event_deserialize(event, &DATA_EVENT_DATA, &ptrdiff);
+    sky_event_unpack(event, &DATA_EVENT_DATA, &sz);
 
-    mu_assert(ptrdiff == DATA_EVENT_DATA_LENGTH, "");
+    mu_assert(sz == DATA_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
     mu_assert(event->action_id == 0, "Expected action id to equal 0");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
@@ -237,12 +237,12 @@ int test_sky_event_data_event_deserialize() {
 }
 
 // Action+Data event.
-int test_sky_event_action_data_event_deserialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_event_action_data_event_unpack() {
+    size_t sz;
     sky_event *event = sky_event_create(0, 0, 0);
-    sky_event_deserialize(event, &ACTION_DATA_EVENT_DATA, &ptrdiff);
+    sky_event_unpack(event, &ACTION_DATA_EVENT_DATA, &sz);
 
-    mu_assert(ptrdiff == ACTION_DATA_EVENT_DATA_LENGTH, "");
+    mu_assert(sz == ACTION_DATA_EVENT_DATA_LENGTH, "");
     mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
     mu_assert(event->action_id == 20, "Expected action id to equal 20");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
@@ -274,17 +274,17 @@ int all_tests() {
     mu_run_test(test_sky_event_set_data);
     mu_run_test(test_sky_event_unset_data);
     
-    mu_run_test(test_sky_event_action_event_get_serialized_length);
-    mu_run_test(test_sky_event_data_event_get_serialized_length);
-    mu_run_test(test_sky_event_action_data_event_get_serialized_length);
+    mu_run_test(test_sky_event_action_event_sizeof);
+    mu_run_test(test_sky_event_data_event_sizeof);
+    mu_run_test(test_sky_event_action_data_event_sizeof);
     
-    mu_run_test(test_sky_event_action_event_serialize);
-    mu_run_test(test_sky_event_data_event_serialize);
-    mu_run_test(test_sky_event_action_data_event_serialize);
+    mu_run_test(test_sky_event_action_event_pack);
+    mu_run_test(test_sky_event_data_event_pack);
+    mu_run_test(test_sky_event_action_data_event_pack);
 
-    mu_run_test(test_sky_event_action_event_deserialize);
-    mu_run_test(test_sky_event_data_event_deserialize);
-    mu_run_test(test_sky_event_action_data_event_deserialize);
+    mu_run_test(test_sky_event_action_event_unpack);
+    mu_run_test(test_sky_event_data_event_unpack);
+    mu_run_test(test_sky_event_action_data_event_unpack);
 
     return 0;
 }

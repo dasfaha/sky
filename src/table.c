@@ -470,7 +470,7 @@ bstring get_data_file_path(sky_table *table)
 //
 // Returns the number of bytes from the start of the data file where the block
 // begins.
-ptrdiff_t get_block_offset(sky_table *table, sky_block_info *info)
+size_t get_block_offset(sky_table *table, sky_block_info *info)
 {
     return (table->block_size * info->id);
 }
@@ -576,13 +576,12 @@ int save_block(sky_block *block)
     sky_block_info *info = block->info;
 
     // Move pointer to starting position of block.
-    ptrdiff_t offset = get_block_offset(table, info);
+    size_t offset = get_block_offset(table, info);
     void *addr = table->data + offset;
 
-    // Serialize block.
-    ptrdiff_t ptrdiff;
-    rc = sky_block_serialize(block, addr, &ptrdiff);
-    check(rc == 0, "Failed to serialize block: %d", info->id);
+    // Pack block.
+    rc = sky_block_pack(block, addr, NULL);
+    check(rc == 0, "Failed to pack block: %d", info->id);
 
     // Update block info.
     sky_block_update_info(block);
@@ -745,7 +744,7 @@ error:
     return -1;
 }
 
-// Reads a block in from disk and deserializes it.
+// Reads a block in from disk and unpack it.
 // 
 // table - The table that contains the block.
 // info        - A reference to the block position.
@@ -757,14 +756,13 @@ int load_block(sky_table *table, sky_block_info *info, sky_block **ret)
     int rc;
     
     // Create pointer at starting position of block.
-    ptrdiff_t offset = get_block_offset(table, info);
+    size_t offset = get_block_offset(table, info);
     void *addr = table->data + offset;
 
-    // Deserialize block.
-    ptrdiff_t ptrdiff;
+    // Unpack block.
     sky_block *block = sky_block_create(table, info);
-    rc = sky_block_deserialize(block, addr, &ptrdiff);
-    check(rc == 0, "Failed to deserialize block: %d", info->id);
+    rc = sky_block_unpack(block, addr, NULL);
+    check(rc == 0, "Failed to unpack block: %d", info->id);
     
     // Assign block to return value.
     *ret = block;
@@ -830,15 +828,15 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
     (*affected_blocks)[0] = block;
 
     // If block size has not been exceeded then exit this function immediately.
-    uint32_t block_serialized_length = sky_block_get_serialized_length(block);
-    if(block_serialized_length <= block->table->block_size) {
+    uint32_t block_packed_length = sky_block_sizeof(block);
+    if(block_packed_length <= block->table->block_size) {
         return 0;
     }
     
     // Extract paths and info from original block.
     bool spanned = block->info->spanned;
     sky_path **paths = block->paths;
-    sky_path_count_t path_count = block->path_count;
+    uint32_t path_count = block->path_count;
     block->paths = NULL;
     block->path_count = 0;
     
@@ -846,19 +844,19 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
     target_block = block;
     
     // Calculate target block size if we were to spread paths evenly across blocks.
-    uint32_t max_block_size = block->table->block_size - BLOCK_HEADER_LENGTH;
-    uint32_t target_block_count = (uint32_t)ceil((double)block_serialized_length / (double)max_block_size);
-    uint32_t target_block_size = block_serialized_length / target_block_count;
+    uint32_t max_block_size = block->table->block_size - MAX_BLOCK_HEADER_LENGTH;
+    uint32_t target_block_count = (uint32_t)ceil((double)block_packed_length / (double)max_block_size);
+    uint32_t target_block_size = block_packed_length / target_block_count;
     
     // Loop over paths and spread them across blocks.
     uint32_t i, j;
     for(i=0; i<path_count; i++) {
         sky_path *path = paths[i];
-        uint32_t path_serialized_length = sky_path_get_serialized_length(path);
+        uint32_t path_packed_length = sky_path_sizeof(path);
         
         // If path is already spanned or the path is larger than max block size
         // then spread its events across multiple blocks.
-        if(spanned || path_serialized_length > max_block_size) {
+        if(spanned || path_packed_length > max_block_size) {
             // Extract events from path.
             events = path->events;
             event_count = path->event_count;
@@ -872,11 +870,11 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
             sky_path *target_path = NULL;
             for(j=0; j<event_count; j++) {
                 sky_event *event = events[j];
-                uint32_t event_serialized_length = sky_event_get_serialized_length(event);
+                uint32_t event_packed_length = sky_event_sizeof(event);
                 
                 // Create new target path if adding event will make path exceed block size.
                 if(target_path != NULL) {
-                    if(sky_path_get_serialized_length(target_path) + event_serialized_length > max_block_size) {
+                    if(sky_path_sizeof(target_path) + event_packed_length > max_block_size) {
                         rc = sky_block_add_path(target_block, target_path);
                         check(rc == 0, "Unable to add path to block[1]: %d", target_block->info->id);
                         target_path = NULL;
@@ -917,12 +915,12 @@ int split_block(sky_block *block, sky_block ***affected_blocks, int *affected_bl
         }
         // Otherwise add path to the target block.
         else {
-            block_serialized_length = sky_block_get_serialized_length(target_block);
+            block_packed_length = sky_block_sizeof(target_block);
 
             // If target block will be larger than target block size then create
             // a new block. Only do this if a path exists on the block though.
             if(target_block->path_count > 0 &&
-               block_serialized_length + path_serialized_length > target_block_size)
+               block_packed_length + path_packed_length > target_block_size)
             {
                 rc = create_target_block(block, &target_block, affected_blocks, affected_block_count);
                 check(rc == 0, "Unable to create target block for block split[2]");
@@ -1264,7 +1262,7 @@ int sky_table_add_event(sky_table *table, sky_event *event)
     rc = find_insertion_block(table, event, &info);
     check(rc == 0, "Unable to find an insertion block");
 
-    // Load block to memory and deserialize.
+    // Load block to memory and unpack it.
     rc = load_block(table, info, &block);
     check(rc == 0, "Unable to load block %d", info->id);
     

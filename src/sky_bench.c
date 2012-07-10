@@ -153,10 +153,9 @@ void usage()
 // options - A list of options to use.
 void benchmark_dag(Options *options)
 {
-    int rc;
     sky_event *event = NULL;
     uint32_t event_count = 0;
-    int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
+    //int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
     
     // Create database.
     sky_database *database = sky_database_create(options->path);
@@ -170,6 +169,7 @@ void benchmark_dag(Options *options)
     check(sky_table_lock(table) == 0, "Unable to lock table");
 
     // Loop for desired number of iterations.
+    /*
     int i;
     for(i=0; i<options->iterations; i++) {
         // Create a path iterator for the table.
@@ -178,18 +178,18 @@ void benchmark_dag(Options *options)
         sky_path_iterator_next(iterator, cursor);
         
         // Create a square matrix of structs.
-        Step *steps = calloc(action_count*action_count, sizeof(Step));
+        //Step *steps = calloc(action_count*action_count, sizeof(Step));
     
         // Iterate over each path.
         while(!iterator->eof) {
-            int32_t action_id, prev_action_id;
+            // int32_t action_id, prev_action_id;
 
             // Increment total event count.
             event_count++;
             
             // Initialize the previous action.
-            rc = sky_cursor_get_action(cursor, &prev_action_id);
-            check(rc == 0, "Unable to retrieve first action");
+            //rc = sky_cursor_get_action(cursor, &prev_action_id);
+            //check(rc == 0, "Unable to retrieve first action");
 
             // Find first event.
             rc = sky_cursor_next_event(cursor);
@@ -201,15 +201,15 @@ void benchmark_dag(Options *options)
                 event_count++;
 
                 // Retrieve action.
-                rc = sky_cursor_get_action(cursor, &action_id);
-                check(rc == 0, "Unable to retrieve first action");
+                //rc = sky_cursor_get_action(cursor, &action_id);
+                //check(rc == 0, "Unable to retrieve first action");
 
                 // Aggregate step information.
-                int32_t index = ((prev_action_id-1)*action_count) + (action_id-1);
-                steps[index].count++;
+                //int32_t index = ((prev_action_id-1)*action_count) + (action_id-1);
+                //steps[index].count++;
 
                 // Assign current action as previous action.
-                prev_action_id = action_id;
+                //prev_action_id = action_id;
 
                 // Find next event.
                 rc = sky_cursor_next_event(cursor);
@@ -233,6 +233,7 @@ void benchmark_dag(Options *options)
         //}
         //printf("total: %d\n", total);
     }
+    */
     
     // Close table
     check(sky_table_unlock(table) == 0, "Unable to unlock table");

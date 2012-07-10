@@ -5,6 +5,7 @@
 #include "dbg.h"
 #include "block.h"
 #include "mem.h"
+#include "minipack.h"
 
 //==============================================================================
 //
@@ -102,96 +103,109 @@ void sky_block_free(sky_block *block)
 
 // Calculates the total number of bytes needed to store just the paths section
 // of the block.
-uint32_t get_paths_length(sky_block *block)
+size_t get_paths_length(sky_block *block)
 {
-    uint32_t i;
-    uint32_t length = 0;
+    size_t sz = 0;
     
     // Add size for each path.
+    uint32_t i;
     for(i=0; i<block->path_count; i++) {
-        length += sky_path_get_serialized_length(block->paths[i]);
+        sz += sky_path_sizeof(block->paths[i]);
     }
     
-    return length;
+    return sz;
 }
 
 // Calculates the total number of bytes needed to store a block and its paths.
 // This number does not include the padding added after the block.
 //
 // block - The block.
-uint32_t sky_block_get_serialized_length(sky_block *block)
+size_t sky_block_sizeof(sky_block *block)
 {
-    uint32_t length = 0;
-
-    // Add path count and path length.
-    length += BLOCK_HEADER_LENGTH;
-    length += get_paths_length(block);
-    
-    return length;
+    size_t sz = 0;
+    sz += minipack_sizeof_array(block->path_count);
+    return sz;
 }
+
+// Calculates the number of bytes in the block header.
+//
+// ptr - A pointer to the raw block data.
+//
+// Returns the length of the raw block data.
+size_t sky_block_sizeof_raw_hdr(void *ptr)
+{
+    size_t sz = 0;
+    sz += minipack_sizeof_array_elem(ptr);
+    return sz;
+}    
 
 // Serializes a block at a given memory location.
 //
-// block  - The block to serialize.
-// addr   - The pointer to the current location.
-// length - The number of bytes written.
+// block - The block to pack.
+// ptr   - The pointer to the current location.
+// sz    - The number of bytes written.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_block_serialize(sky_block *block, void *addr, ptrdiff_t *length)
+int sky_block_pack(sky_block *block, void *ptr, size_t *sz)
 {
     int rc;
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
 
     // Validate.
     check(block != NULL, "Block required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
 
     // Write path count.
-    memwrite(addr, &block->path_count, sizeof(block->path_count), "block path count");
+    minipack_pack_int(ptr, block->path_count, &_sz);
+    check(_sz != 0, "Unable to pack block path count");
+    ptr += _sz;
     
     // Loop over paths and delegate serialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
-        ptrdiff_t ptrdiff;
-        rc = sky_path_serialize(block->paths[i], addr, &ptrdiff);
-        check(rc == 0, "Unable to serialize block path: %d", i);
-        addr += ptrdiff;
+        rc = sky_path_pack(block->paths[i], ptr, &_sz);
+        check(rc == 0, "Unable to pack block path: %d", i);
+        ptr += _sz;
     }
     
     // Null fill the rest of the block.
-    int fillcount = block->table->block_size - (addr-start);
-    check(memset(addr, 0, fillcount) != NULL, "Unable to null fill end of block");
+    int fillcount = block->table->block_size - (ptr-start);
+    check(memset(ptr, 0, fillcount) != NULL, "Unable to null fill end of block");
     
     // Store number of bytes written.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (size_t)(ptr-start);
     }
     
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }
 
 // Deserializes a block from a given memory location.
 //
-// block - The block to serialize.
-// addr   - The pointer to the current location.
-// length - The number of bytes read.
+// block - The block to unpack.
+// ptr   - The pointer to the current location.
+// sz    - The number of bytes read.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_block_deserialize(sky_block *block, void *addr, ptrdiff_t *length)
+int sky_block_unpack(sky_block *block, void *ptr, size_t *sz)
 {
     int rc;
-    void *start = addr;
+    size_t _sz;
+    void *start = ptr;
 
     // Validate.
     check(block != NULL, "Block required");
-    check(addr != NULL, "Address required");
+    check(ptr != NULL, "Pointer required");
 
     // Read path count.
-    memread(addr, &block->path_count, sizeof(block->path_count), "block path count");
+    block->path_count = minipack_unpack_array(ptr, &_sz);
+    check(_sz != 0, "Unable to unpack block path count");
+    ptr += _sz;
 
     // Allocate paths.
     block->paths = realloc(block->paths, sizeof(sky_path*) * block->path_count);
@@ -200,24 +214,23 @@ int sky_block_deserialize(sky_block *block, void *addr, ptrdiff_t *length)
     // Loop over paths and delegate deserialization to each path.
     uint32_t i;
     for(i=0; i<block->path_count; i++) {
-        ptrdiff_t ptrdiff;
         sky_path *path = sky_path_create(0); check_mem(path);
         block->paths[i] = path;
         
-        rc = sky_path_deserialize(path, addr, &ptrdiff);
-        check(rc == 0, "Unable to deserialize block path: %d", i);
-        addr += ptrdiff;
+        rc = sky_path_unpack(path, ptr, &_sz);
+        check(rc == 0, "Unable to unpack block path: %d", i);
+        ptr += _sz;
     }
 
     // Store number of bytes read.
-    if(length != NULL) {
-        *length = (addr-start);
+    if(sz != NULL) {
+        *sz = (ptr-start);
     }
 
     return 0;
 
 error:
-    *length = 0;
+    *sz = 0;
     return -1;
 }
 

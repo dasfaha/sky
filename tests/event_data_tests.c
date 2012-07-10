@@ -15,7 +15,7 @@
 //==============================================================================
 
 char DATA[] = {0x0A, 0x00, 0x03, 0x66, 0x6F, 0x6F};
-int DATA_LENGTH = 6;
+size_t DATA_LENGTH = 6;
 
 
 //==============================================================================
@@ -46,42 +46,42 @@ int test_sky_event_data_create() {
 // Serialization
 //--------------------------------------
 
-int test_sky_event_data_get_serialized_length() {
+int test_sky_event_data_sizeof() {
     struct tagbstring value = bsStatic("foo");
     sky_event_data *data;
     
     data = sky_event_data_create(10, &value);
-    uint32_t length = sky_event_data_get_serialized_length(data);
+    uint32_t length = sky_event_data_sizeof(data);
     mu_assert(length == 6, "Expected length of 6 for 'foo'");
     sky_event_data_free(data);
 
     return 0;
 }
 
-int test_sky_event_data_serialize() {
+int test_sky_event_data_pack() {
+    size_t sz;
     struct tagbstring value = bsStatic("foo");
     void *addr = calloc(DATA_LENGTH, 1);
-    ptrdiff_t length;
     
     sky_event_data *data = sky_event_data_create(10, &value);
-    sky_event_data_serialize(data, addr, &length);
+    sky_event_data_pack(data, addr, &sz);
     sky_event_data_free(data);
     
-    mu_assert(length == DATA_LENGTH, "");
-    mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
+    mu_assert(sz == DATA_LENGTH, "");
+    mu_assert_mem(addr, &DATA, DATA_LENGTH);
 
     free(addr);
     
     return 0;
 }
 
-int test_sky_event_data_deserialize() {
-    ptrdiff_t length;
+int test_sky_event_data_unpack() {
+    size_t sz;
 
     sky_event_data *data = sky_event_data_create(0, NULL);
-    sky_event_data_deserialize(data, &DATA, &length);
+    sky_event_data_unpack(data, &DATA, &sz);
 
-    mu_assert(length == DATA_LENGTH, "");
+    mu_assert(sz == DATA_LENGTH, "");
     mu_assert(data->key == 10, "");
     mu_assert(biseqcstr(data->value, "foo"), "");
 
@@ -99,9 +99,9 @@ int test_sky_event_data_deserialize() {
 
 int all_tests() {
     mu_run_test(test_sky_event_data_create);
-    mu_run_test(test_sky_event_data_get_serialized_length);
-    mu_run_test(test_sky_event_data_serialize);
-    mu_run_test(test_sky_event_data_deserialize);
+    mu_run_test(test_sky_event_data_sizeof);
+    mu_run_test(test_sky_event_data_pack);
+    mu_run_test(test_sky_event_data_unpack);
     return 0;
 }
 

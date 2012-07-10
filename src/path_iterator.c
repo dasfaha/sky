@@ -18,17 +18,41 @@
 // Utility
 //======================================
 
+// Calculates the pointer address for the block the iterator is currently
+// pointing to.
+//
+// iterator - The iterator to calculate the address from.
+//
+// Returns a pointer to the address of the current block.
+void *get_block_data_address(sky_path_iterator *iterator)
+{
+    sky_block_info *info = iterator->table->infos[iterator->block_index];
+    return iterator->table->data + (info->id * iterator->table->block_size);
+}
+
 // Calculates the pointer address for a path that the iterator is currently
 // pointing to.
 //
 // iterator - The iterator to calculate the address from.
 //
 // Returns a pointer to the address of the current path.
-void *get_data_address(sky_path_iterator *iterator)
+void *get_path_data_address(sky_path_iterator *iterator)
 {
-    sky_block_info *info = iterator->table->infos[iterator->block_index];
-    return iterator->table->data + (info->id * iterator->table->block_size) + iterator->byte_index;
+    return get_block_data_address(iterator) + iterator->byte_index;
 }
+
+// Calculates the initial byte offset from the start of the block to where
+// the first path begins.
+//
+// iterator - The iterator to calculate the address from.
+//
+// Returns the number of bytes from the start of the block to the first path.
+size_t get_initial_byte_index(sky_path_iterator *iterator)
+{
+    void *ptr = get_block_data_address(iterator);
+    return sky_block_sizeof_raw_hdr(ptr);
+}
+
 
 //======================================
 // Lifecycle
@@ -47,7 +71,7 @@ sky_path_iterator *sky_path_iterator_create(sky_table *table)
     iterator = malloc(sizeof(sky_path_iterator)); check_mem(iterator);
     iterator->table = table;
     iterator->block_index = 0;
-    iterator->byte_index = BLOCK_HEADER_LENGTH;
+    iterator->byte_index = get_initial_byte_index(iterator);
     iterator->eof = false;
 
     return iterator;
@@ -82,7 +106,6 @@ void sky_path_iterator_free(sky_path_iterator *iterator)
 int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
 {
     int rc;
-    sky_object_id_t zero = 0;
     
     check(iterator != NULL, "Iterator required");
     check(!iterator->eof, "Iterator is at end-of-file");
@@ -97,16 +120,15 @@ int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
     while(true) {
         // Determine address of current location.
         sky_block_info *info = iterator->table->infos[iterator->block_index];
-        ptr = get_data_address(iterator);
+        ptr = get_path_data_address(iterator);
 
         // If byte index is too close to the end-of-block or if there is no more
         // data in the block then go to the next block.
-        if(iterator->byte_index >= block_size-SKY_PATH_HEADER_LENGTH ||
-           memcmp(ptr, &zero, sizeof(zero)) == 0)
+        if(iterator->byte_index >= block_size || *((uint8_t*)ptr) == 0)
         {
             // Move to the next block.
             iterator->block_index += 1;
-            iterator->byte_index = BLOCK_HEADER_LENGTH;
+            iterator->byte_index = get_initial_byte_index(iterator);
 
             // If we have reached the end of the data file then NULL out
             // the pointer and change the iterator state to EOF.
@@ -128,12 +150,12 @@ int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
 
                 rc = sky_table_get_block_span_count(iterator->table, iterator->block_index, &span_count);
                 check(rc == 0, "Unable to calculate span count");
-                iterator->byte_index = BLOCK_HEADER_LENGTH;
+                iterator->byte_index = get_initial_byte_index(iterator);
 
                 // Collect all paths across spanned blocks.
                 void **paths = malloc(sizeof(void*) * span_count); check_mem(paths);
                 for(i=0; i<span_count; i++) {
-                    paths[i] = get_data_address(iterator);
+                    paths[i] = get_path_data_address(iterator);
                     iterator->block_index++;
                 }
                 rc = sky_cursor_set_paths(cursor, paths, span_count);
@@ -143,7 +165,7 @@ int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
             else {
                 rc = sky_cursor_set_path(cursor, ptr);
                 check(rc == 0, "Unable to set path on cursor");
-                iterator->byte_index += sky_path_get_length(ptr);
+                iterator->byte_index += sky_path_sizeof(ptr);
             }
             break;
         }

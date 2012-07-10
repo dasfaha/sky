@@ -60,11 +60,11 @@ int sky_event_data_copy(sky_event_data *source, sky_event_data **target);
 // Serialization
 //======================================
 
-uint32_t sky_event_data_get_serialized_length(sky_event_data *data);
+size_t sky_event_data_sizeof(sky_event_data *data);
 
-int sky_event_data_serialize(sky_event_data *data, void *addr, ptrdiff_t *length);
+int sky_event_data_pack(sky_event_data *data, void *addr, size_t *length);
 
-int sky_event_data_deserialize(sky_event_data *data, void *addr, ptrdiff_t *length);
+int sky_event_data_unpack(sky_event_data *data, void *addr, size_t *length);
 
 
 #endif

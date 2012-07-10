@@ -42,7 +42,7 @@
 //==============================================================================
 
 #define sky_event_flag_t char
-#define sky_event_data_count_t uint16_t
+#define sky_event_data_count_t uint64_t
 
 
 #define SKY_EVENT_FLAG_ACTION  1
@@ -89,11 +89,15 @@ int sky_event_copy(sky_event *source, sky_event **target);
 // Serialization
 //======================================
 
-uint32_t sky_event_get_serialized_length(sky_event *event);
+size_t sky_event_sizeof(sky_event *event);
 
-int sky_event_serialize(sky_event *event, void *addr, ptrdiff_t *length);
+size_t sky_event_sizeof_data(sky_event *event);
 
-int sky_event_deserialize(sky_event *event, void *addr, ptrdiff_t *length);
+size_t sky_event_sizeof_raw(void *ptr);
+
+int sky_event_pack(sky_event *event, void *addr, size_t *length);
+
+int sky_event_unpack(sky_event *event, void *addr, size_t *length);
 
 
 //======================================

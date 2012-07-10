@@ -11,32 +11,6 @@
 //
 //==============================================================================
 
-// Calculates the length of an event stored in raw format at the given pointer.
-//
-// ptr - A pointer to the raw event data.
-//
-// Returns the length of the raw event data.
-uint32_t get_event_length(void *ptr)
-{
-    uint32_t length = SKY_EVENT_HEADER_LENGTH;
-    char event_flag = *((char*)ptr);
-    
-    // Add action length.
-    if(event_flag & SKY_EVENT_FLAG_ACTION) {
-        length += sizeof(int32_t);
-    }
-
-    // Add data length.
-    if(event_flag & SKY_EVENT_FLAG_DATA) {
-        void *data_length_ptr = ptr + length;
-        uint16_t data_length = *((uint16_t*)data_length_ptr);
-        length += sizeof(int16_t) + data_length;
-    }
-    
-    return length;
-}    
-
-
 //======================================
 // Lifecycle
 //======================================
@@ -77,40 +51,6 @@ void sky_cursor_free(sky_cursor *cursor)
 
 
 //======================================
-// Event Management
-//======================================
-
-// Retrieves the action identifier of the current event. If no action is found
-// then the action id is set to zero.
-//
-// cursor    - The cursor to retrieve the action from.
-// action_id - A pointer to where the return value should be set.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_cursor_get_action(sky_cursor *cursor, int32_t *action_id)
-{
-    check(cursor != NULL, "Cursor required");
-    check(!cursor->eof, "No more events are available");
-
-    // Check if the event contains an action.
-    char event_flag = *((char*)cursor->ptr);
-    if(event_flag & SKY_EVENT_FLAG_ACTION) {
-        *action_id = *((int32_t*)(cursor->ptr + SKY_EVENT_HEADER_LENGTH));
-    }
-    // Otherwise return a null action id.
-    else {
-        *action_id = 0;
-    }
-
-    return 0;
-
-error:
-    return -1;
-}
-
-
-
-//======================================
 // Path Management
 //======================================
 
@@ -121,13 +61,11 @@ error:
 void set_current_path(sky_cursor *cursor, uint32_t index)
 {
     // Calculate path length
-    uint32_t events_length;
     void *ptr = cursor->paths[index];
-    memcpy(&events_length, ptr+sizeof(sky_object_id_t), sizeof(events_length));
-    cursor->path_length = SKY_PATH_HEADER_LENGTH + events_length;
-
+    cursor->path_length = sky_path_sizeof_raw(ptr);
+     
     // Store position of first event and store position of end of path.
-    cursor->ptr    = ptr + SKY_PATH_HEADER_LENGTH;
+    cursor->ptr    = ptr + sky_path_sizeof_raw_hdr(ptr);
     cursor->endptr = ptr + cursor->path_length;
 }
 
@@ -211,7 +149,7 @@ int sky_cursor_next_event(sky_cursor *cursor)
     check(!cursor->eof, "No more events are available");
 
     // Move to next event.
-    uint32_t event_length = get_event_length(cursor->ptr);
+    size_t event_length = sky_event_sizeof_raw(cursor->ptr);
     cursor->ptr += event_length;
     cursor->event_index++;
 

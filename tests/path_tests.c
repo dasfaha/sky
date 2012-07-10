@@ -18,7 +18,7 @@ struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
 
-int DATA_LENGTH = 69;
+size_t DATA_LENGTH = 69;
 char DATA[] = {
     0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x39, 0x00, 0x00, 0x00, 0x01, 0x00, 0xE0, 0x37,
@@ -111,9 +111,9 @@ int test_sky_path_add_remove_event() {
 // Serialization length
 //--------------------------------------
 
-int test_sky_path_get_serialized_length() {
+int test_sky_path_sizeof() {
     sky_path *path = create_test_path0();
-    mu_assert(sky_path_get_serialized_length(path) == 69, "");
+    mu_assert(sky_path_sizeof(path) == 69, "");
     sky_path_free(path);
     return 0;
 }
@@ -123,14 +123,14 @@ int test_sky_path_get_serialized_length() {
 // Serialization
 //--------------------------------------
 
-int test_sky_path_serialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_path_pack() {
+    size_t sz;
     void *addr = calloc(DATA_LENGTH, 1);
     sky_path *path = create_test_path0();
-    sky_path_serialize(path, addr, &ptrdiff);
+    sky_path_pack(path, addr, &sz);
     sky_path_free(path);
-    mu_assert(ptrdiff == DATA_LENGTH, "");
-    mu_assert(memcmp(addr, &DATA, DATA_LENGTH) == 0, "");
+    mu_assert(sz == DATA_LENGTH, "");
+    mu_assert_mem(addr, &DATA, DATA_LENGTH);
     free(addr);
     return 0;
 }
@@ -140,14 +140,14 @@ int test_sky_path_serialize() {
 // Deserialization
 //--------------------------------------
 
-int test_sky_path_deserialize() {
-    ptrdiff_t ptrdiff;
+int test_sky_path_unpack() {
+    size_t sz;
 
     sky_event_data *data;
     sky_path *path = sky_path_create(0);
-    sky_path_deserialize(path, &DATA, &ptrdiff);
+    sky_path_unpack(path, &DATA, &sz);
 
-    mu_assert(ptrdiff == DATA_LENGTH, "");
+    mu_assert(sz == DATA_LENGTH, "");
 
     mu_assert(path->object_id == 10, "");
     mu_assert(path->events != NULL, "");
@@ -188,9 +188,9 @@ int test_sky_path_deserialize() {
 int all_tests() {
     mu_run_test(test_sky_path_create);
     mu_run_test(test_sky_path_add_remove_event);
-    mu_run_test(test_sky_path_get_serialized_length);
-    mu_run_test(test_sky_path_serialize);
-    mu_run_test(test_sky_path_deserialize);
+    mu_run_test(test_sky_path_sizeof);
+    mu_run_test(test_sky_path_pack);
+    mu_run_test(test_sky_path_unpack);
 
     return 0;
 }

@@ -35,7 +35,7 @@ typedef struct sky_cursor {
     uint32_t path_count;
     uint32_t path_index;
     uint32_t event_index;
-    uint32_t path_length;
+    size_t path_length;
     void *ptr;
     void *endptr;
     bool eof;
@@ -55,13 +55,6 @@ typedef struct sky_cursor {
 sky_cursor *sky_cursor_create();
 
 void sky_cursor_free(sky_cursor *cursor);
-
-
-//======================================
-// Event Management
-//======================================
-
-int sky_cursor_get_action(sky_cursor *cursor, int32_t *action_id);
 
 
 //======================================
