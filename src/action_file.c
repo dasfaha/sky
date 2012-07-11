@@ -20,19 +20,12 @@
 
 // Creates a reference to an action file.
 // 
-// table - The table that the action file belongs to.
-//
 // Returns a reference to the new action file if successful. Otherwise returns
 // null.
-sky_action_file *sky_action_file_create(sky_table *table)
+sky_action_file *sky_action_file_create()
 {
-    check(table != NULL, "Table required");
-    
-    sky_action_file *action_file = malloc(sizeof(sky_action_file));
+    sky_action_file *action_file = calloc(sizeof(sky_action_file), 1);
     check_mem(action_file);
-    action_file->table = table;
-    action_file->actions = NULL;
-    action_file->action_count = 0;
     return action_file;
     
 error:
@@ -46,7 +39,8 @@ error:
 void sky_action_file_free(sky_action_file *action_file)
 {
     if(action_file) {
-        action_file->table = NULL;
+        if(action_file->path) bdestroy(action_file->path);
+        action_file->path = NULL;
         sky_action_file_unload(action_file);
         free(action_file);
     }
@@ -54,7 +48,7 @@ void sky_action_file_free(sky_action_file *action_file)
 
 
 //======================================
-// Persistence
+// Path
 //======================================
 
 // Retrieves the file path of an action file.
@@ -66,16 +60,41 @@ void sky_action_file_free(sky_action_file *action_file)
 int sky_action_file_get_path(sky_action_file *action_file, bstring *path)
 {
     check(action_file != NULL, "Action file required");
-    check(action_file->table != NULL, "Action file must have a table");
-    check(action_file->table->path != NULL, "Action file's table must have a path");
 
-    *path = bformat("%s/actions", bdata(action_file->table->path)); 
+    *path = bstrcpy(action_file->path);
+    if(action_file->path) check_mem(*path);
+
     return 0;
 
 error:
     *path = NULL;
     return -1;
 }
+
+// Sets the file path of an action file.
+//
+// action_file - The action file.
+// path        - The file path to set.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_action_file_set_path(sky_action_file *action_file, bstring path)
+{
+    check(action_file != NULL, "Action file required");
+
+    action_file->path = bstrcpy(path);
+    if(path) check_mem(action_file->path);
+
+    return 0;
+
+error:
+    action_file->path = NULL;
+    return -1;
+}
+
+
+//======================================
+// Persistence
+//======================================
 
 // Loads actions from file.
 //
@@ -91,20 +110,16 @@ int sky_action_file_load(sky_action_file *action_file)
 
     int rc;
     check(action_file != NULL, "Action file required");
+    check(action_file->path != NULL, "Action file path required");
 
     // Unload any actions currently in memory.
     rc = sky_action_file_unload(action_file);
     check(rc == 0, "Unable to unload action file");
 
-    // Retrieve path for action file.
-    bstring path = NULL;
-    rc = sky_action_file_get_path(action_file, &path);
-    check(rc == 0, "Unable to retrieve action file path");
-
     // Read in actions file if it exists.
-    if(sky_file_exists(path)) {
-        file = fopen(bdata(path), "r");
-        check(file, "Failed to open action file: %s",  bdata(path));
+    if(sky_file_exists(action_file->path)) {
+        file = fopen(bdata(action_file->path), "r");
+        check(file, "Failed to open action file: %s",  bdata(action_file->path));
 
         // Read action count.
         count = minipack_fread_array(file, &sz);
@@ -141,14 +156,10 @@ int sky_action_file_load(sky_action_file *action_file)
     action_file->actions = actions;
     action_file->action_count = count;
 
-    // Clean up.
-    bdestroy(path);
-
     return 0;
 
 error:
     if(file) fclose(file);
-    bdestroy(path);
     return -1;
 }
 
@@ -164,47 +175,37 @@ int sky_action_file_save(sky_action_file *action_file)
 
     int rc;
     check(action_file != NULL, "Action file required");
+    check(action_file->path != NULL, "Action file path required");
 
-    // Retrieve path for action file.
-    bstring path = NULL;
-    rc = sky_action_file_get_path(action_file, &path);
-    check(rc == 0, "Unable to retrieve action file path");
+    // Open file.
+    file = fopen(bdata(action_file->path), "w");
+    check(file, "Failed to open action file: %s", bdata(action_file->path));
 
-    // Read in actions file if it exists.
-    if(sky_file_exists(path)) {
-        file = fopen(bdata(path), "w");
-        check(file, "Failed to open action file: %s", bdata(path));
+    // Write action count.
+    rc = minipack_fwrite_array(file, action_file->action_count, &sz);
+    check(rc == 0, "Unable to write actions array at byte: %ld", ftell(file));
 
-        // Write action count.
-        rc = minipack_fwrite_array(file, action_file->action_count, &sz);
-        check(rc == 0, "Unable to write actions array at byte: %ld", ftell(file));
+    // Write actions.
+    uint32_t i;
+    for(i=0; i<action_file->action_count; i++) {
+        sky_action *action = action_file->actions[i];
 
-        // Write actions.
-        uint32_t i;
-        for(i=0; i<action_file->action_count; i++) {
-            sky_action *action = action_file->actions[i];
+        // Write action id.
+        minipack_fwrite_int(file, action->id, &sz);
+        check(sz != 0, "Unable to write action identifier at byte: %ld", ftell(file));
 
-            // Write action id.
-            minipack_fwrite_int(file, action->id, &sz);
-            check(sz != 0, "Unable to write action identifier at byte: %ld", ftell(file));
-
-            // Write action name.
-            rc = sky_minipack_fwrite_bstring(file, action->name);
-            check(rc == 0, "Unable to write action name at byte: %ld", ftell(file));
-        }
-
-        // Close the file.
-        fclose(file);
+        // Write action name.
+        rc = sky_minipack_fwrite_bstring(file, action->name);
+        check(rc == 0, "Unable to write action name at byte: %ld", ftell(file));
     }
 
-    // Clean up.
-    bdestroy(path);
+    // Close the file.
+    fclose(file);
 
     return 0;
 
 error:
     if(file) fclose(file);
-    bdestroy(path);
     return -1;
 }
 
@@ -256,7 +257,7 @@ int sky_action_file_find_action_by_name(sky_action_file *action_file,
     *ret = NULL;
     
     // Loop over actions to find matching name.
-    int64_t i;
+    int32_t i;
     for(i=0; i<action_file->action_count; i++) {
         if(biseq(action_file->actions[i]->name, name) == 1) {
             *ret = action_file->actions[i];
@@ -289,7 +290,7 @@ int sky_action_file_add_action(sky_action_file *action_file,
     // Make sure an action with that name doesn't already exist.
     sky_action *_action;
     int rc = sky_action_file_find_action_by_name(action_file, action->name, &_action);
-    check(rc == 0 && _action != NULL, "Action already exists with the same name");
+    check(rc == 0 && _action == NULL, "Action already exists with the same name");
     
     // Link to action file.
     action->action_file = action_file;

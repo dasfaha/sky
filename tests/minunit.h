@@ -56,6 +56,7 @@ int tests_run;
 
 #define mu_assert_int_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %d; Received: %d", EXPECTED, ACTUAL)
 #define mu_assert_long_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %ld; Received: %ld", EXPECTED, ACTUAL)
+#define mu_assert_bstring(ACTUAL, EXPECTED) mu_assert_with_msg(biseqcstr(ACTUAL, EXPECTED), "Expected: %s; Received: %s", EXPECTED, bdata(ACTUAL))
 
 
 

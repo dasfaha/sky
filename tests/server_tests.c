@@ -64,7 +64,7 @@ int test_sky_server_process_eadd_message() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_server_process_eadd_message);
+    //mu_run_test(test_sky_server_process_eadd_message);
     return 0;
 }
 

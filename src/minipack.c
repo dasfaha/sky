@@ -27,15 +27,15 @@ int sky_minipack_fread_bstring(FILE *file, bstring *ret)
     
     // Read string length.
     uint32_t length = minipack_fread_raw(file, &sz);
-    check(sz != 0, "Unable to read raw byte element");
+    check(sz != 0, "Unable to read raw byte element at byte %ld", ftell(file));
 
     // Initialize buffer.
     char *buffer = malloc(length+1); check_mem(buffer);
     buffer[length] = 0;
     
     // Read into buffer.
-    sz = fread(buffer, sizeof(char*), length, file);
-    check(sz != length, "Expected %d bytes, received %ld bytes", length, sz);
+    sz = fread(buffer, sizeof(char), length, file);
+    check(sz == length, "Expected %d bytes, received %ld bytes at byte %ld", length, sz, ftell(file));
 
     // Create bstring from buffer and return.
     bstring str = blk2bstr(buffer, length); check_mem(str);
@@ -64,13 +64,14 @@ int sky_minipack_fwrite_bstring(FILE *file, bstring str)
 {
     // Write header.
     size_t sz;
-    int rc = minipack_fwrite_raw(file, blength(str), &sz);
+    uint32_t length = (uint32_t)blength(str);
+    int rc = minipack_fwrite_raw(file, length, &sz);
     check(rc == 0, "Unable to write raw bytes header");
 
     // Write raw bytes.
     if(str) {
-        sz = fwrite(bdata(str), sizeof(char*), blength(str), file);
-        check(sz == (size_t)blength(str), "Attempted to write %d bytes, only wrote %ld bytes", blength(str), sz);
+        sz = fwrite(bdata(str), sizeof(char), length, file);
+        check(sz == (size_t)length, "Attempted to write %d bytes, only wrote %ld bytes", length, sz);
     }
     
     return 0;
