@@ -81,6 +81,10 @@ int sky_action_file_set_path(sky_action_file *action_file, bstring path)
 {
     check(action_file != NULL, "Action file required");
 
+    if(action_file->path) {
+        bdestroy(action_file->path);
+    }
+    
     action_file->path = bstrcpy(path);
     if(path) check_mem(action_file->path);
 
@@ -257,7 +261,7 @@ int sky_action_file_find_action_by_name(sky_action_file *action_file,
     *ret = NULL;
     
     // Loop over actions to find matching name.
-    int32_t i;
+    uint32_t i;
     for(i=0; i<action_file->action_count; i++) {
         if(biseq(action_file->actions[i]->name, name) == 1) {
             *ret = action_file->actions[i];

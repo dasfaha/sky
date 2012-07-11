@@ -49,10 +49,6 @@ int open_table(sky_server *server, bstring database_name,
     rc = sky_table_open(*table);
     check(rc == 0, "Unable to open table");
     
-    // Lock the table.
-    rc = sky_table_lock(*table);
-    check(rc == 0, "Unable to lock table");
-    
     return 0;
 
 error:
@@ -78,10 +74,6 @@ int close_table(sky_server *server, sky_database *database,
     // HACK: Suppress unused "server" variable warning for now.
     server = server;
     
-    // Unlock the table.
-    rc = sky_table_unlock(table);
-    check(rc == 0, "Unable to unlock table");
-
     // Close the table.
     rc = sky_table_close(table);
     check(rc == 0, "Unable to close table");

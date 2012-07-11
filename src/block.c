@@ -171,7 +171,7 @@ int sky_block_pack(sky_block *block, void *ptr, size_t *sz)
     }
     
     // Null fill the rest of the block.
-    int fillcount = block->table->block_size - (ptr-start);
+    int fillcount = block->table->header_file->block_size - (ptr-start);
     check(memset(ptr, 0, fillcount) != NULL, "Unable to null fill end of block");
     
     // Store number of bytes written.

@@ -98,11 +98,6 @@ int tests_run;
     mu_assert(table->infos[INDEX]->max_timestamp == MAX_TIMESTAMP, "Block " #INDEX " max timestamp expected to be " #MAX_TIMESTAMP); \
     mu_assert(table->infos[INDEX]->spanned == SPANNED, "Block " #INDEX " spanned expected to be " #SPANNED);
 
-// Asserts action data.
-#define mu_assert_action(INDEX, ID, NAME) \
-    mu_assert(table->actions[INDEX]->id == ID, "Expected action #" #INDEX " id to be: " #ID); \
-    mu_assert(biseqcstr(table->actions[INDEX]->name, NAME) == 1, "Expected action #" #INDEX " name to be: " #NAME);
-
 // Asserts property data.
 #define mu_assert_property(INDEX, ID, NAME) \
     mu_assert(table->properties[INDEX]->id == ID, "Expected property #" #INDEX " id to be: " #ID); \

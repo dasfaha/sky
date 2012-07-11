@@ -13,6 +13,10 @@ typedef struct sky_table sky_table;
 #include "action.h"
 #include "event.h"
 #include "types.h"
+#include "header_file.h"
+#include "data_file.h"
+#include "action_file.h"
+#include "property_file.h"
 
 //==============================================================================
 //
@@ -42,46 +46,12 @@ typedef struct sky_table sky_table;
 
 //==============================================================================
 //
-// Definitions
-//
-//==============================================================================
-
-#define SKY_OBJECT_FILE_LOCK_NAME ".lock"
-
-#define SKY_DEFAULT_BLOCK_SIZE 0x10000
-
-
-//==============================================================================
-//
 // Typedefs
 //
 //==============================================================================
 
-#define sky_block_info_id_t uint32_t
+#define SKY_LOCK_NAME ".lock"
 
-// The block info stores the sequential block identifier as well as the object
-// identifier range that is stored in that block. The block info is used in the
-// header file as an index when looking up block data.
-typedef struct sky_block_info {
-    sky_block_info_id_t id;
-    sky_object_id_t min_object_id;
-    sky_object_id_t max_object_id;
-    sky_timestamp_t min_timestamp;
-    sky_timestamp_t max_timestamp;
-    bool spanned;
-} sky_block_info;
-
-// The various states that an table can be in.
-typedef enum sky_table_state_e {
-    SKY_OBJECT_FILE_STATE_CLOSED,
-    SKY_OBJECT_FILE_STATE_OPEN,
-    SKY_OBJECT_FILE_STATE_LOCKED
-} sky_table_state_e;
-
-
-#define sky_table_version_t uint32_t
-#define sky_table_block_size_t uint32_t
-#define sky_table_block_count_t uint32_t
 #define sky_table_property_count_t uint16_t
 
 // The table is a reference to the disk location where data is stored. The
@@ -89,20 +59,12 @@ typedef enum sky_table_state_e {
 // properties.
 struct sky_table {
     sky_database *database;
+    sky_data_file *data_file;
     sky_action_file *action_file;
+    sky_property_file *property_file;
     bstring name;
     bstring path;
-    sky_table_state_e state;
-    sky_table_version_t version;
-    sky_table_block_size_t block_size;
-    sky_table_block_count_t block_count;
-    sky_block_info **infos;
-    sky_action **actions;
-    sky_property **properties;
-    sky_table_property_count_t property_count;
-    int data_fd;
-    void *data;
-    size_t data_length;
+    bool state;
 };
 
 
@@ -128,15 +90,6 @@ void sky_table_free(sky_table *table);
 int sky_table_open(sky_table *table);
 
 int sky_table_close(sky_table *table);
-
-
-//======================================
-// Locking
-//======================================
-
-int sky_table_lock(sky_table *table);
-
-int sky_table_unlock(sky_table *table);
 
 
 //======================================

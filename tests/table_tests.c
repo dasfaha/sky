@@ -52,7 +52,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
-struct tagbstring google = bsStatic("http://www.google.com/this is a test yay!!!");
+struct tagbstring google = bsStatic("http://www.google.com/this/is/a/test/yay/super!");
 struct tagbstring data10 = bsStatic("0123456789");
 struct tagbstring data20 = bsStatic("01234567890123456789");
 struct tagbstring data30 = bsStatic("012345678901234567890123456789");
@@ -155,8 +155,8 @@ int test_sky_table_add_event() {
     ADD_EVENT(table, 946692000000000LL, 10, 22);
 
     // Verify database files.
-    mu_assert_file("tmp/db/users/data", "tests/fixtures/db/table_test0/users/data");
-    mu_assert_file("tmp/db/users/header", "tests/fixtures/db/table_test0/users/header");
+    mu_assert_file("tmp/db/users/data", "tests/fixtures/table/0/users/data");
+    mu_assert_file("tmp/db/users/header", "tests/fixtures/table/0/users/header");
     
     mu_assert(sky_table_unlock(table) == 0, "");
     mu_assert(sky_table_close(table) == 0, "");

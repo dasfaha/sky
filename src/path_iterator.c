@@ -26,8 +26,8 @@
 // Returns a pointer to the address of the current block.
 void *get_block_data_address(sky_path_iterator *iterator)
 {
-    sky_block_info *info = iterator->table->infos[iterator->block_index];
-    return iterator->table->data + (info->id * iterator->table->block_size);
+    sky_block_info *info = iterator->table->header_file->infos[iterator->block_index];
+    return iterator->table->data + (info->index * iterator->table->header_file->block_size);
 }
 
 // Calculates the pointer address for a path that the iterator is currently
@@ -112,14 +112,14 @@ int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
     check(cursor != NULL, "Existing cursor is required for iteration");
 
     // Retrieve some data file info.
-    uint32_t block_size  = iterator->table->block_size;
-    uint32_t block_count = iterator->table->block_count;
+    uint32_t block_size  = iterator->table->header_file->block_size;
+    uint32_t block_count = iterator->table->header_file->block_count;
     
     // Loop until we find the next available path.
     void *ptr = NULL;
     while(true) {
         // Determine address of current location.
-        sky_block_info *info = iterator->table->infos[iterator->block_index];
+        sky_block_info *info = iterator->table->header_file->infos[iterator->block_index];
         ptr = get_path_data_address(iterator);
 
         // If byte index is too close to the end-of-block or if there is no more

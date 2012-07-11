@@ -191,7 +191,6 @@ void generate(Options *options)
     check_mem(table);
     
     check(sky_table_open(table) == 0, "Unable to open table");
-    check(sky_table_lock(table) == 0, "Unable to lock table");
 
     // Loop over paths and create events.
     int i, j;
@@ -211,7 +210,6 @@ void generate(Options *options)
     }
     
     // Close table
-    check(sky_table_unlock(table) == 0, "Unable to unlock table");
     check(sky_table_close(table) == 0, "Unable to close table");
     
     // Clean up

@@ -7,6 +7,7 @@
 #include "table.h"
 #include "path.h"
 #include "event.h"
+#include "data_file.h"
 
 
 //==============================================================================
@@ -36,7 +37,7 @@
 //==============================================================================
 
 typedef struct sky_block {
-    sky_table *table;
+    sky_data_file *data_file;
     sky_block_info *info;
     uint32_t path_count;
     sky_path **paths;
@@ -53,7 +54,7 @@ typedef struct sky_block {
 // Lifecycle
 //======================================
 
-sky_block *sky_block_create(sky_table *table, sky_block_info *info);
+sky_block *sky_block_create();
 
 void sky_block_free(sky_block *block);
 

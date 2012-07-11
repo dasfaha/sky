@@ -166,7 +166,6 @@ void benchmark_dag(Options *options)
     check_mem(table);
     
     check(sky_table_open(table) == 0, "Unable to open table");
-    check(sky_table_lock(table) == 0, "Unable to lock table");
 
     // Loop for desired number of iterations.
     /*
@@ -236,7 +235,6 @@ void benchmark_dag(Options *options)
     */
     
     // Close table
-    check(sky_table_unlock(table) == 0, "Unable to unlock table");
     check(sky_table_close(table) == 0, "Unable to close table");
     
     // Clean up
