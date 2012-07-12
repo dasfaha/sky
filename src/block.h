@@ -1,14 +1,14 @@
 #ifndef _block_h
 #define _block_h
 
-#include <stddef.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
-#include "table.h"
-#include "path.h"
-#include "event.h"
-#include "data_file.h"
+typedef struct sky_block sky_block;
 
+#include "bstring.h"
+#include "file.h"
+#include "types.h"
 
 //==============================================================================
 //
@@ -16,18 +16,12 @@
 //
 //==============================================================================
 
-// A block represents a contiguous area of storage for paths. A block can store
-// multiple paths or paths can span across multiple blocks (block spanning).
-
-
-//==============================================================================
+// The block object stores information about the object id range and the
+// timestamp range of each physical block in a data file. The block objects are
+// stored in order of block index within the header file.
 //
-// Definitions
-//
-//==============================================================================
-
-// The maximum size the header can be.
-#define MAX_BLOCK_HEADER_LENGTH 9
+// The block also stores whether it is spanned, meaning that the
+// object that it contains is stored across multiple blocks.
 
 
 //==============================================================================
@@ -36,12 +30,16 @@
 //
 //==============================================================================
 
-typedef struct sky_block {
-    sky_data_file *data_file;
-    sky_block_info *info;
-    uint32_t path_count;
-    sky_path **paths;
-} sky_block;
+#define SKY_BLOCK_HEADER_SIZE (sizeof(sky_object_id_t) * 2) + (sizeof(sky_timestamp_t) * 2)
+
+struct sky_block {
+    uint32_t index;
+    sky_object_id_t min_object_id;
+    sky_object_id_t max_object_id;
+    sky_timestamp_t min_timestamp;
+    sky_timestamp_t max_timestamp;
+    bool spanned;
+};
 
 
 //==============================================================================
@@ -54,46 +52,25 @@ typedef struct sky_block {
 // Lifecycle
 //======================================
 
-sky_block *sky_block_create();
+sky_block *sky_block_create(sky_data_file *data_file);
 
 void sky_block_free(sky_block *block);
 
 
 //======================================
-// Serialization
+// Persistence
 //======================================
 
-size_t sky_block_sizeof(sky_block *block);
+int sky_block_pack(sky_block *block, void *ptr, size_t *sz);
 
-size_t sky_block_sizeof_raw_hdr(void *ptr);
-
-int sky_block_pack(sky_block *block, void *addr, size_t *length);
-
-int sky_block_unpack(sky_block *block, void *addr, size_t *length);
+int sky_block_unpack(sky_block *block, void *ptr, size_t *sz);
 
 
 //======================================
-// Block Info
+// Block Management
 //======================================
 
-int sky_block_update_info(sky_block *block);
+int sky_block_get_offset(sky_block *block, size_t offset);
 
-
-//======================================
-// Event Management
-//======================================
-
-int sky_block_add_event(sky_block *block, sky_event *event);
-
-int sky_block_remove_event(sky_block *block, sky_event *event);
-
-
-//======================================
-// Path Management
-//======================================
-
-int sky_block_add_path(sky_block *block, sky_path *path);
-
-int sky_block_remove_path(sky_block *block, sky_path *path);
 
 #endif

@@ -33,9 +33,6 @@ typedef struct sky_header_file sky_header_file;
 
 struct sky_header_file {
     bstring path;
-    uint32_t version;
-    uint32_t block_size;
-    uint32_t block_count;
     sky_block_info **infos;
 };
 
@@ -71,12 +68,5 @@ int sky_header_file_load(sky_header_file *header_file);
 int sky_header_file_unload(sky_header_file *header_file);
 
 int sky_header_file_save(sky_header_file *header_file);
-
-//======================================
-// Block Management
-//======================================
-
-size_t sky_header_file_get_block_offset(sky_header_file *header_file,
-    uint32_t index);
 
 #endif

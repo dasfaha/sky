@@ -23,9 +23,9 @@
 // Lifecycle
 //======================================
 
-// Creates a reference to a header file.
+// Creates a reference to a data file.
 // 
-// Returns a reference to the new header file if successful. Otherwise returns
+// Returns a reference to the new data file if successful. Otherwise returns
 // null.
 sky_data_file *sky_data_file_create()
 {
@@ -38,9 +38,9 @@ error:
     return NULL;
 }
 
-// Removes a header file reference from memory.
+// Removes a data file reference from memory.
 //
-// data_file - The header file to free.
+// data_file - The data file to free.
 void sky_data_file_free(sky_data_file *data_file)
 {
     if(data_file) {
@@ -53,18 +53,18 @@ void sky_data_file_free(sky_data_file *data_file)
 
 
 //======================================
-// Path
+// Paths
 //======================================
 
-// Sets the file path of a header file.
+// Sets the file path of a data file.
 //
-// data_file - The header file.
+// data_file - The data file.
 // path      - The file path to set.
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_data_file_set_path(sky_data_file *data_file, bstring path)
 {
-    check(data_file != NULL, "Header file required");
+    check(data_file != NULL, "Data file required");
 
     if(data_file->path) {
         bdestroy(data_file->path);
@@ -80,14 +80,39 @@ error:
     return -1;
 }
 
+// Sets the file path for the header file.
+//
+// data_file - The data file object.
+// path      - The file path to set.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_set_header_path(sky_data_file *data_file, bstring path)
+{
+    check(data_file != NULL, "Data file required");
+
+    if(data_file->header_path) {
+        bdestroy(data_file->header_path);
+    }
+    
+    data_file->header_path = bstrcpy(path);
+    if(path) check_mem(data_file->header_path);
+
+    return 0;
+
+error:
+    data_file->header_path = NULL;
+    return -1;
+}
+
 
 //======================================
 // Persistence
 //======================================
 
-// Loads the data file into memory as a memory-mapped file.
+// Loads the data file into memory as a memory-mapped file. If the data file
+// is already loaded into memory then it is remapped.
 //
-// data_file - The header file to load.
+// data_file - The data file to load.
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_data_file_load(sky_data_file *data_file)
@@ -97,11 +122,11 @@ int sky_data_file_load(sky_data_file *data_file)
 
     // Calculate the data length.
     size_t data_length;
-    if(data_file->header_file->block_count == 0) {
-        data_length = data_file->header_file->block_size;
+    if(data_file->block_count == 0) {
+        data_length = data_file->block_size;
     }
     else {
-        data_length = table->header_file->block_count * table->header_file->block_size;
+        data_length = data_file->block_count * data_file->block_size;
     }
 
     // Close mapping if remapping isn't supported.
@@ -144,7 +169,7 @@ error:
 
 // Unloads the data file from memory.
 //
-// data_file - The header file to save.
+// data_file - The data file to save.
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_data_file_unload(sky_data_file *data_file)
@@ -167,3 +192,143 @@ int sky_data_file_unload(sky_data_file *data_file)
 }
 
 
+//======================================
+// Header File Management
+//======================================
+
+// Loads header information for the data file.
+//
+// data_file - The data file object associated with the header file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_load_header(sky_data_file *data_file)
+{
+    int rc;
+    size_t sz;
+    FILE *file;
+    uint32_t version = 1;
+    uint8_t buffer[SKY_BLOCK_HEADER_SIZE];
+
+    // Read in header file if it exists.
+    if(sky_file_exists(data_file->header_path)) {
+        file = fopen(bdata(data_file->header_path), "r");
+        check(file, "Failed to open header file for reading: %s",  bdata(data_file->header_path));
+
+        // Read database format version.
+        rc = fread(&version, sizeof(version), 1, file);
+        check(rc == 1, "Unable to read version");
+        version = ntohl(version);
+
+        // Read block size.
+        rc = fread(&data_file->block_size, sizeof(data_file->block_size), 1, file);
+        check(rc == 1, "Unable to read block size");
+        data_file->block_size = ntohl(data_file->block_size);
+
+        // Read block count.
+        rc = fread(&data_file->block_count, sizeof(data_file->block_count), 1, file);
+        check(rc == 1, "Unable to read block count");
+        data_file->block_count = ntohl(data_file->block_count);
+        data_file->blocks = malloc(sizeof(sky_block*) * data_file->block_count);
+        if(data_file->block_count > 0) check_mem(data_file->blocks);
+
+        // Read blocks until end of file.
+        uint32_t i;
+        for(i=0; i<data_file->block_count && !feof(file); i++) {
+            sky_block *block = sky_block_create(data_file);
+            check_mem(block);
+            block->index = i;
+
+            // Read into buffer.
+            rc = fread(buffer, SKY_BLOCK_INFO_SIZE, 1, file);
+            check(rc == 1, "Unable to read block #%d", block->index);
+            
+            // Unpack from buffer.
+            rc = sky_block_unpack(block, buffer, &sz);
+            check(rc == 0, "Unable to unpack block #%d", block->index);
+            
+            data_file->blocks[i] = block;
+        }
+
+        // Close the file.
+        fclose(file);
+
+        // Sort ranges by starting object id.
+        qsort(data_file->blocks, data_file->block_count, sizeof(sky_block*), compare_blocks);
+
+        // Determine spanned blocks.
+        sky_object_id_t last_object_id = -1;
+        for(i=0; i<data_file->block_count; i++) {
+            sky_block *block = data_file->blocks[i];
+            
+            // If this is a single object block then track the object id to
+            // possibly mark it as spanned.
+            if(block->min_object_id == block->max_object_id && block->min_object_id > 0) {
+                // If it has spanned since the last block then mark it and the
+                // previous block.
+                if(block->min_object_id == last_object_id) {
+                    block->spanned = true;
+                    data_file->blocks[i-1]->spanned = true;
+                }
+                // If this is the first block with one object then store the id.
+                else {
+                    last_object_id = block->min_object_id;
+                }
+            }
+            // Clear out last object id for multi-object blocks.
+            else {
+                last_object_id = -1;
+            }
+        }
+    }
+
+    return 0;
+
+error:
+    if(file) fclose(file);
+    return -1;
+}
+
+
+//======================================
+// Block Management
+//======================================
+
+// Appends an empty block at the end of the data file.
+//
+// data_file - The data file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_create_block(sky_data_file *data_file)
+{
+    int rc;
+    
+    // Increment block count and resize block memory.
+    data_file->block_count++;
+    data_file->blocks = realloc(data_file->blocks, sizeof(sky_block*) * data_file->block_count);
+    if(data_file->block_count > 0) check_mem(data_file->blocks);
+
+    // Create new block.
+    sky_block *block = sky_block_create(data_file); check_mem(block);
+    block->index = data_file->block_count-1;
+    data_file->blocks[data_file->block_count-1] = block;
+
+    // Remap data file.
+    rc = sky_data_file_load(data_file);
+    check(rc == 0, "Unable to reload data file");
+
+    // Clear block.
+    sky_block *block = sky_block_create(data_file);
+    rc = save_block(block);
+    check(rc == 0, "Unable to initialize new block");
+
+    // Sort blocks.
+    qsort(data_file->blocks, data_file->block_count, sizeof(sky_block*), compare_blocks);
+
+    // Return the block.
+    *ret = block;
+
+    return 0;
+
+error:
+    return -1;
+}

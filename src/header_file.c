@@ -283,24 +283,6 @@ int sky_header_file_unload(sky_header_file *header_file)
 
 
 //======================================
-// Block Management
-//======================================
-
-// Calculates the byte offset in a data file for a block. This is simply the
-// block index multiplied by the block size.
-//
-// header_file - The heaader file.
-// index       - The index of the block.
-//
-// Returns the number of bytes from the start of the data file where the block
-// begins.
-size_t sky_header_file_get_block_offset(sky_header_file *header_file, uint32_t index)
-{
-    return (header_file->block_size * index);
-}
-
-
-//======================================
 // Block Sorting
 //======================================
 

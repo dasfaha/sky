@@ -32,8 +32,11 @@ typedef struct sky_data_file sky_data_file;
 #define SKY_DEFAULT_BLOCK_SIZE 0x10000
 
 struct sky_data_file {
-    sky_header_file *header_file;
     bstring path;
+    bstring header_path;
+    uint32_t block_size;
+    sky_block **blocks;
+    uint32_t block_count;
     int data_fd;
     void *data;
     size_t data_length;
@@ -56,10 +59,12 @@ void sky_data_file_free(sky_data_file *data_file);
 
 
 //======================================
-// Path
+// Paths
 //======================================
 
 int sky_data_file_set_path(sky_data_file *data_file, bstring path);
+
+int sky_data_file_set_header_path(sky_data_file *data_file, bstring path);
 
 
 //======================================
@@ -69,5 +74,13 @@ int sky_data_file_set_path(sky_data_file *data_file, bstring path);
 int sky_data_file_load(sky_data_file *data_file);
 
 int sky_data_file_unload(sky_data_file *data_file);
+
+
+//======================================
+// Block Management
+//======================================
+
+int sky_data_file_create_block(sky_data_file *data_file);
+
 
 #endif

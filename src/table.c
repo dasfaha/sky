@@ -45,39 +45,6 @@ int sky_table_unload_action_file(sky_table *table);
 //
 //==============================================================================
 
-//======================================
-// Block Management
-//======================================
-
-// Serializes a block in memory and writes it to disk.
-// 
-// block - The in-memory block to write to disk.
-//
-// Returns 0 if successful. Otherwise returns -1.
-int save_block(sky_block *block)
-{
-    int rc;
-
-    sky_table *table = block->table;
-    sky_block_info *info = block->info;
-
-    // Move pointer to starting position of block.
-    size_t offset = get_block_offset(table, info);
-    void *addr = table->data + offset;
-
-    // Pack block.
-    rc = sky_block_pack(block, addr, NULL);
-    check(rc == 0, "Failed to pack block: %d", info->id);
-
-    // Update block info.
-    sky_block_update_info(block);
-
-    return 0;
-
-error:
-    return -1;
-}
-
 // Creates an empty block in the table and returns it.
 //
 // table - The table that will own the new block.

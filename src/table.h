@@ -52,8 +52,6 @@ typedef struct sky_table sky_table;
 
 #define SKY_LOCK_NAME ".lock"
 
-#define sky_table_property_count_t uint16_t
-
 // The table is a reference to the disk location where data is stored. The
 // table also maintains a cache of block info and predefined actions and
 // properties.
@@ -64,7 +62,7 @@ struct sky_table {
     sky_property_file *property_file;
     bstring name;
     bstring path;
-    bool state;
+    bool opened;
 };
 
 
