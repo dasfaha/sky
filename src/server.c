@@ -314,17 +314,17 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     int i;
     for(i=0; i<message->data_count; i++) {
         // Look up key.
-        sky_property_id_t property_id;
-        rc = sky_table_find_or_create_property_id_by_name(table, message->data_keys[i], &property_id);
-        check(rc == 0, "Unable to find or create property id: %s", bdata(message->data_keys[i]));
+        //sky_property_id_t property_id;
+        //rc = sky_table_find_or_create_property_id_by_name(table, message->data_keys[i], &property_id);
+        //check(rc == 0, "Unable to find or create property id: %s", bdata(message->data_keys[i]));
         
         // Add event data.
-        sky_event_set_data(event, property_id, message->data_values[i]);
+        //sky_event_set_data(event, property_id, message->data_values[i]);
     }
     
     // Add event to table.
-    rc = sky_table_add_event(table, event);
-    check(rc == 0, "Unable to add event to table");
+    //rc = sky_table_add_event(table, event);
+    //check(rc == 0, "Unable to add event to table");
     
     // TODO: Send respond to socket.
     
@@ -338,7 +338,7 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     return 0;
 
 error:
-    sky_event_free(event);
+    //sky_event_free(event);
     sky_eadd_message_free(message);
     return -1;
 }

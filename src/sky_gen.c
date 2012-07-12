@@ -176,7 +176,7 @@ void usage()
 // options - A list of options to use while generating the database.
 void generate(Options *options)
 {
-    int rc;
+    //int rc;
     sky_event *event = NULL;
     
     // Seed the randomizer.
@@ -203,8 +203,8 @@ void generate(Options *options)
             sky_timestamp_t timestamp = random() % INT64_MAX;
             sky_action_id_t action_id = (random() % options->action_count) + 1;
             event = sky_event_create(timestamp, object_id, action_id);
-            rc = sky_table_add_event(table, event);
-            check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%lld", event->timestamp, event->object_id, event->action_id);
+            //rc = sky_table_add_event(table, event);
+            //check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%lld", event->timestamp, event->object_id, event->action_id);
             sky_event_free(event);
         }
     }

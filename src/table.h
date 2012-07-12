@@ -13,10 +13,8 @@ typedef struct sky_table sky_table;
 #include "action.h"
 #include "event.h"
 #include "types.h"
-#include "header_file.h"
 #include "data_file.h"
 #include "action_file.h"
-#include "property_file.h"
 
 //==============================================================================
 //
@@ -59,7 +57,6 @@ struct sky_table {
     sky_database *database;
     sky_data_file *data_file;
     sky_action_file *action_file;
-    sky_property_file *property_file;
     bstring name;
     bstring path;
     bool opened;
@@ -88,28 +85,5 @@ void sky_table_free(sky_table *table);
 int sky_table_open(sky_table *table);
 
 int sky_table_close(sky_table *table);
-
-
-//======================================
-// Block Management
-//======================================
-
-int sky_table_get_block_span_count(sky_table *table, uint32_t block_index, uint32_t *span_count);
-
-
-//======================================
-// Event Management
-//======================================
-
-int sky_table_add_event(sky_table *table, sky_event *event);
-
-
-//======================================
-// Property Management
-//======================================
-
-int sky_table_find_or_create_property_id_by_name(sky_table *table,
-                                                 bstring name,
-                                                 sky_property_id_t *property_id);
 
 #endif

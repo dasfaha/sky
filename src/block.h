@@ -9,6 +9,7 @@ typedef struct sky_block sky_block;
 #include "bstring.h"
 #include "file.h"
 #include "types.h"
+#include "data_file.h"
 
 //==============================================================================
 //
@@ -33,6 +34,7 @@ typedef struct sky_block sky_block;
 #define SKY_BLOCK_HEADER_SIZE (sizeof(sky_object_id_t) * 2) + (sizeof(sky_timestamp_t) * 2)
 
 struct sky_block {
+    sky_data_file *data_file;
     uint32_t index;
     sky_object_id_t min_object_id;
     sky_object_id_t max_object_id;
@@ -67,10 +69,18 @@ int sky_block_unpack(sky_block *block, void *ptr, size_t *sz);
 
 
 //======================================
-// Block Management
+// Block Position
 //======================================
 
-int sky_block_get_offset(sky_block *block, size_t offset);
+int sky_block_get_offset(sky_block *block, size_t *offset);
 
+int sky_block_get_ptr(sky_block *block, void **ptr);
+
+
+//======================================
+// Spanning
+//======================================
+
+int sky_block_get_span_count(sky_block *block, uint32_t *count);
 
 #endif

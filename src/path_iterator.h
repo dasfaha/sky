@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "bstring.h"
-#include "table.h"
+#include "data_file.h"
 #include "cursor.h"
 
 
@@ -20,10 +20,6 @@
 // `sky_path_iterator_next()` function. When calling the `next()` function, a cursor
 // is returned instead of a reference to a deserialized path. The cursor can be
 // used to iterate over the raw path data.
-//
-// To perform the relational database equivalent of a full table scan, the
-// `sky_table_create_iterator()` function can be used to create a path
-// iterator. That contains all the paths in the table.
 //
 // The path iterator operates as a forward-only iterator. Jumping to the
 // previous path or jumping to a path by index is not allowed.
@@ -41,7 +37,7 @@
 //==============================================================================
 
 typedef struct sky_path_iterator {
-    sky_table *table;
+    sky_data_file *data_file;
     uint32_t block_index;
     uint32_t byte_index;
     bool eof;
@@ -58,7 +54,7 @@ typedef struct sky_path_iterator {
 // Lifecycle
 //======================================
 
-sky_path_iterator *sky_path_iterator_create(sky_table *table);
+sky_path_iterator *sky_path_iterator_create(sky_data_file *data_file);
 
 void sky_path_iterator_free(sky_path_iterator *iterator);
 
@@ -66,6 +62,8 @@ void sky_path_iterator_free(sky_path_iterator *iterator);
 //======================================
 // Iteration
 //======================================
+
+int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr);
 
 int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor);
 

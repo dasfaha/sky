@@ -1,7 +1,11 @@
 #include <stdlib.h>
 #include <inttypes.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 #include "dbg.h"
+#include "mem.h"
 #include "bstring.h"
 #include "file.h"
 #include "data_file.h"
@@ -11,6 +15,13 @@
 // Forward Declarations
 //
 //==============================================================================
+
+int sky_data_file_load_header(sky_data_file *data_file);
+int sky_data_file_unload_header(sky_data_file *data_file);
+
+int sky_data_file_normalize(sky_data_file *data_file);
+
+int compare_blocks(const void *_a, const void *_b);
 
 
 //==============================================================================
@@ -131,11 +142,11 @@ int sky_data_file_load(sky_data_file *data_file)
 
     // Close mapping if remapping isn't supported.
     if(!MREMAP_AVAILABLE) {
-        sky_data_file_unload(table);
+        sky_data_file_unload(data_file);
     }
 
     // Open the data file and map it if it is not currently open.
-    if(table->data_fd == 0) {
+    if(data_file->data_fd == 0) {
         data_file->data_fd = open(bdata(data_file->path), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         check(data_file->data_fd != -1, "Failed to open data file descriptor: %s",  bdata(data_file->path));
 
@@ -156,14 +167,14 @@ int sky_data_file_load(sky_data_file *data_file)
 #endif
     }
 
-    // Update the table.
+    // Update the data file.
     data_file->data = ptr;
     data_file->data_length = data_length;
 
     return 0;
 
 error:
-    sky_data_file_unload(table);
+    sky_data_file_unload(data_file);
     return -1;
 }
 
@@ -209,6 +220,10 @@ int sky_data_file_load_header(sky_data_file *data_file)
     uint32_t version = 1;
     uint8_t buffer[SKY_BLOCK_HEADER_SIZE];
 
+    // Unload existing header information.
+    rc = sky_data_file_unload_header(data_file);
+    check(rc == 0, "Unable to unload header");
+
     // Read in header file if it exists.
     if(sky_file_exists(data_file->header_path)) {
         file = fopen(bdata(data_file->header_path), "r");
@@ -228,7 +243,7 @@ int sky_data_file_load_header(sky_data_file *data_file)
         rc = fread(&data_file->block_count, sizeof(data_file->block_count), 1, file);
         check(rc == 1, "Unable to read block count");
         data_file->block_count = ntohl(data_file->block_count);
-        data_file->blocks = malloc(sizeof(sky_block*) * data_file->block_count);
+        data_file->blocks = calloc(sizeof(sky_block*), data_file->block_count);
         if(data_file->block_count > 0) check_mem(data_file->blocks);
 
         // Read blocks until end of file.
@@ -239,7 +254,7 @@ int sky_data_file_load_header(sky_data_file *data_file)
             block->index = i;
 
             // Read into buffer.
-            rc = fread(buffer, SKY_BLOCK_INFO_SIZE, 1, file);
+            rc = fread(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
             check(rc == 1, "Unable to read block #%d", block->index);
             
             // Unpack from buffer.
@@ -252,39 +267,43 @@ int sky_data_file_load_header(sky_data_file *data_file)
         // Close the file.
         fclose(file);
 
-        // Sort ranges by starting object id.
-        qsort(data_file->blocks, data_file->block_count, sizeof(sky_block*), compare_blocks);
-
-        // Determine spanned blocks.
-        sky_object_id_t last_object_id = -1;
-        for(i=0; i<data_file->block_count; i++) {
-            sky_block *block = data_file->blocks[i];
-            
-            // If this is a single object block then track the object id to
-            // possibly mark it as spanned.
-            if(block->min_object_id == block->max_object_id && block->min_object_id > 0) {
-                // If it has spanned since the last block then mark it and the
-                // previous block.
-                if(block->min_object_id == last_object_id) {
-                    block->spanned = true;
-                    data_file->blocks[i-1]->spanned = true;
-                }
-                // If this is the first block with one object then store the id.
-                else {
-                    last_object_id = block->min_object_id;
-                }
-            }
-            // Clear out last object id for multi-object blocks.
-            else {
-                last_object_id = -1;
-            }
-        }
+        rc = sky_data_file_normalize(data_file);
+        check(rc == 0, "Unable to normalize data file");
     }
 
     return 0;
 
 error:
     if(file) fclose(file);
+    sky_data_file_unload_header(data_file);
+    return -1;
+}
+
+// Unloads header information from memory.
+//
+// data_file - The data file object associated with the header file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_unload_header(sky_data_file *data_file)
+{
+    check(data_file != NULL, "Data file required");
+    
+    if(data_file->blocks) {
+        uint32_t i;
+        for(i=0; i<data_file->block_count; i++) {
+            sky_block *block = data_file->blocks[i];
+            if(block) {
+                sky_block_free(block);
+                data_file->blocks[i] = NULL;
+            }
+        }
+        free(data_file->blocks);
+        data_file->blocks = NULL;
+    }
+    
+    return 0;
+    
+error:
     return -1;
 }
 
@@ -296,9 +315,10 @@ error:
 // Appends an empty block at the end of the data file.
 //
 // data_file - The data file.
+// ret       - A pointer to where the new block should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_data_file_create_block(sky_data_file *data_file)
+int sky_data_file_create_block(sky_data_file *data_file, sky_block **ret)
 {
     int rc;
     
@@ -317,14 +337,15 @@ int sky_data_file_create_block(sky_data_file *data_file)
     check(rc == 0, "Unable to reload data file");
 
     // Clear block.
-    sky_block *block = sky_block_create(data_file);
-    rc = save_block(block);
-    check(rc == 0, "Unable to initialize new block");
+    void *ptr;
+    rc = sky_block_get_ptr(block, &ptr);
+    check(rc == 0, "Unable to retrieve block pointer");
+    memset(ptr, 0, data_file->block_size);
 
-    // Sort blocks.
+    // Re-sort blocks.
     qsort(data_file->blocks, data_file->block_count, sizeof(sky_block*), compare_blocks);
 
-    // Return the block.
+    // Return the new block.
     *ret = block;
 
     return 0;
@@ -332,3 +353,188 @@ int sky_data_file_create_block(sky_data_file *data_file)
 error:
     return -1;
 }
+
+// Finds the correct block to add an event to.
+//
+// Insertion has several rules to ensure consistency. There are two types of
+// blocks: single object blocks and multi-object blocks. Single object blocks
+// are spans of two or more blocks that have a single object. Multi-object
+// blocks are single blocks that have multiple object ids. An object that is
+// stored in a single block (i.e. doesn't span blocks) is considered a
+// multi-object block since there is probably room to add more objects.
+// 
+// 1. An object id range is unique to a block. If a block has object ids 5 - 8
+//    then no other block can overlap into those ids.
+//
+// 2. Only multi-object blocks can have object ids outside its range added.
+//
+// 3. Objects are added to the first block where the object id is included in
+//    the object id range or is less than the minimum object id of the block.
+//
+// 4. If no block is found by the end then the last block is used for insertion.
+//
+// data_file - The data file that the event is being added to.
+// event     - The event to add to the table.
+// ret       - A pointer to where the insertion block is returned to.
+//
+// Returns 0 if successfully finds a block. Otherwise returns -1.
+int sky_data_file_find_insertion_block(sky_data_file *data_file,
+                                       sky_event *event,
+                                       sky_block **ret)
+{
+    int rc;
+    sky_block *block = NULL;
+    
+    // Initialize return value to NULL.
+    *ret = NULL;
+    
+    // Extract object id and timestamp from event.
+    sky_object_id_t object_id = event->object_id;
+    sky_timestamp_t timestamp = event->timestamp;
+
+    // Loop over sorted blocks to find the appropriate insertion point.
+    uint32_t i;
+    for(i=0; i<data_file->block_count; i++) {
+        block = data_file->blocks[i];
+        
+        // If block is within range then use the block.
+        if(object_id >= block->min_object_id && object_id <= block->max_object_id) {
+            // If this is a single object block then find the appropriate block
+            // based on timestamp.
+            if(block->spanned) {
+                // Find first block where timestamp is before the max.
+                while(i<data_file->block_count && data_file->blocks[i]->min_object_id == object_id) {
+                    if(timestamp <= data_file->blocks[i]->max_timestamp) {
+                        *ret = block;
+                        break;
+                    }
+                    i++;
+                }
+                
+                // If this event is being appended to the object path then use
+                // the last block.
+                if(*ret == NULL) {
+                    *ret = data_file->blocks[i-1];
+                }
+
+                break;
+            }
+            // If this is a multi-object block then simply use it.
+            else {
+                *ret = block;
+                break;
+            }
+        }
+        // If block is before this object id range, then use the block if it
+        // is a multi-object block.
+        else if(object_id < block->min_object_id && !block->spanned) {
+            *ret = block;
+            break;
+        }
+    }
+    
+    // If we haven't found a block then it means that the object id is after all
+    // other object ids or that we are inserting before a single object block or
+    // that we have no blocks.
+    if(*ret == NULL) {
+        // Find the last block if one exists.
+        sky_block *last_block = (data_file->block_count > 0 ? data_file->blocks[data_file->block_count-1] : NULL);
+        
+        // If the last block available is unspanned then use it.
+        if(last_block != NULL && !last_block->spanned) {
+            *ret = last_block;
+        }
+        // Otherwise just create a new block.
+        else {
+            rc = sky_data_file_create_block(data_file, ret);
+            check(rc == 0, "Unable to create block");
+        }
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Updates the block information to mark blocks as spanned or not.
+//
+// data_file - The data file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_normalize(sky_data_file *data_file)
+{
+    // Sort ranges by starting object id.
+    qsort(data_file->blocks, data_file->block_count, sizeof(*data_file->blocks), compare_blocks);
+
+    // Determine spanned blocks.
+    uint32_t i;
+    sky_object_id_t last_object_id = -1;
+    for(i=0; i<data_file->block_count; i++) {
+        sky_block *block = data_file->blocks[i];
+        
+        // If this is a single object block then track the object id to
+        // possibly mark it as spanned.
+        if(block->min_object_id == block->max_object_id && block->min_object_id > 0) {
+            // If it has spanned since the last block then mark it and the
+            // previous block.
+            if(block->min_object_id == last_object_id) {
+                block->spanned = true;
+                data_file->blocks[i-1]->spanned = true;
+            }
+            // If this is the first block with one object then store the id.
+            else {
+                last_object_id = block->min_object_id;
+            }
+        }
+        // Clear out last object id for multi-object blocks.
+        else {
+            last_object_id = -1;
+        }
+    }
+
+    return 0;
+}
+
+
+//======================================
+// Block Sorting
+//======================================
+
+// Compares two blocks and sorts them based on starting min object identifier
+// and then by id.
+int compare_blocks(const void *_a, const void *_b)
+{
+    sky_block **a = (sky_block **)_a;
+    sky_block **b = (sky_block **)_b;
+
+    // Sort by min object id first.
+    if((*a)->min_object_id > (*b)->min_object_id) {
+        return 1;
+    }
+    else if((*a)->min_object_id < (*b)->min_object_id) {
+        return -1;
+    }
+    else {
+        // If min object ids are the same then sort by min timestamp.
+        if((*a)->min_timestamp > (*b)->min_timestamp) {
+            return 1;
+        }
+        else if((*a)->min_timestamp < (*b)->min_timestamp) {
+            return -1;
+        }
+        else {
+            // If min timestamps are the same then sort by block id.
+            if((*a)->index > (*b)->index) {
+                return 1;
+            }
+            else if((*a)->index < (*b)->index) {
+                return -1;
+            }
+            else {
+                return 0;
+            }
+        }
+    }
+}
+

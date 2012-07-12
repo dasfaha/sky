@@ -129,8 +129,29 @@ error:
 
 
 //======================================
-// Block Management
+// Block Position
 //======================================
+
+// Calculates the byte offset for the beginning on the block in the
+// data file based on the data file block size and the block index.
+//
+// block  - The block to calculate the byte offset of.
+// offset - A pointer to where the offset will be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_get_offset(sky_block *block, size_t *offset)
+{
+    check(block != NULL, "Block required");
+    check(block->data_file != NULL, "Data file required");
+    check(block->data_file->data != NULL, "Data file must be mapped");
+
+    *offset = (block->data_file->block_size * block->index);
+    return 0;
+
+error:
+    *offset = 0;
+    return -1;
+}
 
 // Calculates the pointer position for the beginning on the block in the
 // data file based on the data file block size and the block index.
@@ -145,10 +166,68 @@ int sky_block_get_ptr(sky_block *block, void **ptr)
     check(block->data_file != NULL, "Data file required");
     check(block->data_file->data != NULL, "Data file must be mapped");
 
-    *ptr = block->data_file->data + (block->data_file->block_size * block->index);
+    // Retrieve the offset.
+    size_t offset;
+    int rc = sky_block_get_offset(block, &offset);
+    check(rc == 0, "Unable to determine block offset");
+
+    // Calculate pointer based on data pointer.
+    *ptr = block->data_file->data + offset;
+    
     return 0;
 
 error:
     *ptr = NULL;
     return -1;
 }
+
+
+//======================================
+// Spanning
+//======================================
+
+// Determines the number of blocks that this block's object spans. This
+// function only works on the starting block of a span of blocks.
+//
+// block - The initial block in a block span.
+// count - A pointer to where the number of spanned blocks should be stored.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_get_span_count(sky_block *block, uint32_t *count)
+{
+    check(block != NULL, "Block required");
+    check(block->data_file != NULL, "Data file required");
+    check(count != NULL, "Span count address required");
+    
+    // If this block is not spanned then return 1.
+    if(!block->spanned) {
+        *count = 1;
+    }
+    // Otherwise calculate the span count.
+    else {
+        // Loop until the ending block of the span is found.
+        uint32_t index = block->index;
+        sky_object_id_t object_id = block->data_file->blocks[index]->min_object_id;
+        while(true) {
+            index++;
+
+            // If we've reached the end of the blocks or if the object id no longer
+            // matches the starting object id then break out of the loop.
+            if(index > block->data_file->block_count-1 ||
+               object_id != block->data_file->blocks[index]->min_object_id)
+            {
+                break;
+            }
+        }
+
+        // Assign count back to caller's provided address.
+        *count = (index - block->index);
+    }
+    
+    return 0;
+
+error:
+    *count = 0;
+    return -1;
+}
+

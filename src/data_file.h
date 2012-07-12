@@ -9,7 +9,8 @@ typedef struct sky_data_file sky_data_file;
 #include "bstring.h"
 #include "file.h"
 #include "types.h"
-#include "block_info.h"
+#include "block.h"
+#include "event.h"
 
 //==============================================================================
 //
@@ -80,7 +81,9 @@ int sky_data_file_unload(sky_data_file *data_file);
 // Block Management
 //======================================
 
-int sky_data_file_create_block(sky_data_file *data_file);
+int sky_data_file_create_block(sky_data_file *data_file, sky_block **ret);
 
+int sky_data_file_find_insertion_block(sky_data_file *data_file,
+    sky_event *event, sky_block **ret);
 
 #endif
