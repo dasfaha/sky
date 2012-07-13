@@ -16,6 +16,8 @@
 //
 //==============================================================================
 
+int sky_data_file_unmap(sky_data_file *data_file);
+
 int sky_data_file_load_header(sky_data_file *data_file);
 int sky_data_file_unload_header(sky_data_file *data_file);
 int sky_data_file_create_header(sky_data_file *data_file);
@@ -136,7 +138,6 @@ int sky_data_file_load(sky_data_file *data_file)
     check(data_file != NULL, "Data file required");
     check(data_file->path != NULL, "Data file path required");
 
-
     // Load header if not loaded yet.
     if(data_file->blocks == NULL) {
         rc = sky_data_file_load_header(data_file);
@@ -151,7 +152,8 @@ int sky_data_file_load(sky_data_file *data_file)
 
     // Close mapping if remapping isn't supported.
     if(!MREMAP_AVAILABLE) {
-        sky_data_file_unload(data_file);
+        rc = sky_data_file_unmap(data_file);
+        check(rc == 0, "Unable to unmap data file");
     }
 
     // Open the data file and map it if it is not currently open.
@@ -194,18 +196,34 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_data_file_unload(sky_data_file *data_file)
 {
+    // Unload header.
+    sky_data_file_unload_header(data_file);
+    
+    // Unmap the data file.
+    sky_data_file_unmap(data_file);
+    
+    return 0;
+}
+
+// Unmaps the data file but does not unload the header.
+//
+// data_file - The data file to save.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_unmap(sky_data_file *data_file)
+{
     // Unmap file.
     if(data_file->data != NULL) {
         munmap(data_file->data, data_file->data_length);
-        data_file->data = NULL;
     }
     
     // Close file descriptor.
     if(data_file->data_fd != 0) {
         close(data_file->data_fd);
-        data_file->data_fd = 0;
     }
     
+    data_file->data_fd = 0;
+    data_file->data = NULL;
     data_file->data_length = 0;
     
     return 0;
@@ -307,8 +325,9 @@ int sky_data_file_unload_header(sky_data_file *data_file)
             }
         }
         free(data_file->blocks);
-        data_file->blocks = NULL;
     }
+    data_file->blocks = NULL;
+    data_file->block_count = 0;
     
     return 0;
     

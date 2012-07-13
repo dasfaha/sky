@@ -42,7 +42,7 @@ int test_sky_data_file_set_header_path() {
 
 
 //--------------------------------------
-// Persistence
+// Empty File
 //--------------------------------------
 
 int test_sky_data_file_load_empty() {
@@ -58,6 +58,7 @@ int test_sky_data_file_load_empty() {
     mu_assert_int_equals(rc, 0);
 
     mu_assert_bool(data_file->data != NULL);
+    mu_assert_bool(data_file->data_fd != 0);
     mu_assert_long_equals(data_file->data_length, 128L);
     mu_assert_bool(data_file->blocks != NULL);
     mu_assert_int_equals(data_file->block_count, 1);
@@ -67,6 +68,12 @@ int test_sky_data_file_load_empty() {
     rc = sky_data_file_unload(data_file);
     mu_assert_int_equals(rc, 0);
     
+    mu_assert_bool(data_file->data == NULL);
+    mu_assert_bool(data_file->data_fd == 0);
+    mu_assert_long_equals(data_file->data_length, 0L);
+    mu_assert_bool(data_file->blocks == NULL);
+    mu_assert_int_equals(data_file->block_count, 0);
+
     sky_data_file_free(data_file);
     return 0;
 }
