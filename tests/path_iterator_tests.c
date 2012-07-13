@@ -10,27 +10,6 @@
 
 //==============================================================================
 //
-// Constants
-//
-//==============================================================================
-
-struct tagbstring ROOT = bsStatic("tmp/db");
-struct tagbstring OBJECT_TYPE = bsStatic("users");
-
-
-//==============================================================================
-//
-// Macros
-//
-//==============================================================================
-
-#define mu_assert_int64(PTR, VALUE) do {\
-    int64_t num = VALUE;\
-    mu_assert_mem(&num, PTR, sizeof(num));\
-} while(0)
-
-//==============================================================================
-//
 // Test Cases
 //
 //==============================================================================
@@ -40,48 +19,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 //--------------------------------------
 
 int test_sky_path_iterator_next() {
-    int rc;
-    sky_data_file *data_file = sky_data_file_create();
-    data_file->path = bfromcstr("tests/fixtures/cursor/0/data");
-    data_file->header_path = bfromcstr("tests/fixtures/cursor/0/header");
-    rc = sky_data_file_load(data_file);
-    mu_assert_int_equals(rc, 0);
-
-    sky_cursor *cursor = sky_cursor_create();
-    sky_path_iterator *iterator = sky_path_iterator_create(data_file);
-    
-    void *data = table->data;
-
-    // First path should span across the first and third blocks.
-    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
-    mu_assert(cursor->path_count == 2, "");
-    mu_assert(cursor->paths[0] - data == 4, "");
-    mu_assert(cursor->paths[1] - data == 260, "");
-    
-    // Second path should be in the second block.
-    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
-    mu_assert(cursor->path_count == 1, "");
-    mu_assert(cursor->paths[0] - data == 132, "");
-
-    // Third path should be in the fourth block.
-    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
-    mu_assert(cursor->path_count == 1, "");
-    mu_assert(cursor->paths[0] - data == 388, "");
-
-    // No more paths so iterator should be EOF.
-    mu_assert(sky_path_iterator_next(iterator, cursor) == 0, "");
-    mu_assert(cursor->path_count == 0, "");
-    mu_assert(cursor->paths == NULL, "");
-    mu_assert(iterator->eof == true, "");
-    
-    // Clean up.
-    sky_path_iterator_free(iterator);
-    sky_cursor_free(cursor);
-
-    sky_table_close(table);
-    sky_table_free(table);
-    sky_database_free(database);
-    
+    // TODO
     return 0;
 }
 
@@ -93,7 +31,7 @@ int test_sky_path_iterator_next() {
 //==============================================================================
 
 int all_tests() {
-    //mu_run_test(test_sky_path_iterator_next);
+    mu_run_test(test_sky_path_iterator_next);
     return 0;
 }
 

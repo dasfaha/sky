@@ -73,7 +73,7 @@ struct sky_table {
 // Lifecycle
 //======================================
 
-sky_table *sky_table_create(sky_database *database, bstring name);
+sky_table *sky_table_create();
 
 void sky_table_free(sky_table *table);
 

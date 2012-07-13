@@ -9,37 +9,19 @@
 
 //==============================================================================
 //
-// Functions
+// Forward Declaration
 //
 //==============================================================================
 
-//======================================
-// Utility
-//======================================
+int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr);
 
-// Calculates the pointer address for a path that the iterator is currently
-// pointing to.
+
+
+//==============================================================================
 //
-// iterator - The iterator to calculate the address from.
+// Functions
 //
-// Returns a pointer to the address of the current path.
-int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr)
-{
-    // Retrieve the block pointer.
-    sky_block *block = iterator->data_file->blocks[iterator->block_index];
-    int rc = sky_block_get_ptr(block, ptr);
-    check(rc == 0, "Unable to retrieve block pointer");
-
-    // Increment by the byte offset.
-    ptr += iterator->byte_index;
-
-    return 0;
-
-error:
-    *ptr = NULL;
-    return -1;
-}
-
+//==============================================================================
 
 //======================================
 // Lifecycle
@@ -74,6 +56,34 @@ void sky_path_iterator_free(sky_path_iterator *iterator)
         iterator->data_file = NULL;
         free(iterator);
     }
+}
+
+
+//======================================
+// Pointer Management
+//======================================
+
+// Calculates the pointer address for a path that the iterator is currently
+// pointing to.
+//
+// iterator - The iterator to calculate the address from.
+//
+// Returns a pointer to the address of the current path.
+int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr)
+{
+    // Retrieve the block pointer.
+    sky_block *block = iterator->data_file->blocks[iterator->block_index];
+    int rc = sky_block_get_ptr(block, ptr);
+    check(rc == 0, "Unable to retrieve block pointer");
+
+    // Increment by the byte offset.
+    ptr += iterator->byte_index;
+
+    return 0;
+
+error:
+    *ptr = NULL;
+    return -1;
 }
 
 
