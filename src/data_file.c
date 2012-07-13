@@ -18,6 +18,7 @@
 
 int sky_data_file_load_header(sky_data_file *data_file);
 int sky_data_file_unload_header(sky_data_file *data_file);
+int sky_data_file_create_header(sky_data_file *data_file);
 
 int sky_data_file_normalize(sky_data_file *data_file);
 
@@ -42,6 +43,7 @@ sky_data_file *sky_data_file_create()
 {
     sky_data_file *data_file = calloc(sizeof(sky_data_file), 1);
     check_mem(data_file);
+    data_file->block_size = SKY_DEFAULT_BLOCK_SIZE;
     return data_file;
     
 error:
@@ -131,15 +133,21 @@ int sky_data_file_load(sky_data_file *data_file)
 {
     int rc;
     void *ptr;
+    check(data_file != NULL, "Data file required");
+    check(data_file->path != NULL, "Data file path required");
 
+
+    // Load header if not loaded yet.
+    if(data_file->blocks == NULL) {
+        rc = sky_data_file_load_header(data_file);
+        check(rc == 0, "Unable to load header");
+    }
+
+    // There should always be at least one block.
+    check(data_file->block_size > 0, "Data file should have at least one block");
+    
     // Calculate the data length.
-    size_t data_length;
-    if(data_file->block_count == 0) {
-        data_length = data_file->block_size;
-    }
-    else {
-        data_length = data_file->block_count * data_file->block_size;
-    }
+    size_t data_length = data_file->block_count * data_file->block_size;
 
     // Close mapping if remapping isn't supported.
     if(!MREMAP_AVAILABLE) {
@@ -225,52 +233,52 @@ int sky_data_file_load_header(sky_data_file *data_file)
     rc = sky_data_file_unload_header(data_file);
     check(rc == 0, "Unable to unload header");
 
-    // Read in header file if it exists.
-    if(sky_file_exists(data_file->header_path)) {
-        file = fopen(bdata(data_file->header_path), "r");
-        check(file, "Failed to open header file for reading: %s",  bdata(data_file->header_path));
-
-        // Read database format version.
-        rc = fread(&version, sizeof(version), 1, file);
-        check(rc == 1, "Unable to read version");
-        version = ntohl(version);
-
-        // Read block size.
-        rc = fread(&data_file->block_size, sizeof(data_file->block_size), 1, file);
-        check(rc == 1, "Unable to read block size");
-        data_file->block_size = ntohl(data_file->block_size);
-
-        // Read block count.
-        rc = fread(&data_file->block_count, sizeof(data_file->block_count), 1, file);
-        check(rc == 1, "Unable to read block count");
-        data_file->block_count = ntohl(data_file->block_count);
-        data_file->blocks = calloc(sizeof(sky_block*), data_file->block_count);
-        if(data_file->block_count > 0) check_mem(data_file->blocks);
-
-        // Read blocks until end of file.
-        uint32_t i;
-        for(i=0; i<data_file->block_count && !feof(file); i++) {
-            sky_block *block = sky_block_create(data_file);
-            check_mem(block);
-            block->index = i;
-
-            // Read into buffer.
-            rc = fread(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
-            check(rc == 1, "Unable to read block #%d", block->index);
-            
-            // Unpack from buffer.
-            rc = sky_block_unpack(block, buffer, &sz);
-            check(rc == 0, "Unable to unpack block #%d", block->index);
-            
-            data_file->blocks[i] = block;
-        }
-
-        // Close the file.
-        fclose(file);
-
-        rc = sky_data_file_normalize(data_file);
-        check(rc == 0, "Unable to normalize data file");
+    // If header doesn't exist then create a new one.
+    if(!sky_file_exists(data_file->header_path)) {
+        rc = sky_data_file_create_header(data_file);
+        check(rc == 0, "Unable to create header file");
     }
+    
+    file = fopen(bdata(data_file->header_path), "r");
+    check(file, "Failed to open header file for reading: %s",  bdata(data_file->header_path));
+
+    // Read database format version.
+    rc = fread(&version, sizeof(version), 1, file);
+    check(rc == 1, "Unable to read version");
+    version = ntohl(version);
+
+    // Read block size.
+    rc = fread(&data_file->block_size, sizeof(data_file->block_size), 1, file);
+    check(rc == 1, "Unable to read block size");
+    data_file->block_size = ntohl(data_file->block_size);
+
+    // Read blocks until end of file.
+    off_t file_length = sky_get_file_size(data_file->header_path);
+    while(ftell(file) < file_length && !feof(file)) {
+        sky_block *block = sky_block_create(data_file); check_mem(block);
+        block->index = data_file->block_count;
+
+        // Read into buffer.
+        rc = fread(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
+        check(rc == 1, "Unable to read block #%d", block->index);
+        
+        // Unpack from buffer.
+        rc = sky_block_unpack(block, buffer, &sz);
+        check(rc == 0, "Unable to unpack block #%d", block->index);
+        
+        // Append to blocks
+        data_file->block_count++;
+        data_file->blocks = realloc(data_file->blocks, sizeof(sky_block*) * data_file->block_count);
+        check_mem(data_file->blocks);
+        data_file->blocks[data_file->block_count-1] = block;
+    }
+
+    // Close the file.
+    fclose(file);
+
+    rc = sky_data_file_normalize(data_file);
+    check(rc == 0, "Unable to normalize data file");
+    
 
     return 0;
 
@@ -308,6 +316,48 @@ error:
     return -1;
 }
 
+// Creates a new header file. The header file will only be created if one
+// does not already exist.
+//
+// data_file - The data file object associated with the header file.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_create_header(sky_data_file *data_file)
+{
+    int rc;
+    check(data_file != NULL, "Data file required");
+    check(data_file->header_path != NULL, "Data file header path required");
+    check(!sky_file_exists(data_file->header_path), "Header file already exists");
+
+    // Open the file for writing.
+    FILE *file = fopen(bdata(data_file->header_path), "w");
+    check(file, "Failed to open header file for writing: %s",  bdata(data_file->header_path));
+
+    // Write database format version.
+    uint32_t version = htonl(SKY_DATA_FILE_VERSION);
+    rc = fwrite(&version, sizeof(version), 1, file);
+    check(rc == 1, "Unable to write version");
+
+    // Write block size.
+    uint32_t block_size = htonl(data_file->block_size);
+    rc = fwrite(&block_size, sizeof(block_size), 1, file);
+    check(rc == 1, "Unable to write block size");
+    
+    // Write a single empty block.
+    uint8_t *buffer[SKY_BLOCK_HEADER_SIZE];
+    memset(buffer, 0, SKY_BLOCK_HEADER_SIZE);
+    rc = fwrite(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
+    check(rc == 1, "Unable to write initial block header");
+    
+    // Close file.
+    fclose(file);
+    
+    return 0;
+    
+error:
+    if(file) fclose(file);
+    return -1;
+}
 
 //======================================
 // Block Management

@@ -32,6 +32,8 @@ typedef struct sky_data_file sky_data_file;
 
 #define SKY_DEFAULT_BLOCK_SIZE 0x10000
 
+#define SKY_DATA_FILE_VERSION  1
+
 struct sky_data_file {
     bstring path;
     bstring header_path;
