@@ -143,7 +143,7 @@ int sky_block_get_offset(sky_block *block, size_t *offset)
 {
     check(block != NULL, "Block required");
     check(block->data_file != NULL, "Data file required");
-    check(block->data_file->data != NULL, "Data file must be mapped");
+    check(block->data_file->block_size != 0, "Data file must have a nonzero block size");
 
     *offset = (block->data_file->block_size * block->index);
     return 0;
@@ -199,6 +199,9 @@ int sky_block_get_span_count(sky_block *block, uint32_t *count)
     check(block->data_file != NULL, "Data file required");
     check(count != NULL, "Span count address required");
     
+    sky_data_file *data_file = block->data_file;
+    sky_block **blocks = data_file->blocks;
+
     // If this block is not spanned then return 1.
     if(!block->spanned) {
         *count = 1;
@@ -207,14 +210,13 @@ int sky_block_get_span_count(sky_block *block, uint32_t *count)
     else {
         // Loop until the ending block of the span is found.
         uint32_t index = block->index;
-        sky_object_id_t object_id = block->data_file->blocks[index]->min_object_id;
+        sky_object_id_t object_id = block->min_object_id;
         while(true) {
             index++;
 
             // If we've reached the end of the blocks or if the object id no longer
             // matches the starting object id then break out of the loop.
-            if(index > block->data_file->block_count-1 ||
-               object_id != block->data_file->blocks[index]->min_object_id)
+            if(index > data_file->block_count-1 || object_id != blocks[index]->min_object_id)
             {
                 break;
             }

@@ -22,6 +22,15 @@
 //==============================================================================
 
 //--------------------------------------
+// Locking
+//--------------------------------------
+
+int sky_table_lock(sky_table *table);
+
+int sky_table_unlock(sky_table *table);
+
+
+//--------------------------------------
 // Data file
 //--------------------------------------
 
@@ -213,7 +222,7 @@ int sky_table_open(sky_table *table)
     }
 
     // Obtain a lock.
-    rc = sky_table_create_lock(table);
+    rc = sky_table_lock(table);
     check(rc == 0, "Unable to obtain lock");
 
     // Load data file.
@@ -256,7 +265,7 @@ int sky_table_close(sky_table *table)
     table->opened = false;
 
     // Release the lock.
-    rc = sky_table_remove_lock(table);
+    rc = sky_table_unlock(table);
     check(rc == 0, "Unable to remove lock");
 
     return 0;
@@ -275,7 +284,7 @@ error:
 // table - The table to lock.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_table_create_lock(sky_table *table)
+int sky_table_lock(sky_table *table)
 {
     FILE *file;
     check(table != NULL, "Table required to lock");
@@ -308,7 +317,7 @@ error:
 // table - The table to unlock.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_table_remove_lock(sky_table *table)
+int sky_table_unlock(sky_table *table)
 {
     FILE *file;
 

@@ -56,6 +56,7 @@ int tests_run;
 
 #define mu_assert_int_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %d; Received: %d", EXPECTED, ACTUAL)
 #define mu_assert_long_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %ld; Received: %ld", EXPECTED, ACTUAL)
+#define mu_assert_int64_equals(ACTUAL, EXPECTED) mu_assert_with_msg(ACTUAL == EXPECTED, "Expected: %lld; Received: %lld", EXPECTED, ACTUAL)
 #define mu_assert_bstring(ACTUAL, EXPECTED) mu_assert_with_msg(biseqcstr(ACTUAL, EXPECTED), "Expected: %s; Received: %s", EXPECTED, bdata(ACTUAL))
 
 
@@ -130,11 +131,11 @@ int tests_run;
 
 // Asserts the contents of memory. If an error occurs then the memory is
 // dumped to file.
-#define mu_assert_mem(ACTUAL, EXPECTED, N) \
-    int rc = memcmp(ACTUAL, EXPECTED, N); \
-    if(rc != 0) { \
+#define mu_assert_mem(ACTUAL, EXPECTED, N) do {\
+    if(memcmp(ACTUAL, EXPECTED, N) != 0) { \
         FILE *file = fopen(MEMDUMPFILE, "w"); \
         fwrite(ACTUAL, N, sizeof(char), file); \
         fclose(file); \
         mu_fail("Memory contents do not match. Memory dumped to: " MEMDUMPFILE); \
-    }
+    } \
+} while(0)

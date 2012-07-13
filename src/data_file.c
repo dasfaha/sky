@@ -58,6 +58,7 @@ void sky_data_file_free(sky_data_file *data_file)
         if(data_file->path) bdestroy(data_file->path);
         data_file->path = NULL;
         sky_data_file_unload(data_file);
+        sky_data_file_unload_header(data_file);
         free(data_file);
     }
 }
