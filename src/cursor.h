@@ -35,7 +35,6 @@ typedef struct sky_cursor {
     uint32_t path_count;
     uint32_t path_index;
     uint32_t event_index;
-    size_t path_length;
     void *ptr;
     void *endptr;
     bool eof;
@@ -70,7 +69,7 @@ int sky_cursor_set_paths(sky_cursor *cursor, void **ptrs, int count);
 // Iteration
 //======================================
 
-int sky_cursor_next_event(sky_cursor *cursor);
+int sky_cursor_next(sky_cursor *cursor);
 
 
 #endif

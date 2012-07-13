@@ -3,6 +3,17 @@
 #include "event.h"
 #include "mem.h"
 #include "dbg.h"
+#include "minipack.h"
+
+
+//==============================================================================
+//
+// Forward Declarations
+//
+//==============================================================================
+
+int sky_cursor_set_ptr(sky_cursor *cursor, void *ptr);
+int sky_cursor_set_eof(sky_cursor *cursor);
 
 
 //==============================================================================
@@ -17,20 +28,10 @@
 
 // Creates a reference to a cursor.
 // 
-// Returns a reference to the new cursor if successful. Otherwise returns
-// null.
+// Returns a reference to the new cursor if successful.
 sky_cursor *sky_cursor_create()
 {
-    sky_cursor *cursor;
-    
-    cursor = malloc(sizeof(sky_cursor)); check_mem(cursor);
-    cursor->paths = NULL;
-    cursor->path_count = 0;
-    cursor->path_index = 0;
-    cursor->event_index = 0;
-    cursor->ptr = NULL;
-    cursor->eof = false;
-    
+    sky_cursor *cursor = calloc(sizeof(sky_cursor),1 ); check_mem(cursor);
     return cursor;
     
 error:
@@ -54,22 +55,6 @@ void sky_cursor_free(sky_cursor *cursor)
 // Path Management
 //======================================
 
-// Initializes the cursor to point to a new path.
-//
-// cursor - The cursor to update.
-// index  - The index of the path.
-void set_current_path(sky_cursor *cursor, uint32_t index)
-{
-    // Calculate path length
-    void *ptr = cursor->paths[index];
-    cursor->path_length = sky_path_sizeof_raw(ptr);
-     
-    // Store position of first event and store position of end of path.
-    cursor->ptr    = ptr + sky_path_sizeof_raw_hdr(ptr);
-    cursor->endptr = ptr + cursor->path_length;
-}
-
-
 // Assigns a single path to the cursor.
 // 
 // cursor - The cursor.
@@ -79,16 +64,17 @@ void set_current_path(sky_cursor *cursor, uint32_t index)
 int sky_cursor_set_path(sky_cursor *cursor, void *ptr)
 {
     int rc;
-    
     check(cursor != NULL, "Cursor required");
 
     // If data is not null then create an array of one pointer.
+    void **ptrs;
     if(ptr != NULL) {
-        void **ptrs = malloc(sizeof(void*));
+        ptrs = malloc(sizeof(void*)); check_mem(ptrs);
         ptrs[0] = ptr;
         rc = sky_cursor_set_paths(cursor, ptrs, 1);
         check(rc == 0, "Unable to set path data to cursor");
     }
+    // Otherwise clear out pointer paths.
     else {
         rc = sky_cursor_set_paths(cursor, NULL, 0);
         check(rc == 0, "Unable to remove path data");
@@ -97,10 +83,11 @@ int sky_cursor_set_path(sky_cursor *cursor, void *ptr)
     return 0;
 
 error:
+    if(ptrs) free(ptrs);
     return -1;
 }
 
-// Assigns a list of paths to the cursor.
+// Assigns a list of path pointers to the cursor.
 // 
 // cursor - The cursor.
 // ptrs   - An array to pointers of raw paths.
@@ -108,6 +95,7 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_cursor_set_paths(sky_cursor *cursor, void **ptrs, int count)
 {
+    int rc;
     check(cursor != NULL, "Cursor required");
     
     // Free old path list.
@@ -122,12 +110,13 @@ int sky_cursor_set_paths(sky_cursor *cursor, void **ptrs, int count)
     cursor->event_index = 0;
     cursor->eof = (count == 0);
     
-    // Position the pointer at the first path.
+    // Position the pointer at the first path if paths are passed.
     if(count > 0) {
-        set_current_path(cursor, 0);
+        rc = sky_cursor_set_ptr(cursor, cursor->paths[0]);
+        check(rc == 0, "Unable to set paths");
     }
+    // Otherwise clear out the pointer.
     else {
-        cursor->path_length = 0;
         cursor->ptr = NULL;
         cursor->endptr = NULL;
     }
@@ -140,11 +129,49 @@ error:
 
 
 //======================================
+// Pointer Management
+//======================================
+
+// Initializes the cursor to point at a new path at a given pointer.
+//
+// cursor - The cursor to update.
+// ptr    - The address of the start of a path.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_cursor_set_ptr(sky_cursor *cursor, void *ptr)
+{
+    size_t sz;
+    
+    // Skip over header.
+    sz = sky_path_sizeof_raw_hdr(ptr);
+    check(sz > 0, "Unable to determine path header size at %p", ptr);
+    ptr += sz;
+
+    // Read how long the event data is.
+    uint32_t events_length = minipack_unpack_raw(ptr, &sz);
+    check(sz > 0, "Unable to determine path event data length at %p", ptr);
+    ptr += sz;
+
+    // Store position of first event and store position of end of path.
+    cursor->ptr    = ptr;
+    cursor->endptr = cursor->ptr + events_length;
+    
+    return 0;
+
+error:
+    cursor->ptr = NULL;
+    cursor->endptr = NULL;
+    return -1;
+}
+
+
+//======================================
 // Iteration
 //======================================
 
-int sky_cursor_next_event(sky_cursor *cursor)
+int sky_cursor_next(sky_cursor *cursor)
 {
+    int rc;
     check(cursor != NULL, "Cursor required");
     check(!cursor->eof, "No more events are available");
 
@@ -159,16 +186,13 @@ int sky_cursor_next_event(sky_cursor *cursor)
 
         // Move to the next path if more paths are remaining.
         if(cursor->path_index < cursor->path_count) {
-            set_current_path(cursor, cursor->path_index);
+            rc = sky_cursor_set_ptr(cursor, cursor->paths[cursor->path_index]);
+            check(rc == 0, "Unable to set pointer to path");
         }
         // Otherwise set EOF.
         else {
-            cursor->path_index = 0;
-            cursor->event_index = 0;
-            cursor->eof = true;
-            cursor->path_length = 0;
-            cursor->ptr    = NULL;
-            cursor->endptr = NULL;
+            rc = sky_cursor_set_eof(cursor);
+            check(rc == 0, "Unable to set EOF on cursor");
         }
     }
 
@@ -178,3 +202,23 @@ error:
     return -1;
 }
 
+// Flags a cursor to say that it is at the end of all its paths.
+//
+// cursor - The cursor to set EOF on.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_cursor_set_eof(sky_cursor *cursor)
+{
+    check(cursor != NULL, "Cursor required");
+    
+    cursor->path_index  = 0;
+    cursor->event_index = 0;
+    cursor->eof         = true;
+    cursor->ptr         = NULL;
+    cursor->endptr      = NULL;
+
+    return 0;
+
+error:
+    return -1;
+}

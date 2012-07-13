@@ -275,11 +275,11 @@ size_t sky_event_sizeof_raw(void *ptr)
 
     // Add action length.
     if(event_flag & SKY_EVENT_FLAG_ACTION) {
-        _sz = minipack_sizeof_int_elem(ptr);
+        _sz = minipack_sizeof_int_elem(ptr+sz);
         if(_sz == 0) {
             return 0;
         }
-        sz += sz;
+        sz += _sz;
     }
 
     // Add data length.
@@ -288,7 +288,7 @@ size_t sky_event_sizeof_raw(void *ptr)
         if(_sz == 0) {
             return 0;
         }
-        sz += data_length;
+        sz += _sz + data_length;
     }
     
     return sz;

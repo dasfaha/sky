@@ -14,8 +14,13 @@
 //
 //==============================================================================
 
-struct tagbstring ROOT = bsStatic("tmp/db");
-struct tagbstring OBJECT_TYPE = bsStatic("users");
+size_t DATA_LENGTH = 50;
+char DATA[] = 
+    "\x0a\xda\x00\x2e\x01\x00\x03\x5d\x01\x3b\x37\xe0\x00\x06\x03\x00"
+    "\x03\x5d\x02\x11\xcb\x84\x00\x07\xaa\x01\xa3\x66\x6f\x6f\x02\xa3"
+    "\x62\x61\x72\x02\x00\x03\x5d\x02\xe8\x5f\x28\x00\xa5\x01\xa3\x66"
+    "\x6f\x6f"
+;
 
 
 //==============================================================================
@@ -29,59 +34,40 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 //--------------------------------------
 
 int test_sky_cursor_next() {
-    copydb("cursor0");
-
-    // Open table and create iterator.
-    sky_database *database = sky_database_create(&ROOT);
-    sky_table *table = sky_table_create(database, &OBJECT_TYPE);
-    sky_table_open(table);
-
     sky_cursor *cursor = sky_cursor_create();
-    sky_path_iterator *iterator = sky_path_iterator_create(table);
     
-    void *data = table->data;
-
-    // First path (OID#10).
-    sky_path_iterator_next(iterator, cursor);
-    mu_assert_long_equals(cursor->ptr-data, 16L);
-    mu_assert(sky_cursor_next_event(cursor) == 0, "");
-    mu_assert(cursor->ptr-data == 40, "");
-    mu_assert(sky_cursor_next_event(cursor) == 0, "");
-    mu_assert(cursor->ptr-data == 272, "");
-    mu_assert(sky_cursor_next_event(cursor) == 0, "");
-    mu_assert(cursor->ptr == NULL, "");
-    mu_assert(cursor->eof, "");
+    // Event 1
+    int rc = sky_cursor_set_path(cursor, &DATA);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_int_equals(cursor->path_index, 0);
+    mu_assert_int_equals(cursor->event_index, 0);
+    mu_assert_long_equals(cursor->ptr-((void*)&DATA), 4L);
+    mu_assert_bool(!cursor->eof);
     
-    // Second path (OID#11)
-    sky_path_iterator_next(iterator, cursor);
-    mu_assert(cursor->ptr-data == 144, "");
-    mu_assert(sky_cursor_next_event(cursor) == 0, "");
-    mu_assert(cursor->ptr-data == 172, "");
-    mu_assert(sky_cursor_next_event(cursor) == 0, "");
-    mu_assert(cursor->ptr == NULL, "");
-    mu_assert(cursor->eof, "");
+    // Event 2
+    rc = sky_cursor_next(cursor);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_int_equals(cursor->path_index, 0);
+    mu_assert_int_equals(cursor->event_index, 1);
+    mu_assert_long_equals(cursor->ptr-((void*)&DATA), 14L);
+    mu_assert_bool(!cursor->eof);
 
-    // Third path (OID#12)
-    sky_path_iterator_next(iterator, cursor);
-    mu_assert(cursor->ptr-data == 400, "");
-    mu_assert(sky_cursor_next_event(cursor) == 0, "");
-    mu_assert(cursor->ptr == NULL, "");
-    mu_assert(cursor->eof, "");
-
-    // No more paths so iterator should be EOF.
-    sky_path_iterator_next(iterator, cursor);
-    mu_assert(iterator->eof == true, "");
-    mu_assert(cursor->ptr == NULL, "");
-    mu_assert(cursor->eof, "");
+    // Event 3
+    rc = sky_cursor_next(cursor);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_int_equals(cursor->path_index, 0);
+    mu_assert_int_equals(cursor->event_index, 2);
+    mu_assert_long_equals(cursor->ptr-((void*)&DATA), 35L);
+    mu_assert_bool(!cursor->eof);
     
-    // Clean up.
-    sky_path_iterator_free(iterator);
+    // EOF
+    rc = sky_cursor_next(cursor);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_int_equals(cursor->path_index, 0);
+    mu_assert_int_equals(cursor->event_index, 0);
+    mu_assert_bool(cursor->eof);
+
     sky_cursor_free(cursor);
-
-    sky_table_close(table);
-    sky_table_free(table);
-    sky_database_free(database);
-    
     return 0;
 }
 
@@ -93,7 +79,7 @@ int test_sky_cursor_next() {
 //==============================================================================
 
 int all_tests() {
-    //mu_run_test(test_sky_cursor_next);
+    mu_run_test(test_sky_cursor_next);
     return 0;
 }
 

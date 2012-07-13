@@ -68,15 +68,8 @@ void sort_events(sky_path *path)
 // Returns a new path.
 sky_path *sky_path_create(sky_object_id_t object_id)
 {
-    sky_path *path;
-    
-    path = malloc(sizeof(sky_path)); check_mem(path);
-    
+    sky_path *path = calloc(sizeof(sky_path), 1); check_mem(path);
     path->object_id = object_id;
-    
-    path->events = NULL;
-    path->event_count = 0;
-
     return path;
     
 error:
@@ -94,6 +87,7 @@ void sky_path_free(sky_path *path)
         sky_path_event_count_t i=0;
         for(i=0; i<path->event_count; i++) {
             sky_event_free(path->events[i]);
+            path->events[i] = NULL;
         }
         
         if(path->events) free(path->events);

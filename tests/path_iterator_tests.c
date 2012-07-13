@@ -40,15 +40,15 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 //--------------------------------------
 
 int test_sky_path_iterator_next() {
-    copydb("path_iterator0");
-
-    // Open table and create iterator.
-    sky_database *database = sky_database_create(&ROOT);
-    sky_table *table = sky_table_create(database, &OBJECT_TYPE);
-    sky_table_open(table);
+    int rc;
+    sky_data_file *data_file = sky_data_file_create();
+    data_file->path = bfromcstr("tests/fixtures/cursor/0/data");
+    data_file->header_path = bfromcstr("tests/fixtures/cursor/0/header");
+    rc = sky_data_file_load(data_file);
+    mu_assert_int_equals(rc, 0);
 
     sky_cursor *cursor = sky_cursor_create();
-    sky_path_iterator *iterator = sky_path_iterator_create(table);
+    sky_path_iterator *iterator = sky_path_iterator_create(data_file);
     
     void *data = table->data;
 
