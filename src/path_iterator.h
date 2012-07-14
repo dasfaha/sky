@@ -80,7 +80,5 @@ int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr);
 
 int sky_path_iterator_next(sky_path_iterator *iterator);
 
-int sky_path_iterator_eof(sky_path_iterator *iterator);
-
 
 #endif

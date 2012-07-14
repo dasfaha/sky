@@ -164,7 +164,7 @@ int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr)
     check(rc == 0, "Unable to retrieve block pointer");
 
     // Increment by the byte offset.
-    ptr += iterator->byte_index;
+    *ptr += iterator->byte_index;
 
     return 0;
 
@@ -218,7 +218,7 @@ int sky_path_iterator_next(sky_path_iterator *iterator)
         check(rc == 0, "Unable to retrieve the current pointer");
 
         // Read path size and move past it.
-        iterator->byte_index += sky_path_sizeof(ptr);
+        iterator->byte_index += sky_path_sizeof_raw(ptr);
         
         // If the byte index is past the block size then move to next block.
         if(iterator->byte_index >= data_file->block_size) {
