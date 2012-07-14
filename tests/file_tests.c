@@ -35,6 +35,22 @@ int test_sky_file_cp() {
     return 0;
 }
 
+int test_sky_file_cp_r() {
+    struct tagbstring src_path  = bsStatic("tests/fixtures/file/my_dir");
+    struct tagbstring dest_path = bsStatic("tmp");
+    int rc = sky_file_cp_r(&src_path, &dest_path);
+    mu_assert_int_equals(rc, 0);
+
+    struct tagbstring dir1 = bsStatic("tmp/c");
+    struct tagbstring dir2 = bsStatic("tmp/c/e");
+    mu_assert_file("tests/fixtures/file/my_dir/a.txt", "tmp/a.txt");
+    mu_assert_file("tests/fixtures/file/my_dir/b.txt", "tmp/b.txt");
+    mu_assert_bool(sky_file_is_dir(&dir1));
+    mu_assert_file("tests/fixtures/file/my_dir/c/d.txt", "tmp/c/d.txt");
+    mu_assert_bool(sky_file_is_dir(&dir2));
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -45,6 +61,7 @@ int test_sky_file_cp() {
 int all_tests() {
     mu_run_test(test_sky_file_exists);
     mu_run_test(test_sky_file_cp);
+    mu_run_test(test_sky_file_cp_r);
     return 0;
 }
 
