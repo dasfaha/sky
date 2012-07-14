@@ -18,8 +18,10 @@
 // Iteration
 //--------------------------------------
 
-int test_sky_path_iterator_next() {
-    // TODO
+int test_sky_path_iterator_single_block_next() {
+    //int rc;
+    //sky_data_file *data_file = sky_data_file_create();
+    
     return 0;
 }
 
@@ -31,7 +33,7 @@ int test_sky_path_iterator_next() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_path_iterator_next);
+    mu_run_test(test_sky_path_iterator_single_block_next);
     return 0;
 }
 

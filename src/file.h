@@ -24,7 +24,9 @@
 
 bool sky_file_exists(bstring path);
 
-off_t sky_get_file_size(bstring path);
+off_t sky_file_get_size(bstring path);
+
+int sky_file_cp(bstring src, bstring dest);
 
 
 #endif

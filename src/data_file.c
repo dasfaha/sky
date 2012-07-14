@@ -271,7 +271,7 @@ int sky_data_file_load_header(sky_data_file *data_file)
     data_file->block_size = ntohl(data_file->block_size);
 
     // Read blocks until end of file.
-    off_t file_length = sky_get_file_size(data_file->header_path);
+    off_t file_length = sky_file_get_size(data_file->header_path);
     while(ftell(file) < file_length && !feof(file)) {
         sky_block *block = sky_block_create(data_file); check_mem(block);
         block->index = data_file->block_count;
@@ -453,7 +453,9 @@ int sky_data_file_find_insertion_block(sky_data_file *data_file,
                                        sky_block **ret)
 {
     int rc;
-    sky_block *block = NULL;
+    check(data_file != NULL, "Data file required");
+    check(event != NULL, "Event required");
+    check(event->object_id != 0, "Event object id required");
     
     // Initialize return value to NULL.
     *ret = NULL;
@@ -464,6 +466,7 @@ int sky_data_file_find_insertion_block(sky_data_file *data_file,
 
     // Loop over sorted blocks to find the appropriate insertion point.
     uint32_t i;
+    sky_block *block = NULL;
     for(i=0; i<data_file->block_count; i++) {
         block = data_file->blocks[i];
         
@@ -564,6 +567,38 @@ int sky_data_file_normalize(sky_data_file *data_file)
     }
 
     return 0;
+}
+
+
+//======================================
+// Block Management
+//======================================
+
+// Adds an event to the data file.
+//
+// data_file - The data file to add the event to..
+// event     - The event to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_add_event(sky_data_file *data_file, sky_event *event)
+{
+    int rc;
+    check(data_file != NULL, "Data file required");
+    check(event != NULL, "Event required");
+    
+    // Find insertion block.
+    sky_block *block;
+    rc = sky_data_file_find_insertion_block(data_file, event, &block);
+    check(rc == 0, "Unable to find insertion block");
+    
+    // Add the event to the block.
+    rc = sky_block_add_event(block, event);
+    check(rc == 0, "Unable to add event to block");
+    
+    return 0;
+
+error:
+    return -1;
 }
 
 

@@ -7,6 +7,7 @@
 #include "bstring.h"
 #include "mem.h"
 #include "block.h"
+#include "path_iterator.h"
 
 //==============================================================================
 //
@@ -233,3 +234,132 @@ error:
     return -1;
 }
 
+
+//======================================
+// Splitting
+//======================================
+
+// Splits a block into multiple blocks based on the the addition of an event.
+// The paths are placed into multiple buckets depending on their sizes and
+// order and then are evenly distributed across the blocks.
+//
+// block - The block to split.
+// event - The event that will be added to the block.
+// ret   - A reference to the block that the event will be added to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_split_with_event(sky_block *block, sky_event *event,
+                               sky_block **ret)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(event != NULL, "Event required");
+    
+    // Initialize the return value.
+    *ret = NULL;
+    
+    // Create a path iterator and point it at the block.
+    sky_path_iterator *iterator = sky_path_iterator_create();
+    rc = sky_path_iterator_set_block(iterator, block);
+    check(rc == 0, "Unable to set path iterator block");
+    
+    void *ptr;
+    sky_object_id_t object_id = event->object_id;
+
+    // Loop over paths in block.
+    while(!iterator->eof) {
+        // If the current path matches then save the ptr and exit.
+        if(object_id == iterator->current_object_id) {
+            rc = sky_path_iterator_get_ptr(iterator, &ptr);
+            check(rc == 0, "Unable to retrieve iterator's current pointer");
+            break;
+        }
+    }
+    
+    sky_path_iterator_free(iterator);
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//======================================
+// Path Management
+//======================================
+
+// Retrieves a pointer to the start of a path with a given object id inside
+// the block. If no path exists with the given object id exists then a null
+// pointer is returned.
+//
+// block     - The block to search.
+// object_id - The object id to search for.
+// ret       - A pointer to where the path's pointer should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
+                           void **ret)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(object_id > 0, "Object id required");
+
+    // Create a path iterator and point it at the block.
+    sky_path_iterator *iterator = sky_path_iterator_create();
+    rc = sky_path_iterator_set_block(iterator, block);
+    check(rc == 0, "Unable to set path iterator block");
+    
+    // Initialize the return value.
+    *ret = NULL;
+    
+    // Loop over iterator until we find the path matching the object id.
+    while(!iterator->eof) {
+        // If the current path matches then save the ptr and exit.
+        if(object_id == iterator->current_object_id) {
+            rc = sky_path_iterator_get_ptr(iterator, ret);
+            check(rc == 0, "Unable to retrieve iterator's current pointer");
+            break;
+        }
+    }
+    
+    sky_path_iterator_free(iterator);
+    
+    return 0;
+
+error:
+    sky_path_iterator_free(iterator);
+    *ret = NULL;
+    return -1;
+}
+
+
+
+//======================================
+// Event Management
+//======================================
+
+// Adds an event to the block. If the size of the block exceeds the block size
+// then a new empty block is allocated and half the paths in the block are
+// moved to the new block.
+//
+// block - The block to add the event to.
+// event - The event to add to the block.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_add_event(sky_block *block, sky_event *event)
+{
+    check(block != NULL, "Block required");
+    check(event != NULL, "Event required");
+
+    // If block will be too large then split the block.
+    
+    // TODO: If split, determine if event should be added to new block.
+    // TODO: Find path inside block or where new path should be inserted.
+    // TODO: Serialize path/event and insert into insertion point.
+    
+    return 0;
+
+error:
+    return -1;
+}

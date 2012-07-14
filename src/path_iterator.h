@@ -37,10 +37,12 @@
 //==============================================================================
 
 typedef struct sky_path_iterator {
+    sky_block *block;
     sky_data_file *data_file;
     uint32_t block_index;
     uint32_t byte_index;
     bool eof;
+    sky_object_id_t current_object_id;
 } sky_path_iterator;
 
 
@@ -54,9 +56,20 @@ typedef struct sky_path_iterator {
 // Lifecycle
 //======================================
 
-sky_path_iterator *sky_path_iterator_create(sky_data_file *data_file);
+sky_path_iterator *sky_path_iterator_create();
 
 void sky_path_iterator_free(sky_path_iterator *iterator);
+
+
+//======================================
+// Source
+//======================================
+
+int sky_path_iterator_set_data_file(sky_path_iterator *iterator,
+    sky_data_file *data_file);
+
+int sky_path_iterator_set_block(sky_path_iterator *iterator,
+    sky_block *block);
 
 
 //======================================
@@ -65,7 +78,7 @@ void sky_path_iterator_free(sky_path_iterator *iterator);
 
 int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr);
 
-int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor);
+int sky_path_iterator_next(sky_path_iterator *iterator);
 
 int sky_path_iterator_eof(sky_path_iterator *iterator);
 

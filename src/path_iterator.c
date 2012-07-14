@@ -15,6 +15,10 @@
 
 int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr);
 
+int sky_path_iterator_get_current_block(sky_path_iterator *iterator,
+    sky_block **block);
+
+int sky_path_iterator_fast_forward(sky_path_iterator *iterator);
 
 
 //==============================================================================
@@ -29,17 +33,12 @@ int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr);
 
 // Creates a reference to a path iterator.
 // 
-// data_file - The data file to iterate over.
-//
 // Returns a reference to the new path iterator if successful. Otherwise returns
 // null.
-sky_path_iterator *sky_path_iterator_create(sky_data_file *data_file)
+sky_path_iterator *sky_path_iterator_create()
 {
-    sky_path_iterator *iterator;
-    
-    iterator = calloc(sizeof(sky_path_iterator), 1); check_mem(iterator);
-    iterator->data_file = data_file;
-
+    sky_path_iterator *iterator = calloc(sizeof(sky_path_iterator), 1);
+    check_mem(iterator);
     return iterator;
     
 error:
@@ -60,8 +59,90 @@ void sky_path_iterator_free(sky_path_iterator *iterator)
 
 
 //======================================
-// Pointer Management
+// Source
 //======================================
+
+// Assigns a data file as the source.
+// 
+// iterator  - The iterator.
+// data_file - The data file to iterate over.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_path_iterator_set_data_file(sky_path_iterator *iterator, sky_data_file *data_file)
+{
+    int rc;
+    check(iterator != NULL, "Iterator required");
+    iterator->data_file   = data_file;
+    iterator->block_index = 0;
+    iterator->block       = NULL;
+    iterator->byte_index  = 0;
+
+    // Position iterator at the first path.
+    rc = sky_path_iterator_fast_forward(iterator);
+    check(rc == 0, "Unable to find next available path");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+// Assigns a block as the source.
+// 
+// iterator  - The iterator.
+// block     - The block to iterate over.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_path_iterator_set_block(sky_path_iterator *iterator, sky_block *block)
+{
+    int rc;
+    check(iterator != NULL, "Iterator required");
+    iterator->block       = block;
+    iterator->data_file   = NULL;
+    iterator->block_index = 0;
+    iterator->byte_index  = 0;
+
+    // Position iterator at the first path.
+    rc = sky_path_iterator_fast_forward(iterator);
+    check(rc == 0, "Unable to find next available path");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+
+//======================================
+// Block Management
+//======================================
+
+// Retrieves the current block that is being searched.
+// 
+// iterator - The iterator.
+// block    - A pointer to where the current block is returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_path_iterator_get_current_block(sky_path_iterator *iterator,
+                                        sky_block **block)
+{
+    check(iterator != NULL, "Iterator required");
+    check(block != NULL, "Block return address required");
+    
+    // If we are iterating over a data file then return the current block.
+    if(iterator->data_file != NULL) {
+        *block = iterator->data_file->blocks[iterator->block_index];
+    }
+    // If we are iterating over a single block then just return that block.
+    else {
+        *block = iterator->block;
+    }
+    
+    return 0;
+    
+error:
+    return -1;
+}
 
 // Calculates the pointer address for a path that the iterator is currently
 // pointing to.
@@ -71,9 +152,15 @@ void sky_path_iterator_free(sky_path_iterator *iterator)
 // Returns a pointer to the address of the current path.
 int sky_path_iterator_get_ptr(sky_path_iterator *iterator, void **ptr)
 {
+    int rc;
+
+    // Retrieve the current block.
+    sky_block *block;
+    rc = sky_path_iterator_get_current_block(iterator, &block);
+    check(rc == 0, "Unable to retrieve current block");
+    
     // Retrieve the block pointer.
-    sky_block *block = iterator->data_file->blocks[iterator->block_index];
-    int rc = sky_block_get_ptr(block, ptr);
+    rc = sky_block_get_ptr(block, ptr);
     check(rc == 0, "Unable to retrieve block pointer");
 
     // Increment by the byte offset.
@@ -91,78 +178,103 @@ error:
 // Iteration
 //======================================
 
-// Retrieves a cursor pointing to the next available path.
+// Moves the iterator to point to the next path.
 // 
 // iterator - The iterator.
-// cursor   - A reference to an existing cursor to use.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_path_iterator_next(sky_path_iterator *iterator, sky_cursor *cursor)
+int sky_path_iterator_next(sky_path_iterator *iterator)
 {
     int rc;
-    
     check(iterator != NULL, "Iterator required");
+    check(iterator->data_file != NULL || iterator->block != NULL, "Iterator must have a source");
     check(!iterator->eof, "Iterator is at end-of-file");
-    check(cursor != NULL, "Existing cursor is required for iteration");
 
     // Retrieve some data file info.
-    uint32_t block_size  = iterator->data_file->block_size;
-    uint32_t block_count = iterator->data_file->block_count;
+    sky_data_file *data_file = (iterator->data_file ? iterator->data_file : iterator->block->data_file);
     
-    // Loop until we find the next available path.
-    void *ptr = NULL;
-    while(true) {
-        // Determine address of current location.
+    // Retrieve current block.
+    sky_block *block;
+    rc = sky_path_iterator_get_current_block(iterator, &block);
+    check(rc == 0, "Unable to retrieve current block");
+
+    // If we are searching the data file and the current block is spanned then
+    // move to the next block after the span.
+    if(iterator->data_file && block->spanned) {
+        // Retrieve span count.
+        uint32_t span_count;
+        rc = sky_block_get_span_count(block, &span_count);
+        check(rc == 0, "Unable to calculate span count");
+        
+        // Move to the first block after the span.
+        iterator->block_index += span_count;
+        iterator->byte_index = 0;
+    }
+    // Otherwise move to the next path.
+    else {
+        // Find current pointer.
+        void *ptr;
         rc = sky_path_iterator_get_ptr(iterator, &ptr);
-        check(rc == 0, "Unable to retrieve the path pointer");
+        check(rc == 0, "Unable to retrieve the current pointer");
 
-        // If byte index is too close to the end-of-block or if there is no more
-        // data in the block then go to the next block.
-        sky_block *block = iterator->data_file->blocks[iterator->block_index];
-        if(iterator->byte_index >= block_size || *((uint8_t*)ptr) == 0)
-        {
-            // Move to the next block.
-            iterator->block_index += 1;
+        // Read path size and move past it.
+        iterator->byte_index += sky_path_sizeof(ptr);
+        
+        // If the byte index is past the block size then move to next block.
+        if(iterator->byte_index >= data_file->block_size) {
+            iterator->block_index++;
             iterator->byte_index = 0;
-
-            // If we have reached the end of the data file then NULL out
-            // the pointer and change the iterator state to EOF.
-            if(iterator->block_index >= block_count) {
-                iterator->block_index = 0;
-                iterator->eof = true;
-                rc = sky_cursor_set_path(cursor, NULL);
-                check(rc == 0, "Unable to clear cursor path");
-                break;
-            }
         }
-        // If a path is found then exit the loop and update iterator state to
-        // the next path.
+    }
+    
+    // Move to the next available path or mark the iterator as eof.
+    rc = sky_path_iterator_fast_forward(iterator);
+    check(rc == 0, "Unable to find next available path");
+    
+    return 0;
+    
+error:
+    return -1;
+}
+
+
+// Moves the iterator to the next available path if it is not currently on a
+// valid path. This can occur when the current location has null data or if
+// an empty block is traversed over. If the iterator is at the end of the
+// available paths then it is flagged as EOF.
+// 
+// iterator - The iterator.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_path_iterator_fast_forward(sky_path_iterator *iterator)
+{
+    int rc;
+    check(iterator, "Iterator required");
+    
+    sky_data_file *data_file = iterator->data_file;
+    
+    // Keep searching for data or the EOF until we find it.
+    while(true) {
+        // If the block index is out of range then mark as EOF and exit.
+        uint32_t max_block_index = (data_file != NULL ? data_file->block_count-1 : 0);
+        if(iterator->block_index > max_block_index) {
+            iterator->block_index = 0;
+            iterator->byte_index  = 0;
+            iterator->eof = true;
+            break;
+        }
+        
+        // If there is null data then move to the next block.
+        void *ptr;
+        rc = sky_path_iterator_get_ptr(iterator, &ptr);
+        check(rc == 0, "Unable to retrieve the current pointer");
+        
+        // If there is null data then move to the next block.
+        if(*((uint8_t*)ptr) == 0) {
+            iterator->block_index++;
+        }
+        // If there is valid data then exit.
         else {
-            // If this is a spanned block then move to the next block after the
-            // span.
-            if(block->spanned) {
-                uint32_t i, span_count;
-
-                rc = sky_block_get_span_count(block, &span_count);
-                check(rc == 0, "Unable to calculate span count");
-                iterator->byte_index = 0;
-
-                // Collect all paths across spanned blocks.
-                void **paths = malloc(sizeof(void*) * span_count); check_mem(paths);
-                for(i=0; i<span_count; i++) {
-                    rc = sky_path_iterator_get_ptr(iterator, &paths[i]);
-                    check(rc == 0, "Unable to retrieve the path (#%d) pointer", i);
-                    iterator->block_index++;
-                }
-                rc = sky_cursor_set_paths(cursor, paths, span_count);
-                check(rc == 0, "Unable to set paths on multi-block cursor");
-            }
-            // Otherwise move the byte index ahead to the next path.
-            else {
-                rc = sky_cursor_set_path(cursor, ptr);
-                check(rc == 0, "Unable to set path on cursor");
-                iterator->byte_index += sky_path_sizeof(ptr);
-            }
             break;
         }
     }

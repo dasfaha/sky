@@ -88,4 +88,11 @@ int sky_data_file_create_block(sky_data_file *data_file, sky_block **ret);
 int sky_data_file_find_insertion_block(sky_data_file *data_file,
     sky_event *event, sky_block **ret);
 
+
+//======================================
+// Event Management
+//======================================
+
+int sky_data_file_add_event(sky_data_file *data_file, sky_event *event);
+
 #endif

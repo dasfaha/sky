@@ -10,6 +10,7 @@ typedef struct sky_block sky_block;
 #include "file.h"
 #include "types.h"
 #include "data_file.h"
+#include "event.h"
 
 //==============================================================================
 //
@@ -82,5 +83,19 @@ int sky_block_get_ptr(sky_block *block, void **ptr);
 //======================================
 
 int sky_block_get_span_count(sky_block *block, uint32_t *count);
+
+
+//======================================
+// Path Management
+//======================================
+
+int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
+    void **ret);
+
+//======================================
+// Event Management
+//======================================
+
+int sky_block_add_event(sky_block *block, sky_event *event);
 
 #endif
