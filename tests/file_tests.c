@@ -52,6 +52,32 @@ int test_sky_file_cp_r() {
 }
 
 
+//--------------------------------------
+// File Delete
+//--------------------------------------
+
+int test_sky_file_rm() {
+    struct tagbstring fixture_path  = bsStatic("tests/fixtures/file/lorem.txt");
+    struct tagbstring path = bsStatic("tmp/xyz");
+    sky_file_cp(&fixture_path, &path);
+    mu_assert_bool(sky_file_exists(&path));
+    int rc = sky_file_rm(&path);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_bool(!sky_file_exists(&path));
+    return 0;
+}
+
+int test_sky_file_rm_r() {
+    struct tagbstring fixture_path  = bsStatic("tests/fixtures/file/my_dir");
+    struct tagbstring path = bsStatic("tmp/xyz");
+    sky_file_cp_r(&fixture_path, &path);
+    mu_assert_bool(sky_file_exists(&path));
+    int rc = sky_file_rm_r(&path);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_bool(!sky_file_exists(&path));
+    return 0;
+}
+
 //==============================================================================
 //
 // Setup
@@ -62,6 +88,8 @@ int all_tests() {
     mu_run_test(test_sky_file_exists);
     mu_run_test(test_sky_file_cp);
     mu_run_test(test_sky_file_cp_r);
+    mu_run_test(test_sky_file_rm);
+    mu_run_test(test_sky_file_rm_r);
     return 0;
 }
 

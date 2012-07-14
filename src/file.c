@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <sys/stat.h>
 #include <dirent.h>
 
@@ -151,7 +152,7 @@ int sky_file_cp_r(bstring src, bstring dest)
                 ent_dest = bformat("%s/%s", bdata(dest), ent->d_name); check_mem(ent_dest);
 
                 rc = sky_file_cp_r(ent_src, ent_dest);
-                check(rc == 0, "Unable to copy: %s", bdata(src));
+                check(rc == 0, "Unable to copy: %s", bdata(ent_src));
 
                 bdestroy(ent_src);
                 bdestroy(ent_dest);
@@ -172,6 +173,85 @@ int sky_file_cp_r(bstring src, bstring dest)
 error:
     bdestroy(ent_src);
     bdestroy(ent_dest);
+    return -1;
+}
+
+
+//--------------------------------------
+// File Delete
+//--------------------------------------
+
+// Deletes a single file.
+//
+// path - The path of the file to delete.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_file_rm(bstring path)
+{
+    int rc;
+    check(path != NULL, "Path required");
+    check(!sky_file_is_dir(path), "File cannot be a directory");
+
+    if(sky_file_exists(path)) {
+        rc = remove(bdata(path));
+        check(rc == 0, "Unable to delete file");
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
+// Recursively deletes a file or directory.
+//
+// path  - The path of the file or directory to delete.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_file_rm_r(bstring path)
+{
+    int rc;
+    check(path != NULL, "Path required");
+
+    bstring ent_path;
+    
+    // If path doesn't exist then just ignore it.
+    if(sky_file_exists(path)) {
+        // If the file is a directory then delete its contents first and then
+        // delete it.
+        if(sky_file_is_dir(path)) {
+            // Open directory.
+            DIR *dir = opendir(bdata(path));
+            check(dir != NULL, "Unable to open directory: %s", bdata(path));
+
+            // Remove each file inside directory.
+            struct dirent *ent;
+            while((ent = readdir(dir))) {
+                if(strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+                    ent_path  = bformat("%s/%s", bdata(path), ent->d_name); check_mem(ent_path);
+                    rc = sky_file_rm_r(ent_path);
+                    check(rc == 0, "Unable to delete: %s", bdata(ent_path));
+                    bdestroy(ent_path);
+                }
+            }
+
+            // Close directory.
+            closedir(dir);
+
+            // Remove directory.
+            remove(bdata(path));
+        }
+        // If this is a file then delete it.
+        else {
+            rc = sky_file_rm(path);
+            check(rc == 0, "Unable to delete file: %s", bdata(path));
+        }
+    }
+    
+    return 0;
+
+error:
+    bdestroy(ent_path);
     return -1;
 }
 
