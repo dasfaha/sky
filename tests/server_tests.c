@@ -44,7 +44,7 @@ char EADD_MESSAGE[] =
 //--------------------------------------
 
 int test_sky_server_process_eadd_message() {
-    cleandb();
+    cleantmp();
     int socket = 0;
     sky_server *server = sky_server_create(&SERVER_ROOT);
     mu_assert(sky_server_process_eadd_message(server, socket, &EADD_MESSAGE) == 0, "");

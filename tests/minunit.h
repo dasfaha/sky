@@ -1,5 +1,7 @@
+#include <sys/stat.h>
 #include <stdbool.h>
 #include <bstring.h>
+#include <file.h>
 
 //==============================================================================
 //
@@ -68,6 +70,10 @@ int tests_run;
 //
 //==============================================================================
 
+// The temporary directory.
+#define TMPDIR "tmp"
+struct tagbstring BSTMPDIR = bsStatic(TMPDIR);
+
 // The temporary file used for file operations in the test suite.
 #define TEMPFILE "/tmp/skytemp"
 
@@ -81,15 +87,18 @@ int tests_run;
 //
 //==============================================================================
 
-// Empties the tmp/db directory.
-#define cleandb() \
-    system("tests/cleandb.sh")
+// Empties the tmp directory.
+#define cleantmp() do {\
+    mu_assert_with_msg(sky_file_rm_r(&BSTMPDIR) == 0, "Unable to clean tmp directory"); \
+    mu_assert_with_msg(mkdir(bdata(&BSTMPDIR), S_IRWXU | S_IRWXG | S_IRWXO) == 0, "Unable to create tmp directory"); \
+} while(0)
     
-// Copy a database from the fixtures directory into the tmp/db directory.
-#define copydb(DB) \
-    char _copydb_cmd[1024]; \
-    snprintf(_copydb_cmd, 1024, "tests/copydb.sh %s", DB); \
-    system(_copydb_cmd)
+// Loads the tmp directory with the contents of another directory.
+#define loadtmp(PATH) do {\
+    struct tagbstring _srcpath = bsStatic(PATH); \
+    cleantmp(); \
+    mu_assert_with_msg(sky_file_cp_r(&_srcpath, &BSTMPDIR) == 0, "Unable to copy to tmp directory"); \
+} while(0)
     
 // Asserts that a block has a specific block id and object id range.
 #define mu_assert_block_info(INDEX, ID, MIN_OBJECT_ID, MAX_OBJECT_ID, MIN_TIMESTAMP, MAX_TIMESTAMP, SPANNED) \

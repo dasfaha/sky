@@ -46,13 +46,13 @@ int test_sky_data_file_set_header_path() {
 //--------------------------------------
 
 int test_sky_data_file_load_empty() {
-    cleandb();
+    cleantmp();
     
     int rc;
     sky_data_file *data_file = sky_data_file_create();
     data_file->block_size = 128;
-    data_file->path = bfromcstr("tmp/db/data");
-    data_file->header_path = bfromcstr("tmp/db/header");
+    data_file->path = bfromcstr("tmp/data");
+    data_file->header_path = bfromcstr("tmp/header");
     
     rc = sky_data_file_load(data_file);
     mu_assert_int_equals(rc, 0);
@@ -62,8 +62,8 @@ int test_sky_data_file_load_empty() {
     mu_assert_long_equals(data_file->data_length, 128L);
     mu_assert_bool(data_file->blocks != NULL);
     mu_assert_int_equals(data_file->block_count, 1);
-    mu_assert_file("tmp/db/data", "tests/fixtures/data_files/0/data");
-    mu_assert_file("tmp/db/header", "tests/fixtures/data_files/0/header");
+    mu_assert_file("tmp/data", "tests/fixtures/data_files/0/data");
+    mu_assert_file("tmp/header", "tests/fixtures/data_files/0/header");
 
     rc = sky_data_file_unload(data_file);
     mu_assert_int_equals(rc, 0);
