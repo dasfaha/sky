@@ -272,6 +272,7 @@ int sky_path_iterator_fast_forward(sky_path_iterator *iterator)
         // If there is null data then move to the next block.
         if(*((uint8_t*)ptr) == 0) {
             iterator->block_index++;
+            iterator->byte_index = 0;
         }
         // If there is valid data then exit.
         else {
