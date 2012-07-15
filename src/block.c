@@ -1,12 +1,15 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include "dbg.h"
 #include "endian.h"
 #include "bstring.h"
 #include "mem.h"
 #include "block.h"
+#include "path.h"
 #include "path_iterator.h"
 
 //==============================================================================
@@ -44,6 +47,36 @@ void sky_block_free(sky_block *block)
         memset(block, 0, sizeof(*block));
         free(block);
     }
+}
+
+
+//======================================
+// Persistence
+//======================================
+
+// Syncs the in-memory block back to disk.
+//
+// block - The block to save.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_save(sky_block *block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+
+    // Retrieve the location of 
+    void *ptr = NULL;
+    rc = sky_block_get_ptr(block, &ptr);
+    check(rc == 0, "Unable to retrieve block data pointer");
+    
+    // Sync the memory for the block.
+    rc = msync(ptr, block->data_file->block_size, MS_SYNC);
+    check(rc == 0, "Unable to sync block to disk");
+    
+    return 0;
+    
+error:
+    return -1;
 }
 
 
@@ -128,6 +161,104 @@ error:
     return -1;
 }
 
+
+//======================================
+// Header Management
+//======================================
+
+// Updates the block object id and timestamp ranges and saves the changes to
+// the header file as required.
+//
+// block     - The block to update ranges for.
+// object_id - The object id being added to the block.
+// timestamp - The timestamp being added to the block.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_update(sky_block *block, sky_object_id_t object_id,
+                     sky_timestamp_t timestamp)
+{
+    int rc, fd;
+    FILE *file;
+    check(block != NULL, "Block required");
+    check(object_id != 0, "Object id cannot be zero");
+
+    // Check if the object id or timestamp is out of range.
+    bool is_empty = (block->min_object_id == 0 && block->max_object_id == 0);
+    bool object_id_changed = (object_id < block->min_object_id || object_id > block->max_object_id);
+    bool timestamp_changed = (timestamp < block->min_timestamp || timestamp > block->max_timestamp);
+    
+    // If anything is out of range then update block and save.
+    if(is_empty || object_id_changed || timestamp_changed) {
+        // Update block ranges.
+        if(is_empty || object_id < block->min_object_id) {
+            block->min_object_id = object_id;
+        }
+        if(is_empty || object_id > block->max_object_id) {
+            block->max_object_id = object_id;
+        }
+        if(is_empty || timestamp < block->min_timestamp) {
+            block->min_timestamp = timestamp;
+        }
+        if(is_empty || timestamp > block->max_timestamp) {
+            block->max_timestamp = timestamp;
+        }
+        
+        // Open header file.
+        fd = open(bdata(block->data_file->header_path), O_WRONLY);
+        check(fd != 0, "Unable to open header file for block update");
+        file = fdopen(fd, "w");
+        check(file != NULL, "Unable to open header file stream for block update");
+        
+        // Write to buffer.
+        size_t sz;
+        uint8_t *buffer[SKY_BLOCK_HEADER_SIZE];
+        rc = sky_block_pack(block, buffer, &sz);
+        check(rc == 0, "Unable to pack block header data");
+        
+        // Determine header file position.
+        off_t offset;
+        rc = sky_block_get_header_offset(block, &offset);
+        check(rc == 0, "Unable to determine block offset in header file");
+        rc = fseek(file, offset, SEEK_SET);
+        check(rc == 0, "Unable to position file at block position: %lld", offset);
+        
+        // Write to file.
+        rc = fwrite(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
+        check(rc == 1, "Unable to write block to header file");
+        
+        // Close header file.
+        fclose(file);
+        close(fd);
+    }
+
+    return 0;
+
+error:
+    if(file) fclose(file);
+    if(fd) close(fd);
+    return -1;
+}    
+
+// Calculates the byte position of the block inside the header file using the
+// block's index.
+//
+// block  - The block to determine the position for.
+// offset - The offset, in bytes, from the beginning of the header file where
+//          the block data begins.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_get_header_offset(sky_block *block, off_t *offset)
+{
+    check(block != NULL, "Block required");
+    check(offset != NULL, "Offset pointer required");
+
+    *offset = ((uint32_t)SKY_HEADER_FILE_HDR_SIZE) + (block->index * ((uint32_t)SKY_BLOCK_HEADER_SIZE));
+    return 0;
+    
+error:
+    *offset = 0;
+    return -1;
+}
 
 //======================================
 // Block Position
@@ -349,14 +480,42 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_block_add_event(sky_block *block, sky_event *event)
 {
+    int rc;
     check(block != NULL, "Block required");
     check(event != NULL, "Event required");
 
-    // If block will be too large then split the block.
+    // Find path insertion point.
+    void *ptr;
+    rc = sky_block_get_path_ptr(block, event->object_id, &ptr);
+    check(rc == 0, "Unable to find path pointer for block #%d", block->index);
     
-    // TODO: If split, determine if event should be added to new block.
-    // TODO: Find path inside block or where new path should be inserted.
-    // TODO: Serialize path/event and insert into insertion point.
+    // If path doesn't exist then wrap event in path.
+    if(ptr == NULL) {
+        // Position pointer at the beginning of the block.
+        rc = sky_block_get_ptr(block, &ptr);
+        check(rc == 0, "Unable to retrieve block data pointer");
+        
+        // Determine path size and event size.
+        size_t event_length = sky_event_sizeof(event);
+
+        // Serialize path header.
+        size_t sz;
+        rc = sky_path_pack_hdr(event->object_id, event_length, ptr, &sz);
+        check(rc == 0, "Unable to pack path header");
+        ptr += sz;
+        
+        // Serialize event data.
+        rc = sky_event_pack(event, ptr, NULL);
+        check(rc == 0, "Unable to pack event");
+    }
+    
+    // Save block to disk.
+    rc = sky_block_save(block);
+    check(rc == 0, "Unable to save block");
+    
+    // Update header.
+    rc = sky_block_update(block, event->object_id, event->timestamp);
+    check(rc == 0, "Unable to write block to header");
     
     return 0;
 

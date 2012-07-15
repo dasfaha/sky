@@ -60,13 +60,22 @@ void sky_path_free(sky_path *path);
 
 size_t sky_path_sizeof(sky_path *path);
 
+size_t sky_path_sizeof_hdr(sky_object_id_t object_id,
+    uint32_t event_data_length);
+
 size_t sky_path_sizeof_raw(void *ptr);
 
 size_t sky_path_sizeof_raw_hdr(void *ptr);
 
 int sky_path_pack(sky_path *path, void *addr, size_t *length);
 
+int sky_path_pack_hdr(sky_object_id_t object_id, uint32_t event_data_length,
+    void *addr, size_t *length);
+
 int sky_path_unpack(sky_path *path, void *addr, size_t *length);
+
+int sky_path_unpack_hdr(sky_object_id_t *object_id, uint32_t *event_data_length,
+    void *addr, size_t *length);
 
 
 //======================================

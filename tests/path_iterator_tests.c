@@ -78,7 +78,7 @@ int test_sky_path_iterator_single_block_next() {
 int test_sky_path_iterator_data_file_next() {
     loadtmp("tests/fixtures/path_iterator/1");
     int rc;
-    void *block_ptr, *ptr;
+    void *ptr;
     sky_data_file *data_file = sky_data_file_create();
     data_file->path = bfromcstr("tmp/data");
     data_file->header_path = bfromcstr("tmp/header");

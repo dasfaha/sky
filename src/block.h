@@ -70,6 +70,13 @@ int sky_block_unpack(sky_block *block, void *ptr, size_t *sz);
 
 
 //======================================
+// Header Management
+//======================================
+
+int sky_block_get_header_offset(sky_block *block, off_t *offset);
+
+
+//======================================
 // Block Position
 //======================================
 

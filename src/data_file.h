@@ -34,6 +34,8 @@ typedef struct sky_data_file sky_data_file;
 
 #define SKY_DATA_FILE_VERSION  1
 
+#define SKY_HEADER_FILE_HDR_SIZE sizeof(uint32_t) + sizeof(uint32_t)
+
 struct sky_data_file {
     bstring path;
     bstring header_path;
