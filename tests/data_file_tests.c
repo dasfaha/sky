@@ -10,6 +10,32 @@
 
 //==============================================================================
 //
+// Helpers
+//
+//==============================================================================
+
+#define INIT_DATA_FILE(PATH, BLOCK_SIZE) \
+    loadtmp(PATH); \
+    data_file = sky_data_file_create(); \
+    data_file->block_size = 64; \
+    data_file->path = bfromcstr("tmp/data"); \
+    data_file->header_path = bfromcstr("tmp/header"); \
+    sky_data_file_load(data_file);
+
+#define ADD_EVENT(TIMESTAMP, OBJECT_ID, ACTION_ID) do { \
+    sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID); \
+    mu_assert_int_equals(sky_data_file_add_event(data_file, event), 0); \
+    sky_event_free(event); \
+} while (0)
+
+
+#define ASSERT_DATA_FILE(FIXTURE) \
+    mu_assert_file("tmp/data", FIXTURE "/data"); \
+    mu_assert_file("tmp/header", FIXTURE "/header");
+
+
+//==============================================================================
+//
 // Test Cases
 //
 //==============================================================================
@@ -84,24 +110,10 @@ int test_sky_data_file_load_empty() {
 //--------------------------------------
 
 int test_sky_data_file_add_event_to_new_block() {
-    cleantmp();
-    
-    int rc;
-    sky_event *event;
-    sky_data_file *data_file = sky_data_file_create();
-    data_file->block_size = 64;
-    data_file->path = bfromcstr("tmp/data");
-    data_file->header_path = bfromcstr("tmp/header");
-    sky_data_file_load(data_file);
-    
-    // Event 1
-    event = sky_event_create(10LL, 1LL, 20);
-    rc = sky_data_file_add_event(data_file, event);
-    mu_assert_int_equals(rc, 0);
-    sky_event_free(event);
-    mu_assert_file("tmp/data", "tests/fixtures/data_files/1/a/data");
-    mu_assert_file("tmp/header", "tests/fixtures/data_files/1/a/header");
-
+    sky_data_file *data_file;
+    INIT_DATA_FILE("", 64);
+    ADD_EVENT(10LL, 1LL, 20);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/1/a");
     sky_data_file_free(data_file);
     return 0;
 }

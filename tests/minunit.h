@@ -95,9 +95,14 @@ struct tagbstring BSTMPDIR = bsStatic(TMPDIR);
     
 // Loads the tmp directory with the contents of another directory.
 #define loadtmp(PATH) do {\
-    struct tagbstring _srcpath = bsStatic(PATH); \
-    cleantmp(); \
-    mu_assert_with_msg(sky_file_cp_r(&_srcpath, &BSTMPDIR) == 0, "Unable to copy to tmp directory"); \
+    if(strcmp(PATH, "") == 0) { \
+        cleantmp(); \
+    } \
+    else { \
+        struct tagbstring _srcpath = bsStatic(PATH); \
+        cleantmp(); \
+        mu_assert_with_msg(sky_file_cp_r(&_srcpath, &BSTMPDIR) == 0, "Unable to copy to tmp directory"); \
+    } \
 } while(0)
     
 // Asserts that a block has a specific block id and object id range.
