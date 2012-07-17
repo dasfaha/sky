@@ -95,9 +95,15 @@ sky_event_data_length_t sky_event_sizeof_data(sky_event *event);
 
 size_t sky_event_sizeof_raw(void *ptr);
 
-int sky_event_pack(sky_event *event, void *addr, size_t *length);
+int sky_event_pack(sky_event *event, void *ptr, size_t *sz);
 
-int sky_event_unpack(sky_event *event, void *addr, size_t *length);
+int sky_event_pack_hdr(sky_timestamp_t timestamp, sky_action_id_t action_id,
+    sky_event_data_length_t data_length, void *ptr, size_t *sz);
+
+int sky_event_unpack(sky_event *event, void *ptr, size_t *sz);
+
+int sky_event_unpack_hdr(sky_timestamp_t *timestamp, sky_action_id_t *action_id,
+    sky_event_data_length_t *data_length, void *ptr, size_t *sz);
 
 
 //======================================

@@ -43,6 +43,7 @@ typedef struct sky_path_iterator {
     uint32_t byte_index;
     bool eof;
     sky_object_id_t current_object_id;
+    size_t block_data_length;
 } sky_path_iterator;
 
 
@@ -57,6 +58,10 @@ typedef struct sky_path_iterator {
 //======================================
 
 sky_path_iterator *sky_path_iterator_create();
+
+sky_path_iterator *sky_path_iterator_alloc();
+
+void sky_path_iterator_init(sky_path_iterator *iterator);
 
 void sky_path_iterator_free(sky_path_iterator *iterator);
 

@@ -128,7 +128,7 @@ size_t sky_path_sizeof(sky_path *path)
     size_t event_data_length = get_event_data_length(path);
 
     // Add header and event data length together.
-    sz += PATH_HEADER_LENGTH;
+    sz += SKY_PATH_HEADER_LENGTH;
     sz += event_data_length;
     
     return sz;
@@ -220,7 +220,7 @@ int sky_path_pack_hdr(sky_object_id_t object_id, uint32_t event_data_length,
 
     // Store number of bytes written.
     if(sz != NULL) {
-        *sz = PATH_HEADER_LENGTH;
+        *sz = SKY_PATH_HEADER_LENGTH;
     }
 
     return 0;

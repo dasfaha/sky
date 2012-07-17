@@ -433,33 +433,31 @@ int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
     check(object_id > 0, "Object id required");
 
     // Create a path iterator and point it at the block.
-    sky_path_iterator *iterator = sky_path_iterator_create();
-    rc = sky_path_iterator_set_block(iterator, block);
+    sky_path_iterator iterator;
+    sky_path_iterator_init(&iterator);
+    rc = sky_path_iterator_set_block(&iterator, block);
     check(rc == 0, "Unable to set path iterator block");
     
     // Initialize the return value.
     *ret = NULL;
     
     // Loop over iterator until we find the path matching the object id.
-    while(!iterator->eof) {
+    while(!iterator.eof) {
         // If the current path matches then save the ptr and exit.
-        if(object_id == iterator->current_object_id) {
-            rc = sky_path_iterator_get_ptr(iterator, ret);
+        if(object_id == iterator.current_object_id) {
+            rc = sky_path_iterator_get_ptr(&iterator, ret);
             check(rc == 0, "Unable to retrieve iterator's current pointer");
             break;
         }
         
         // Move to next path.
-        rc = sky_path_iterator_next(iterator);
+        rc = sky_path_iterator_next(&iterator);
         check(rc == 0, "Unable to move to next path");
     }
-    
-    sky_path_iterator_free(iterator);
     
     return 0;
 
 error:
-    sky_path_iterator_free(iterator);
     *ret = NULL;
     return -1;
 }
@@ -484,30 +482,114 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     check(block != NULL, "Block required");
     check(event != NULL, "Event required");
 
-    // Find path insertion point.
-    void *ptr;
-    rc = sky_block_get_path_ptr(block, event->object_id, &ptr);
-    check(rc == 0, "Unable to find path pointer for block #%d", block->index);
-    
-    // If path doesn't exist then wrap event in path.
-    if(ptr == NULL) {
-        // Position pointer at the beginning of the block.
-        rc = sky_block_get_ptr(block, &ptr);
-        check(rc == 0, "Unable to retrieve block data pointer");
-        
-        // Determine path size and event size.
-        size_t event_length = sky_event_sizeof(event);
+    // Store the block pointer.
+    void *block_ptr;
+    rc = sky_block_get_ptr(block, &block_ptr);
+    check(rc == 0, "Unable to retrieve block pointer");
 
-        // Serialize path header.
-        size_t sz;
+    // Initialize path iterator.
+    sky_path_iterator iterator;
+    sky_path_iterator_init(&iterator);
+    rc = sky_path_iterator_set_block(&iterator, block);
+    check(rc == 0, "Unable to set path iterator block");
+
+    // Setup pointers to the insertion path & event insertion point.
+    void *path_ptr  = NULL;
+    void *event_ptr = NULL;
+
+    // Loop over iterator until we find the path or insertion point.
+    while(!iterator.eof) {
+        // If we reached the correct path then retrieve the path pointer
+        // and then use a cursor to find the insertion point.
+        if(event->object_id == iterator.current_object_id) {
+            // Save path pointer.
+            rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
+            check(rc == 0, "Unable to retrieve iterator's current pointer");
+            
+            // Use cursor to find event insertion point.
+            sky_cursor cursor;
+            sky_cursor_init(&cursor);
+            sky_cursor_set_path(&cursor, path_ptr);
+            check(rc == 0, "Unable to set cursor path");
+            
+            // Loop over cursor until we reach the event insertion point.
+            while(!cursor.eof) {
+                sky_timestamp_t timestamp;
+                sky_action_id_t action_id;
+                sky_event_data_length_t data_length;
+
+                // Retrieve current timestamp in cursor.
+                size_t hdrsz;
+                rc = sky_event_unpack_hdr(&timestamp, &action_id, &data_length, cursor.ptr, &hdrsz);
+                check(rc == 0, "Unable to unpack event header");
+                
+                // Retrieve event insertion pointer once the timestamp is
+                // reached.
+                if(timestamp >= event->timestamp) {
+                    event_ptr = cursor.ptr;
+                    break;
+                }
+                
+                // Move to next event.
+                rc = sky_cursor_next(&cursor);
+                check(rc == 0, "Unable to move to next event");
+            }
+            
+            // If no insertion point was found then append the event to the
+            // end of the path.
+            if(event_ptr == NULL) {
+                event_ptr = path_ptr + sky_path_sizeof_raw(path_ptr);
+            }
+        }
+        // If we are beyond the object id then exit and use the current
+        // pointer as the insertion point.
+        else if(path_ptr == NULL && iterator.current_object_id > event->object_id) {
+            rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
+            check(rc == 0, "Unable to retrieve iterator's current pointer");
+        }
+        
+        // Move to next path.
+        rc = sky_path_iterator_next(&iterator);
+        check(rc == 0, "Unable to move to next path");
+    }
+    
+    // Save the length of the data in the block. This value can only be 
+    // determined after the iterator has reached EOF.
+    size_t block_data_length = iterator.block_data_length;
+
+    // If we reached EOF and found no path insertion point then move the
+    // pointer to the end of the last path.
+    if(path_ptr == NULL) {
+        path_ptr = block_ptr + block_data_length;
+    }
+
+    // Determine size.
+    bool path_exists = (event_ptr != NULL);
+    size_t event_length = sky_event_sizeof(event);
+    size_t sz = event_length + (path_exists ? 0 : SKY_PATH_HEADER_LENGTH);
+    
+    // Shift data down in the block so we have enough room.
+    void *ptr = (path_exists ? event_ptr : path_ptr);
+    //debug("[SHIFT] %p (%ld) | %p (%ld)", block_ptr, block_data_length, ptr, sz);
+    memmove(ptr+sz, ptr, block_data_length-(ptr-block_ptr));
+    
+    // Pack the path first if it is missing.
+    if(!path_exists) {
         rc = sky_path_pack_hdr(event->object_id, event_length, ptr, &sz);
         check(rc == 0, "Unable to pack path header");
-        ptr += sz;
         
-        // Serialize event data.
-        rc = sky_event_pack(event, ptr, NULL);
-        check(rc == 0, "Unable to pack event");
+        // Point event pointer at the beginning of the path event data.
+        event_ptr = path_ptr + SKY_PATH_HEADER_LENGTH;
     }
+    // Or update the path event length if a path exists.
+    else {
+        *(sky_path_event_data_length_t*)(path_ptr+sizeof(sky_object_id_t)) += event_length;
+    }
+    
+    // Pack event.
+    size_t event_sz;
+    rc = sky_event_pack(event, event_ptr, &event_sz);
+    check(rc == 0, "Unable to pack event");
     
     // Save block to disk.
     rc = sky_block_save(block);

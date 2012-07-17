@@ -37,13 +37,30 @@ int sky_path_iterator_fast_forward(sky_path_iterator *iterator);
 // null.
 sky_path_iterator *sky_path_iterator_create()
 {
-    sky_path_iterator *iterator = calloc(sizeof(sky_path_iterator), 1);
-    check_mem(iterator);
+    sky_path_iterator *iterator = sky_path_iterator_alloc(); check_mem(iterator);
+    sky_path_iterator_init(iterator);
     return iterator;
     
 error:
     sky_path_iterator_free(iterator);
     return NULL;
+}
+
+// Allocates memory for a path iterator.
+// 
+// Returns a reference to the new path iterator if successful. Otherwise returns
+// null.
+sky_path_iterator *sky_path_iterator_alloc()
+{
+    return malloc(sizeof(sky_path_iterator));
+}
+
+// Initializes a path iterator.
+// 
+// iterator - The iterator to initialize.
+void sky_path_iterator_init(sky_path_iterator *iterator)
+{
+    memset(iterator, 0, sizeof(sky_path_iterator));
 }
 
 // Removes a path iterator reference from memory.
@@ -219,6 +236,12 @@ int sky_path_iterator_next(sky_path_iterator *iterator)
 
         // Read path size and move past it.
         iterator->byte_index += sky_path_sizeof_raw(ptr);
+        
+        // If this is a single block iterator then save the byte index so it
+        // can be used to determine the block data length.
+        if(iterator->block != NULL) {
+            iterator->block_data_length = iterator->byte_index;
+        }
         
         // If the byte index is past the block size then move to next block.
         if(iterator->byte_index >= data_file->block_size) {

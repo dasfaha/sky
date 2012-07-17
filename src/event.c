@@ -18,28 +18,16 @@
 // Utility
 //======================================
 
-// Determines whether the event has an action set on it.
-bool has_action(sky_event *event)
-{
-    return (event->action_id != 0);
-}
-
-// Determines whether the event has a data set on it.
-bool has_data(sky_event *event)
-{
-    return (event->data_count > 0);
-}
-
 // Calculates the flag byte for the event based on whether the event has an
 // action and whether the event has data.
-sky_event_flag_t get_event_flag(sky_event *event)
+sky_event_flag_t sky_event_get_flag(sky_action_id_t action_id, uint32_t data_length)
 {
     sky_event_flag_t flag = 0;
 
-    if(has_action(event)) {
+    if(action_id != 0) {
         flag |= SKY_EVENT_FLAG_ACTION;
     }
-    if(has_data(event)) {
+    if(data_length > 0) {
         flag |= SKY_EVENT_FLAG_DATA;
     }
 
@@ -226,13 +214,13 @@ size_t sky_event_sizeof(sky_event *event)
     sz += sizeof(event->timestamp);
     
     // Add action if one is set.
-    if(has_action(event)) {
+    if(event->action_id != 0) {
         sz += sizeof(event->action_id);
     }
     
     // Add data if set.
-    if(has_data(event)) {
-        sky_event_data_length_t data_length = sky_event_sizeof_data(event);
+    sky_event_data_length_t data_length = sky_event_sizeof_data(event);
+    if(data_length > 0) {
         sz += sizeof(data_length);
         sz += data_length;
     }
@@ -308,35 +296,70 @@ int sky_event_pack(sky_event *event, void *ptr, size_t *sz)
     check(event != NULL, "Event required");
     check(ptr != NULL, "Pointer required");
     
+    // Pack header.
+    size_t data_length = sky_event_sizeof_data(event);
+    rc = sky_event_pack_hdr(event->timestamp, event->action_id, data_length, ptr, &_sz);
+    check(rc == 0, "Unable to pack event header");
+    ptr += _sz;
+
+    // Pack data.
+    uint64_t i;
+    for(i=0; i<event->data_count; i++) {
+        rc = sky_event_data_pack(event->data[i], ptr, &_sz);
+        check(rc == 0, "Unable to pack event data at %p", ptr);
+        ptr += _sz;
+    }
+    
+    // Store number of bytes written.
+    if(sz != NULL) {
+        *sz = (ptr-start);
+    }
+    
+    return 0;
+
+error:
+    *sz = 0;
+    return -1;
+}
+
+// Serializes the header of an event to memory at a given pointer location.
+//
+// timestamp   - The timestamp of the event.
+// action_id   - The action id of the event.
+// data_length - The length, in bytes, of the data section of the event.
+// ptr         - The pointer to the current location.
+// sz          - The number of bytes written.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_event_pack_hdr(sky_timestamp_t timestamp,
+                       sky_action_id_t action_id,
+                       sky_event_data_length_t data_length,
+                       void *ptr, size_t *sz)
+{
+    void *start = ptr;
+    
+    // Validate.
+    check(ptr != NULL, "Pointer required");
+    
     // Write event flag.
-    sky_event_flag_t flag = get_event_flag(event);
+    sky_event_flag_t flag = sky_event_get_flag(action_id, data_length);
     *((sky_event_flag_t*)ptr) = flag;
     ptr += sizeof(flag);
     
     // Write timestamp.
-    *((sky_timestamp_t*)ptr) = event->timestamp;
+    *((sky_timestamp_t*)ptr) = timestamp;
     ptr += sizeof(sky_timestamp_t);
     
-    // Write action if set.
-    if(has_action(event)) {
-        *((sky_action_id_t*)ptr) = event->action_id;
+    // Write action id.
+    if(action_id != 0) {
+        *((sky_action_id_t*)ptr) = action_id;
         ptr += sizeof(sky_action_id_t);
     }
 
-    // Write data if set.
-    if(has_data(event)) {
-        // Write data length.
-        sky_event_data_length_t data_length = sky_event_sizeof_data(event);
+    // Write data length.
+    if(data_length > 0) {
         *((sky_event_data_length_t*)ptr) = data_length;
         ptr += sizeof(data_length);
-        
-        // Pack data.
-        uint64_t i;
-        for(i=0; i<event->data_count; i++) {
-            rc = sky_event_data_pack(event->data[i], ptr, &_sz);
-            check(rc == 0, "Unable to pack event data at %p", ptr);
-            ptr += _sz;
-        }
     }
     
     // Store number of bytes written.
@@ -368,42 +391,84 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     check(event != NULL, "Event required");
     check(ptr != NULL, "Pointer required");
 
+    // Read event header.
+    sky_event_data_length_t data_length;
+    rc = sky_event_unpack_hdr(&event->timestamp, &event->action_id, &data_length, ptr, &_sz);
+    check(rc == 0, "Unable to unpack event header");
+    ptr += _sz;
+
+    // Clear existing data.
+    clear_data(event);
+    
+    // Unpack data.
+    int index = 0;
+    void *endptr = ptr + data_length;
+    while(ptr < endptr) {
+        check(allocate_data(event) == 0, "Unable to append event data");
+        event->data[index] = sky_event_data_create(0, NULL);
+
+        rc = sky_event_data_unpack(event->data[index], ptr, &_sz);
+        check(rc == 0, "Unable to unpack event data at %p", ptr);
+        ptr += _sz;
+
+        index++;
+    }
+
+    // Store number of bytes read.
+    if(sz != NULL) {
+        *sz = (ptr-start);
+    }
+
+    return 0;
+
+error:
+    *sz = 0;
+    return -1;
+}
+
+// Deserializes an event header from memory.
+//
+// timestamp   - A pointer to where the event timestamp will be returned.
+// action_id   - A pointer to where the event's action id will be returned.
+// data_length - A pointer to where the event's data length will be returned.
+// ptr         - The pointer to the current location.
+// sz          - The number of bytes written.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_event_unpack_hdr(sky_timestamp_t *timestamp,
+                         sky_action_id_t *action_id,
+                         sky_event_data_length_t *data_length,
+                         void *ptr, size_t *sz)
+{
+    void *start = ptr;
+
+    // Validate.
+    check(ptr != NULL, "Pointer required");
+
     // Read event flag.
     sky_event_flag_t flag = *((sky_event_flag_t*)ptr);
     ptr += sizeof(flag);
 
     // Read timestamp.
-    event->timestamp = *((sky_timestamp_t*)ptr);
-    ptr += sizeof(event->timestamp);
+    *timestamp = *((sky_timestamp_t*)ptr);
+    ptr += sizeof(sky_timestamp_t);
     
     // Read action if one exists.
     if(flag & SKY_EVENT_FLAG_ACTION) {
-        event->action_id = *((sky_action_id_t*)ptr);
-        ptr += sizeof(event->action_id);
+        *action_id = *((sky_action_id_t*)ptr);
+        ptr += sizeof(sky_action_id_t);
+    }
+    else {
+        *action_id = 0;
     }
 
-    // Clear existing data.
-    clear_data(event);
-    
-    // Read data if set.
+    // Read data length.
     if(flag & SKY_EVENT_FLAG_DATA) {
-        // Read data length.
-        sky_event_data_length_t data_length = *((sky_event_data_length_t*)ptr);
-        ptr += sizeof(data_length);
-
-        // Unpack data.
-        int index = 0;
-        void *endptr = ptr + data_length;
-        while(ptr < endptr) {
-            check(allocate_data(event) == 0, "Unable to append event data");
-            event->data[index] = sky_event_data_create(0, NULL);
-
-            rc = sky_event_data_unpack(event->data[index], ptr, &_sz);
-            check(rc == 0, "Unable to unpack event data at %p", ptr);
-            ptr += _sz;
-
-            index++;
-        }
+        *data_length = *((sky_event_data_length_t*)ptr);
+        ptr += sizeof(sky_event_data_length_t);
+    }
+    else {
+        *data_length = 0;
     }
 
     // Store number of bytes read.

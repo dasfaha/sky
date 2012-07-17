@@ -38,6 +38,20 @@ error:
     return NULL;
 }
 
+// Allocates memory for the cursor.
+// 
+// Returns a reference to the new cursor if successful.
+sky_cursor *sky_cursor_alloc()
+{
+    return malloc(sizeof(sky_cursor));
+}
+
+// Initializes a cursor.
+void sky_cursor_init(sky_cursor *cursor)
+{
+    memset(cursor, 0, sizeof(sky_cursor));
+}
+
 // Removes a cursor reference from memory.
 //
 // cursor - The cursor to free.
@@ -143,7 +157,7 @@ int sky_cursor_set_ptr(sky_cursor *cursor, void *ptr)
     check(ptr != NULL, "Pointer required");
     
     // Store position of first event and store position of end of path.
-    cursor->ptr    = ptr + PATH_HEADER_LENGTH;
+    cursor->ptr    = ptr + SKY_PATH_HEADER_LENGTH;
     cursor->endptr = ptr + sky_path_sizeof_raw(ptr);
     
     return 0;

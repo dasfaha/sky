@@ -184,7 +184,7 @@ int test_sky_path_unpack() {
 int all_tests() {
     mu_run_test(test_sky_path_create);
     mu_run_test(test_sky_path_add_remove_event);
-    //mu_run_test(test_sky_path_sizeof);
+    mu_run_test(test_sky_path_sizeof);
     mu_run_test(test_sky_path_pack);
     mu_run_test(test_sky_path_unpack);
 
