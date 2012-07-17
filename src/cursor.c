@@ -3,7 +3,6 @@
 #include "event.h"
 #include "mem.h"
 #include "dbg.h"
-#include "minipack.h"
 
 
 //==============================================================================
@@ -140,21 +139,12 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_cursor_set_ptr(sky_cursor *cursor, void *ptr)
 {
-    size_t sz;
+    check(cursor != NULL, "Cursor required");
+    check(ptr != NULL, "Pointer required");
     
-    // Skip over header.
-    sz = sky_path_sizeof_raw_hdr(ptr);
-    check(sz > 0, "Unable to determine path header size at %p", ptr);
-    ptr += sz;
-
-    // Read how long the event data is.
-    uint32_t events_length = minipack_unpack_raw(ptr, &sz);
-    check(sz > 0, "Unable to determine path event data length at %p", ptr);
-    ptr += sz;
-
     // Store position of first event and store position of end of path.
-    cursor->ptr    = ptr;
-    cursor->endptr = cursor->ptr + events_length;
+    cursor->ptr    = ptr + PATH_HEADER_LENGTH;
+    cursor->endptr = ptr + sky_path_sizeof_raw(ptr);
     
     return 0;
 

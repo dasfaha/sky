@@ -18,21 +18,21 @@ struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
 
-size_t ACTION_EVENT_DATA_LENGTH = 10;
+size_t ACTION_EVENT_DATA_LENGTH = 11;
 char ACTION_EVENT_DATA[] = 
-    "\x01\x00\x00\x01\x34\x96\x90\xd0\x00\x14"
+    "\x01\x1e\x00\x00\x00\x00\x00\x00\x00\x14\x00"
 ;
 
-size_t DATA_EVENT_DATA_LENGTH = 20;
+size_t DATA_EVENT_DATA_LENGTH = 23;
 char DATA_EVENT_DATA[] = 
-    "\x02\x00\x00\x01\x34\x96\x90\xd0\x00\xaa\x01\xa3\x66\x6f\x6f\x02"
-    "\xa3\x62\x61\x72"
+    "\x02\x1e\x00\x00\x00\x00\x00\x00\x00\x0a\x00\x00\x00\x01\xa3\x66"
+    "\x6f\x6f\x02\xa3\x62\x61\x72"
 ;
 
-size_t ACTION_DATA_EVENT_DATA_LENGTH = 21;
+size_t ACTION_DATA_EVENT_DATA_LENGTH = 25;
 char ACTION_DATA_EVENT_DATA[] = 
-    "\x03\x00\x00\x01\x34\x96\x90\xd0\x00\x14\xaa\x01\xa3\x66\x6f\x6f"
-    "\x02\xa3\x62\x61\x72"
+    "\x03\x1e\x00\x00\x00\x00\x00\x00\x00\x14\x00\x0a\x00\x00\x00\x01"
+    "\xa3\x66\x6f\x6f\x02\xa3\x62\x61\x72"
 ;
 
 
@@ -150,7 +150,7 @@ int test_sky_event_action_data_event_sizeof() {
 int test_sky_event_action_event_pack() {
     size_t sz;
     void *addr = calloc(ACTION_EVENT_DATA_LENGTH, 1);
-    sky_event *event = sky_event_create(1325376000000LL, 0, 20);
+    sky_event *event = sky_event_create(30LL, 0, 20);
     sky_event_pack(event, addr, &sz);
     sky_event_free(event);
     mu_assert_long_equals(sz, ACTION_EVENT_DATA_LENGTH);
@@ -163,7 +163,7 @@ int test_sky_event_action_event_pack() {
 int test_sky_event_data_event_pack() {
     size_t sz;
     void *addr = calloc(DATA_EVENT_DATA_LENGTH, 1);
-    sky_event *event = sky_event_create(1325376000000LL, 0, 0);
+    sky_event *event = sky_event_create(30LL, 0, 0);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     sky_event_pack(event, addr, &sz);
@@ -178,7 +178,7 @@ int test_sky_event_data_event_pack() {
 int test_sky_event_action_data_event_pack() {
     size_t sz;
     void *addr = calloc(ACTION_DATA_EVENT_DATA_LENGTH, 1);
-    sky_event *event = sky_event_create(1325376000000LL, 0, 20);
+    sky_event *event = sky_event_create(30LL, 0, 20);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     sky_event_pack(event, addr, &sz);
@@ -200,7 +200,7 @@ int test_sky_event_action_event_unpack() {
     sky_event_unpack(event, &ACTION_EVENT_DATA, &sz);
 
     mu_assert_long_equals(sz, ACTION_EVENT_DATA_LENGTH);
-    mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
+    mu_assert_int64_equals(event->timestamp, 30LL);
     mu_assert(event->action_id == 20, "Expected action id to equal 20");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
     mu_assert(event->data == NULL, "Expected data to be NULL");
@@ -218,7 +218,7 @@ int test_sky_event_data_event_unpack() {
     sky_event_unpack(event, &DATA_EVENT_DATA, &sz);
 
     mu_assert_long_equals(sz, DATA_EVENT_DATA_LENGTH);
-    mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
+    mu_assert_int64_equals(event->timestamp, 30LL);
     mu_assert(event->action_id == 0, "Expected action id to equal 0");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
     mu_assert(event->data != NULL, "Expected data to not be NULL");
@@ -242,7 +242,7 @@ int test_sky_event_action_data_event_unpack() {
     sky_event_unpack(event, &ACTION_DATA_EVENT_DATA, &sz);
 
     mu_assert_long_equals(sz, ACTION_DATA_EVENT_DATA_LENGTH);
-    mu_assert(event->timestamp == 1325376000000LL, "Expected timestamp to equal 1325376000000LL");
+    mu_assert_int64_equals(event->timestamp, 30LL);
     mu_assert(event->action_id == 20, "Expected action id to equal 20");
     mu_assert(event->object_id == 0, "Expected object id to equal 0");
     mu_assert(event->data != NULL, "Expected data to not be NULL");

@@ -263,12 +263,10 @@ int sky_data_file_load_header(sky_data_file *data_file)
     // Read database format version.
     rc = fread(&version, sizeof(version), 1, file);
     check(rc == 1, "Unable to read version");
-    version = ntohl(version);
 
     // Read block size.
     rc = fread(&data_file->block_size, sizeof(data_file->block_size), 1, file);
     check(rc == 1, "Unable to read block size");
-    data_file->block_size = ntohl(data_file->block_size);
 
     // Read blocks until end of file.
     off_t file_length = sky_file_get_size(data_file->header_path);
@@ -353,13 +351,12 @@ int sky_data_file_create_header(sky_data_file *data_file)
     check(file, "Failed to open header file for writing: %s",  bdata(data_file->header_path));
 
     // Write database format version.
-    uint32_t version = htonl(SKY_DATA_FILE_VERSION);
+    uint32_t version = SKY_DATA_FILE_VERSION;
     rc = fwrite(&version, sizeof(version), 1, file);
     check(rc == 1, "Unable to write version");
 
     // Write block size.
-    uint32_t block_size = htonl(data_file->block_size);
-    rc = fwrite(&block_size, sizeof(block_size), 1, file);
+    rc = fwrite(&data_file->block_size, sizeof(data_file->block_size), 1, file);
     check(rc == 1, "Unable to write block size");
     
     // Write a single empty block.

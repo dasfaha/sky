@@ -276,6 +276,8 @@ int sky_path_iterator_fast_forward(sky_path_iterator *iterator)
         }
         // If there is valid data then exit.
         else {
+            // Grab the current object id.
+            iterator->current_object_id = *((sky_object_id_t*)ptr);
             break;
         }
     }

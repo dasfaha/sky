@@ -18,12 +18,12 @@ struct tagbstring foo = bsStatic("foo");
 struct tagbstring bar = bsStatic("bar");
 struct tagbstring baz = bsStatic("baz");
 
-size_t DATA_LENGTH = 50;
+size_t DATA_LENGTH = 62;
 char DATA[] = 
-    "\x0a\xda\x00\x2e\x01\x00\x03\x5d\x01\x3b\x37\xe0\x00\x06\x03\x00"
-    "\x03\x5d\x02\x11\xcb\x84\x00\x07\xaa\x01\xa3\x66\x6f\x6f\x02\xa3"
-    "\x62\x61\x72\x02\x00\x03\x5d\x02\xe8\x5f\x28\x00\xa5\x01\xa3\x66"
-    "\x6f\x6f"
+    "\x02\x00\x00\x00\x36\x00\x00\x00\x01\x1a\x00\x00\x00\x00\x00\x00"
+    "\x00\x06\x00\x03\x1b\x00\x00\x00\x00\x00\x00\x00\x07\x00\x0a\x00"
+    "\x00\x00\x01\xa3\x66\x6f\x6f\x02\xa3\x62\x61\x72\x02\x1c\x00\x00"
+    "\x00\x00\x00\x00\x00\x05\x00\x00\x00\x01\xa3\x66\x6f\x6f"
 ;
 
 
@@ -31,20 +31,20 @@ char DATA[] =
 sky_path *create_test_path0()
 {
     sky_event *event;
-    sky_path *path = sky_path_create(10);
+    sky_path *path = sky_path_create(2);
 
     // Action-only event
-    event = sky_event_create(946684800000000LL, 10, 6);
+    event = sky_event_create(26LL, 2, 6);
     sky_path_add_event(path, event);
 
     // Action+data event
-    event = sky_event_create(946688400000000LL, 10, 7);
+    event = sky_event_create(27LL, 2, 7);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     sky_path_add_event(path, event);
 
     // Data-only event
-    event = sky_event_create(946692000000000LL, 10, 0);
+    event = sky_event_create(28LL, 2, 0);
     sky_event_set_data(event, 1, &foo);
     sky_path_add_event(path, event);
 
@@ -63,9 +63,9 @@ sky_path *create_test_path0()
 //--------------------------------------
 
 int test_sky_path_create() {
-    sky_path *path = sky_path_create(10);
+    sky_path *path = sky_path_create(2);
     mu_assert(path != NULL, "Unable to allocate path");
-    mu_assert(path->object_id == 10, "Path object id not assigned");
+    mu_assert(path->object_id == 2, "Path object id not assigned");
     sky_path_free(path);
 
     return 0;
@@ -77,14 +77,14 @@ int test_sky_path_create() {
 //--------------------------------------
 
 int test_sky_path_add_remove_event() {
-    sky_path *path = sky_path_create(10);
+    sky_path *path = sky_path_create(2);
 
-    sky_event *event0 = sky_event_create(1325377000000LL, 10, 200);
+    sky_event *event0 = sky_event_create(27LL, 2, 11);
     sky_path_add_event(path, event0);
-    sky_event *event1 = sky_event_create(1325376000000LL, 10, 200);
+    sky_event *event1 = sky_event_create(26LL, 2, 10);
     sky_path_add_event(path, event1);
     
-    // Check order of events (e1 should be after e0 based on timestamp).
+    // Check order of events (e0 should be after e1 based on timestamp).
     mu_assert(path->event_count == 2, "");
     mu_assert(path->events[0] == event1, "");
     mu_assert(path->events[1] == event0, "");
@@ -145,16 +145,16 @@ int test_sky_path_unpack() {
 
     mu_assert_long_equals(sz, DATA_LENGTH);
 
-    mu_assert(path->object_id == 10, "");
+    mu_assert(path->object_id == 2, "");
     mu_assert(path->events != NULL, "");
     mu_assert(path->event_count == 3, "");
 
-    mu_assert(path->events[0]->timestamp == 946684800000000LL, "");
-    mu_assert(path->events[0]->object_id == 10, "");
+    mu_assert(path->events[0]->timestamp == 26LL, "");
+    mu_assert(path->events[0]->object_id == 2, "");
     mu_assert(path->events[0]->action_id == 6, "");
 
-    mu_assert(path->events[1]->timestamp == 946688400000000LL, "");
-    mu_assert(path->events[1]->object_id == 10, "");
+    mu_assert(path->events[1]->timestamp == 27LL, "");
+    mu_assert(path->events[1]->object_id == 2, "");
     mu_assert(path->events[1]->action_id == 7, "");
 
     sky_event_get_data(path->events[1], 1, &data);
@@ -162,8 +162,8 @@ int test_sky_path_unpack() {
     sky_event_get_data(path->events[1], 2, &data);
     mu_assert(biseqcstr(data->value, "bar"), "");
 
-    mu_assert(path->events[2]->timestamp == 946692000000000LL, "");
-    mu_assert(path->events[2]->object_id == 10, "");
+    mu_assert(path->events[2]->timestamp == 28LL, "");
+    mu_assert(path->events[2]->object_id == 2, "");
     mu_assert(path->events[2]->action_id == 0, "");
 
     sky_event_get_data(path->events[2], 1, &data);

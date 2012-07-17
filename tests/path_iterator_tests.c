@@ -44,20 +44,20 @@ int test_sky_path_iterator_single_block_next() {
     // Path 2
     rc = sky_path_iterator_next(iterator);
     mu_assert_int_equals(rc, 0);
-    mu_assert_int_equals(iterator->byte_index, 12);
+    mu_assert_int_equals(iterator->byte_index, 19);
     mu_assert_bool(!iterator->eof);
     rc = sky_path_iterator_get_ptr(iterator, &ptr);
     mu_assert_int_equals(rc, 0);
-    mu_assert_long_equals(ptr-block_ptr, 12L);
+    mu_assert_long_equals(ptr-block_ptr, 19L);
     
     // Path 3
     rc = sky_path_iterator_next(iterator);
     mu_assert_int_equals(rc, 0);
-    mu_assert_int_equals(iterator->byte_index, 58);
+    mu_assert_int_equals(iterator->byte_index, 47);
     mu_assert_bool(!iterator->eof);
     rc = sky_path_iterator_get_ptr(iterator, &ptr);
     mu_assert_int_equals(rc, 0);
-    mu_assert_long_equals(ptr-block_ptr, 58L);
+    mu_assert_long_equals(ptr-block_ptr, 47L);
     
     // EOF
     rc = sky_path_iterator_next(iterator);
@@ -94,21 +94,24 @@ int test_sky_path_iterator_data_file_next() {
     rc = sky_path_iterator_get_ptr(iterator, &ptr);
     mu_assert_int_equals(rc, 0);
     mu_assert_long_equals(ptr-data_file->data, 0L);
+    mu_assert_int_equals(iterator->current_object_id, 2);
     mu_assert_bool(!iterator->eof);
 
     // Path 2
     rc = sky_path_iterator_next(iterator);
     mu_assert_int_equals(rc, 0);
-    mu_assert_int_equals(iterator->byte_index, 12);
+    mu_assert_int_equals(iterator->byte_index, 19);
+    mu_assert_int_equals(iterator->current_object_id, 3);
     mu_assert_bool(!iterator->eof);
     rc = sky_path_iterator_get_ptr(iterator, &ptr);
     mu_assert_int_equals(rc, 0);
-    mu_assert_long_equals(ptr-data_file->data, 12L);
+    mu_assert_long_equals(ptr-data_file->data, 19L);
     
     // Path 3 (Spanned)
     rc = sky_path_iterator_next(iterator);
     mu_assert_int_equals(rc, 0);
     mu_assert_int_equals(iterator->byte_index, 0);
+    mu_assert_int_equals(iterator->current_object_id, 4);
     mu_assert_bool(!iterator->eof);
     rc = sky_path_iterator_get_ptr(iterator, &ptr);
     mu_assert_int_equals(rc, 0);
@@ -118,10 +121,11 @@ int test_sky_path_iterator_data_file_next() {
     rc = sky_path_iterator_next(iterator);
     mu_assert_int_equals(rc, 0);
     mu_assert_int_equals(iterator->byte_index, 0);
+    mu_assert_int_equals(iterator->current_object_id, 5);
     mu_assert_bool(!iterator->eof);
     rc = sky_path_iterator_get_ptr(iterator, &ptr);
     mu_assert_int_equals(rc, 0);
-    mu_assert_long_equals(ptr-data_file->data, 192L);
+    mu_assert_long_equals(ptr-data_file->data, 128L);
     
     // EOF
     rc = sky_path_iterator_next(iterator);

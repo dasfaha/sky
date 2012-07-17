@@ -93,27 +93,25 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_block_pack(sky_block *block, void *ptr, size_t *sz)
 {
-    void *start = ptr;
-
     // Validate.
     check(block != NULL, "Block required");
     check(ptr != NULL, "Pointer required");
     
     // Write object id range.
-    sky_object_id_t min_object_id = htonll(block->min_object_id);
-    sky_object_id_t max_object_id = htonll(block->max_object_id);
-    memwrite(ptr, &min_object_id, sizeof(min_object_id), "min object id");
-    memwrite(ptr, &max_object_id, sizeof(max_object_id), "max object id");
+    *((sky_object_id_t*)ptr) = block->min_object_id;
+    ptr += sizeof(sky_object_id_t);
+    *((sky_object_id_t*)ptr) = block->max_object_id;
+    ptr += sizeof(sky_object_id_t);
 
     // Write timestamp range.
-    sky_timestamp_t min_timestamp = htonll(block->min_timestamp);
-    sky_timestamp_t max_timestamp = htonll(block->max_timestamp);
-    memwrite(ptr, &min_timestamp, sizeof(min_timestamp), "min timestamp");
-    memwrite(ptr, &max_timestamp, sizeof(max_timestamp), "max timestamp");
+    *((sky_timestamp_t*)ptr) = block->min_timestamp;
+    ptr += sizeof(sky_timestamp_t);
+    *((sky_timestamp_t*)ptr) = block->max_timestamp;
+    ptr += sizeof(sky_timestamp_t);
 
     // Store number of bytes written.
     if(sz != NULL) {
-        *sz = (ptr-start);
+        *sz = SKY_BLOCK_HEADER_SIZE;
     }
     
     return 0;
@@ -131,27 +129,25 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int sky_block_unpack(sky_block *block, void *ptr, size_t *sz)
 {
-    void *start = ptr;
-    
     // Validate.
     check(block != NULL, "Block required");
     check(ptr != NULL, "Pointer required");
 
-    // Write object id range.
-    memread(ptr, &block->min_object_id, sizeof(block->min_object_id), "min object id");
-    block->min_object_id = ntohll(block->min_object_id);
-    memread(ptr, &block->max_object_id, sizeof(block->max_object_id), "max object id");
-    block->max_object_id = ntohll(block->max_object_id);
+    // Read object id range.
+    block->min_object_id = *((sky_object_id_t*)ptr);
+    ptr += sizeof(sky_object_id_t);
+    block->max_object_id = *((sky_object_id_t*)ptr);
+    ptr += sizeof(sky_object_id_t);
 
-    // Write timestamp range.
-    memread(ptr, &block->min_timestamp, sizeof(block->min_timestamp), "min timestamp");
-    block->min_timestamp = ntohll(block->min_timestamp);
-    memread(ptr, &block->max_timestamp, sizeof(block->max_timestamp), "max timestamp");
-    block->max_timestamp = ntohll(block->max_timestamp);
+    // Read timestamp range.
+    block->min_timestamp = *((sky_timestamp_t*)ptr);
+    ptr += sizeof(sky_timestamp_t);
+    block->max_timestamp = *((sky_timestamp_t*)ptr);
+    ptr += sizeof(sky_timestamp_t);
 
     // Store number of bytes read.
     if(sz != NULL) {
-        *sz = (ptr-start);
+        *sz = SKY_BLOCK_HEADER_SIZE;
     }
     
     return 0;
@@ -452,6 +448,10 @@ int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
             check(rc == 0, "Unable to retrieve iterator's current pointer");
             break;
         }
+        
+        // Move to next path.
+        rc = sky_path_iterator_next(iterator);
+        check(rc == 0, "Unable to move to next path");
     }
     
     sky_path_iterator_free(iterator);

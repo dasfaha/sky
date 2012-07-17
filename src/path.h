@@ -22,8 +22,9 @@
 //
 //==============================================================================
 
-#define sky_path_event_count_t uint64_t
-#define sky_path_events_length_t uint64_t
+#define sky_path_event_data_length_t uint32_t
+
+#define PATH_HEADER_LENGTH sizeof(sky_object_id_t) + sizeof(sky_path_event_data_length_t)
 
 
 //==============================================================================
@@ -60,12 +61,7 @@ void sky_path_free(sky_path *path);
 
 size_t sky_path_sizeof(sky_path *path);
 
-size_t sky_path_sizeof_hdr(sky_object_id_t object_id,
-    uint32_t event_data_length);
-
 size_t sky_path_sizeof_raw(void *ptr);
-
-size_t sky_path_sizeof_raw_hdr(void *ptr);
 
 int sky_path_pack(sky_path *path, void *addr, size_t *length);
 

@@ -22,7 +22,7 @@
 //
 // key   - The property id used as the key for the data.
 // value - The string value of the data.
-sky_event_data *sky_event_data_create(int16_t key, bstring value)
+sky_event_data *sky_event_data_create(sky_property_id_t key, bstring value)
 {
     sky_event_data *data;
     
@@ -78,7 +78,7 @@ error:
 size_t sky_event_data_sizeof(sky_event_data *data)
 {
     size_t sz = 0;
-    sz += minipack_sizeof_int(data->key);
+    sz += sizeof(data->key);
     sz += minipack_sizeof_raw(blength(data->value));
     sz += blength(data->value);
     return sz;
@@ -101,10 +101,9 @@ int sky_event_data_pack(sky_event_data *data, void *ptr, size_t *sz)
     check(ptr != NULL, "Pointer required");
     
     // Write key.
-    minipack_pack_int(ptr, data->key, &_sz);
-    check(_sz != 0, "Unable to pack event data key at %p", ptr);
-    ptr += _sz;
-    
+    *((sky_property_id_t*)ptr) = data->key;
+    ptr += sizeof(data->key);
+
     // Write value header.
     minipack_pack_raw(ptr, blength(data->value), &_sz);
     check(_sz != 0, "Unable to pack event data value header at %p", ptr);
@@ -142,9 +141,8 @@ int sky_event_data_unpack(sky_event_data *data, void *ptr, size_t *sz)
     check(ptr != NULL, "Pointer required");
 
     // Read key.
-    data->key = minipack_unpack_int(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack event data key at %p", ptr);
-    ptr += _sz;
+    data->key = *((sky_property_id_t*)ptr);
+    ptr += sizeof(data->key);
 
     // Read value header.
     uint32_t value_length = minipack_unpack_raw(ptr, &_sz);

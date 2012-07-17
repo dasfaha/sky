@@ -5,7 +5,6 @@
 #include "dbg.h"
 #include "path.h"
 #include "mem.h"
-#include "minipack.h"
 
 //==============================================================================
 //
@@ -84,7 +83,7 @@ void sky_path_free(sky_path *path)
 {
     if(path) {
         // Destroy events.
-        sky_path_event_count_t i=0;
+        uint32_t i=0;
         for(i=0; i<path->event_count; i++) {
             sky_event_free(path->events[i]);
             path->events[i] = NULL;
@@ -129,27 +128,8 @@ size_t sky_path_sizeof(sky_path *path)
     size_t event_data_length = get_event_data_length(path);
 
     // Add header and event data length together.
-    sz += sky_path_sizeof_hdr(path->object_id, event_data_length);
+    sz += PATH_HEADER_LENGTH;
     sz += event_data_length;
-    
-    return sz;
-}
-
-// Calculates the total number of bytes needed to store a path header given
-// the object id and event data length.
-//
-// object_id         - The object id for the path.
-// event_data_length - The size, in bytes, of the path's event data.
-//
-// Returns the size, in bytes, of the path's header.
-size_t sky_path_sizeof_hdr(sky_object_id_t object_id,
-                           uint32_t event_data_length)
-{
-    size_t sz = 0;
-
-    // Add lengths.
-    sz += minipack_sizeof_int(object_id);
-    sz += minipack_sizeof_raw(event_data_length);
     
     return sz;
 }
@@ -161,29 +141,16 @@ size_t sky_path_sizeof_hdr(sky_object_id_t object_id,
 // Returns the length of the path.
 size_t sky_path_sizeof_raw(void *ptr)
 {
-    size_t _sz;
     size_t sz = 0;
         
     // Read object id to determine element size.
-    sz += sky_path_sizeof_raw_hdr(ptr);
+    sz += sizeof(sky_object_id_t);
     
     // Read events length.
-    size_t event_data_length = minipack_unpack_raw(ptr+sz, &_sz);
+    size_t event_data_length = *((sky_path_event_data_length_t*)(ptr + sz));
+    sz += sizeof(sky_path_event_data_length_t);
     sz += event_data_length;
-    sz += _sz;
     
-    return sz;
-}
-
-// Calculates the size of the path's header.
-// 
-// ptr - A pointer to raw, packed path data.
-//
-// Returns the length of the path.
-size_t sky_path_sizeof_raw_hdr(void *ptr)
-{
-    size_t sz = 0;
-    sz += minipack_sizeof_int_elem(ptr);
     return sz;
 }
 
@@ -210,7 +177,7 @@ int sky_path_pack(sky_path *path, void *ptr, size_t *sz)
     ptr += _sz;
 
     // Pack events.
-    sky_path_event_count_t i;
+    uint32_t i;
     for(i=0; i<path->event_count; i++) {
         rc = sky_event_pack(path->events[i], ptr, &_sz);
         check(rc == 0, "Unable to pack path event at %p", ptr);
@@ -241,27 +208,19 @@ error:
 int sky_path_pack_hdr(sky_object_id_t object_id, uint32_t event_data_length,
                       void *ptr, size_t *sz)
 {
-    size_t _sz;
-    void *start = ptr;
-    
     // Validate.
     check(ptr != NULL, "Pointer required");
     check(object_id != 0, "Object ID cannot be zero");
     check(event_data_length > 0, "Event data length cannot be zero");
 
-    // Write object id.
-    minipack_pack_int(ptr, object_id, &_sz);
-    check(_sz != 0, "Unable to pack path object id at %p", ptr);
-    ptr += _sz;
-    
-    // Write events length.
-    minipack_pack_raw(ptr, event_data_length, &_sz);
-    check(_sz != 0, "Unable to pack path event data length at %p", ptr);
-    ptr += _sz;
+    // Write object id & event data length.
+    *((sky_object_id_t*)ptr) = object_id;
+    ptr += sizeof(sky_object_id_t);
+    *((sky_path_event_data_length_t*)ptr) = event_data_length;
 
     // Store number of bytes written.
     if(sz != NULL) {
-        *sz = (ptr-start);
+        *sz = PATH_HEADER_LENGTH;
     }
 
     return 0;
@@ -288,15 +247,11 @@ int sky_path_unpack(sky_path *path, void *ptr, size_t *sz)
     check(path != NULL, "Path required");
     check(ptr != NULL, "Pointer required");
 
-    // Read object id.
-    path->object_id = minipack_unpack_int(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack path object id at %p", ptr);
-    ptr += _sz;
-
-    // Read events length.
-    size_t event_data_length = minipack_unpack_raw(ptr, &_sz);
-    check(_sz != 0, "Unable to unpack path events length at %p", ptr);
-    ptr += _sz;
+    // Read object id & event data length.
+    path->object_id = *((sky_object_id_t*)ptr);
+    ptr += sizeof(sky_object_id_t);
+    size_t event_data_length = *((sky_path_event_data_length_t*)ptr);
+    ptr += sizeof(sky_path_event_data_length_t);
 
     // Unpack events.
     int index = 0;
@@ -344,7 +299,7 @@ int sky_path_add_event(sky_path *path, sky_event *event)
     check(path != NULL, "Path required");
     check(path->object_id != 0, "Path object id cannot be null");
     check(event != NULL, "Event required");
-    check(path->object_id == event->object_id, "Event object id (%lld) does not match path object id (%lld)", event->object_id, path->object_id);
+    check(path->object_id == event->object_id, "Event object id (%d) does not match path object id (%d)", event->object_id, path->object_id);
 
     // Raise error if event has already been added.
     unsigned int i;

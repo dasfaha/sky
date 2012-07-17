@@ -118,6 +118,18 @@ int test_sky_data_file_add_event_to_new_block() {
     return 0;
 }
 
+/*
+int test_sky_data_file_add_event_to_existing_path() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/1/a", 0);
+    ADD_EVENT(8LL, 1LL, 21);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/1/b");
+    sky_data_file_free(data_file);
+    return 0;
+}
+*/
+
+
 //==============================================================================
 //
 // Setup
@@ -129,6 +141,7 @@ int all_tests() {
     mu_run_test(test_sky_data_file_set_header_path);
     mu_run_test(test_sky_data_file_load_empty);
     mu_run_test(test_sky_data_file_add_event_to_new_block);
+    //mu_run_test(test_sky_data_file_add_event_to_existing_path);
     return 0;
 }
 

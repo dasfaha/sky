@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 #include "bstring.h"
+#include "types.h"
 
 
 //==============================================================================
@@ -20,21 +21,12 @@
 
 //==============================================================================
 //
-// Definitions
-//
-//==============================================================================
-
-#define sky_event_data_key_t int16_t
-
-
-//==============================================================================
-//
 // Typedefs
 //
 //==============================================================================
 
 typedef struct sky_event_data {
-    sky_event_data_key_t key;
+    sky_property_id_t key;
     bstring value;
 } sky_event_data;
 
@@ -49,7 +41,7 @@ typedef struct sky_event_data {
 // Lifecycle
 //======================================
 
-sky_event_data *sky_event_data_create(sky_event_data_key_t key, bstring value);
+sky_event_data *sky_event_data_create(sky_property_id_t key, bstring value);
 
 void sky_event_data_free(sky_event_data *event);
 

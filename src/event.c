@@ -7,8 +7,6 @@
 #include "bstring.h"
 #include "event.h"
 #include "mem.h"
-#include "minipack.h"
-#include "minipack.h"
 
 //==============================================================================
 //
@@ -34,9 +32,9 @@ bool has_data(sky_event *event)
 
 // Calculates the flag byte for the event based on whether the event has an
 // action and whether the event has data.
-uint8_t get_event_flag(sky_event *event)
+sky_event_flag_t get_event_flag(sky_event *event)
 {
-    uint8_t flag = 0;
+    sky_event_flag_t flag = 0;
 
     if(has_action(event)) {
         flag |= SKY_EVENT_FLAG_ACTION;
@@ -222,20 +220,20 @@ size_t sky_event_sizeof(sky_event *event)
     size_t sz = 0;
     
     // Add event flag.
-    sz += 1;
+    sz += sizeof(sky_event_flag_t);
     
     // Add timestamp.
     sz += sizeof(event->timestamp);
     
     // Add action if one is set.
     if(has_action(event)) {
-        sz += minipack_sizeof_int(event->action_id);
+        sz += sizeof(event->action_id);
     }
     
     // Add data if set.
     if(has_data(event)) {
-        size_t data_length = sky_event_sizeof_data(event);
-        sz += minipack_sizeof_raw(data_length);
+        sky_event_data_length_t data_length = sky_event_sizeof_data(event);
+        sz += sizeof(data_length);
         sz += data_length;
     }
 
@@ -244,7 +242,7 @@ size_t sky_event_sizeof(sky_event *event)
 
 // Calculates the total number of bytes needed to store just the data section
 // of the event.
-size_t sky_event_sizeof_data(sky_event *event)
+sky_event_data_length_t sky_event_sizeof_data(sky_event *event)
 {
     size_t sz = 0;
     
@@ -265,9 +263,8 @@ size_t sky_event_sizeof_data(sky_event *event)
 // Returns the length of the raw event data.
 size_t sky_event_sizeof_raw(void *ptr)
 {
-    size_t _sz;
     size_t sz = 0;
-    char event_flag = *((char*)ptr);
+    char event_flag = *((sky_event_flag_t*)ptr);
 
     // Add event flag and timestamp.
     sz += sizeof(sky_event_flag_t);
@@ -275,20 +272,14 @@ size_t sky_event_sizeof_raw(void *ptr)
 
     // Add action length.
     if(event_flag & SKY_EVENT_FLAG_ACTION) {
-        _sz = minipack_sizeof_int_elem(ptr+sz);
-        if(_sz == 0) {
-            return 0;
-        }
-        sz += _sz;
+        sz += sizeof(sky_action_id_t);
     }
 
     // Add data length.
     if(event_flag & SKY_EVENT_FLAG_DATA) {
-        size_t data_length = minipack_unpack_raw(ptr+sz, &_sz);
-        if(_sz == 0) {
-            return 0;
-        }
-        sz += _sz + data_length;
+        sky_event_data_length_t data_length = *((sky_event_data_length_t*)(ptr+sz));
+        sz += sizeof(data_length);
+        sz += data_length;
     }
     
     return sz;
@@ -318,27 +309,26 @@ int sky_event_pack(sky_event *event, void *ptr, size_t *sz)
     check(ptr != NULL, "Pointer required");
     
     // Write event flag.
-    uint8_t flag = get_event_flag(event);
-    memwrite(ptr, &flag, sizeof(flag), "event flag");
+    sky_event_flag_t flag = get_event_flag(event);
+    *((sky_event_flag_t*)ptr) = flag;
+    ptr += sizeof(flag);
     
     // Write timestamp.
-    sky_timestamp_t timestamp = htonll(event->timestamp);
-    memwrite(ptr, &timestamp, sizeof(timestamp), "event timestamp");
+    *((sky_timestamp_t*)ptr) = event->timestamp;
+    ptr += sizeof(sky_timestamp_t);
     
     // Write action if set.
     if(has_action(event)) {
-        minipack_pack_int(ptr, event->action_id, &_sz);
-        check(_sz != 0, "Unable to pack event action id at %p", ptr);
-        ptr += _sz;
+        *((sky_action_id_t*)ptr) = event->action_id;
+        ptr += sizeof(sky_action_id_t);
     }
 
     // Write data if set.
     if(has_data(event)) {
         // Write data length.
-        size_t data_length = sky_event_sizeof_data(event);
-        minipack_pack_raw(ptr, data_length, &_sz);
-        check(_sz != 0, "Unable to pack event data length at %p", ptr);
-        ptr += _sz;
+        sky_event_data_length_t data_length = sky_event_sizeof_data(event);
+        *((sky_event_data_length_t*)ptr) = data_length;
+        ptr += sizeof(data_length);
         
         // Pack data.
         uint64_t i;
@@ -379,19 +369,17 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     check(ptr != NULL, "Pointer required");
 
     // Read event flag.
-    uint8_t flag;
-    memread(ptr, &flag, sizeof(flag), "event flag");
+    sky_event_flag_t flag = *((sky_event_flag_t*)ptr);
+    ptr += sizeof(flag);
 
     // Read timestamp.
-    sky_timestamp_t timestamp;
-    memread(ptr, &timestamp, sizeof(timestamp), "event timestamp");
-    event->timestamp = ntohll(timestamp);
+    event->timestamp = *((sky_timestamp_t*)ptr);
+    ptr += sizeof(event->timestamp);
     
     // Read action if one exists.
     if(flag & SKY_EVENT_FLAG_ACTION) {
-        event->action_id = minipack_unpack_int(ptr, &_sz);
-        check(_sz != 0, "Unable to unpack event action id at %p", ptr);
-        ptr += _sz;
+        event->action_id = *((sky_action_id_t*)ptr);
+        ptr += sizeof(event->action_id);
     }
 
     // Clear existing data.
@@ -400,9 +388,8 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     // Read data if set.
     if(flag & SKY_EVENT_FLAG_DATA) {
         // Read data length.
-        size_t data_length = minipack_unpack_raw(ptr, &_sz);
-        check(_sz != 0, "Unable to unpack event data length at %p", ptr);
-        ptr += _sz;
+        sky_event_data_length_t data_length = *((sky_event_data_length_t*)ptr);
+        ptr += sizeof(data_length);
 
         // Unpack data.
         int index = 0;
@@ -445,7 +432,8 @@ error:
 //         NULL.
 //
 // Returns 0 if successful, otherwise -1.
-int sky_event_get_data(sky_event *event, int16_t key, sky_event_data **data)
+int sky_event_get_data(sky_event *event, sky_property_id_t key,
+                       sky_event_data **data)
 {
     uint64_t i;
     bool found = false;
@@ -479,7 +467,7 @@ error:
 // value - The value to set on the data.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_event_set_data(sky_event *event, int16_t key, bstring value)
+int sky_event_set_data(sky_event *event, sky_property_id_t key, bstring value)
 {
     int rc;
     sky_event_data *data = NULL;
@@ -519,7 +507,7 @@ error:
 // key   - The key to unset.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_event_unset_data(sky_event *event, int16_t key)
+int sky_event_unset_data(sky_event *event, sky_property_id_t key)
 {
     uint64_t i, j;
     

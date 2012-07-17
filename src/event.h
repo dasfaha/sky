@@ -41,8 +41,8 @@
 //
 //==============================================================================
 
-#define sky_event_flag_t char
-#define sky_event_data_count_t uint64_t
+#define sky_event_flag_t uint8_t
+#define sky_event_data_length_t uint32_t
 
 
 #define SKY_EVENT_FLAG_ACTION  1
@@ -61,7 +61,7 @@ typedef struct sky_event {
     sky_timestamp_t timestamp;
     sky_object_id_t object_id;
     sky_action_id_t action_id;
-    sky_event_data_count_t data_count;
+    uint32_t data_count;
     sky_event_data **data;
 } sky_event;
 
@@ -91,7 +91,7 @@ int sky_event_copy(sky_event *source, sky_event **target);
 
 size_t sky_event_sizeof(sky_event *event);
 
-size_t sky_event_sizeof_data(sky_event *event);
+sky_event_data_length_t sky_event_sizeof_data(sky_event *event);
 
 size_t sky_event_sizeof_raw(void *ptr);
 
@@ -104,13 +104,13 @@ int sky_event_unpack(sky_event *event, void *addr, size_t *length);
 // Data Management
 //======================================
 
-int sky_event_get_data(sky_event *event, sky_event_data_key_t key,
+int sky_event_get_data(sky_event *event, sky_property_id_t key,
                        sky_event_data **data);
 
-int sky_event_set_data(sky_event *event, sky_event_data_key_t key,
+int sky_event_set_data(sky_event *event, sky_property_id_t key,
                        bstring value);
 
-int sky_event_unset_data(sky_event *event, sky_event_data_key_t key);
+int sky_event_unset_data(sky_event *event, sky_property_id_t key);
 
 
 #endif

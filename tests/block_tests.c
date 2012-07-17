@@ -16,8 +16,8 @@
 //==============================================================================
 
 char DATA[] = 
-    "\x00\x00\x00\x00\x00\x00\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x14"
-    "\x00\x00\x01\x34\x96\x90\xd0\x00\x00\x03\x5d\x01\x3b\x37\xe0\x00"
+    "\x0a\x00\x00\x00\x14\x00\x00\x00\x1e\x00\x00\x00\x00\x00\x00\x00"
+    "\x28\x00\x00\x00\x00\x00\x00\x00"
 ;
 
 
@@ -54,8 +54,8 @@ int test_sky_block_pack() {
     sky_block *block = sky_block_create(NULL);
     block->min_object_id = 10;
     block->max_object_id = 20;
-    block->min_timestamp = 1325376000000LL;
-    block->max_timestamp = 946684800000000LL;
+    block->min_timestamp = 30LL;
+    block->max_timestamp = 40LL;
     
     size_t sz;
     uint8_t *buffer[SKY_BLOCK_HEADER_SIZE];
@@ -73,10 +73,10 @@ int test_sky_block_unpack() {
     int rc = sky_block_unpack(block, &DATA, &sz);
     mu_assert_int_equals(rc, 0);
     mu_assert_long_equals(sz, SKY_BLOCK_HEADER_SIZE);
-    mu_assert_int64_equals(block->min_object_id, 10LL);
-    mu_assert_int64_equals(block->max_object_id, 20LL);
-    mu_assert_int64_equals(block->min_timestamp, 1325376000000LL);
-    mu_assert_int64_equals(block->max_timestamp, 946684800000000LL);
+    mu_assert_int_equals(block->min_object_id, 10);
+    mu_assert_int_equals(block->max_object_id, 20);
+    mu_assert_int64_equals(block->min_timestamp, 30LL);
+    mu_assert_int64_equals(block->max_timestamp, 40LL);
     sky_block_free(block);
     return 0;
 }
