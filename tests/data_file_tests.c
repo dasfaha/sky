@@ -149,6 +149,7 @@ int all_tests() {
     mu_run_test(test_sky_data_file_load_empty);
     mu_run_test(test_sky_data_file_add_event_to_new_block);
     mu_run_test(test_sky_data_file_prepend_event_to_existing_path);
+    mu_run_test(test_sky_data_file_append_event_to_existing_path);
     return 0;
 }
 
