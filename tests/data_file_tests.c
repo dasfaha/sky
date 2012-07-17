@@ -112,7 +112,7 @@ int test_sky_data_file_load_empty() {
 int test_sky_data_file_add_event_to_new_block() {
     sky_data_file *data_file;
     INIT_DATA_FILE("", 64);
-    ADD_EVENT(10LL, 1LL, 20);
+    ADD_EVENT(10LL, 3LL, 20);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/a");
     sky_data_file_free(data_file);
     return 0;
@@ -121,7 +121,7 @@ int test_sky_data_file_add_event_to_new_block() {
 int test_sky_data_file_prepend_event_to_existing_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/1/a", 0);
-    ADD_EVENT(8LL, 1LL, 21);
+    ADD_EVENT(8LL, 3LL, 21);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/b");
     sky_data_file_free(data_file);
     return 0;
@@ -130,8 +130,26 @@ int test_sky_data_file_prepend_event_to_existing_path() {
 int test_sky_data_file_append_event_to_existing_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/1/b", 0);
-    ADD_EVENT(11LL, 1LL, 22);
+    ADD_EVENT(11LL, 3LL, 22);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/c");
+    sky_data_file_free(data_file);
+    return 0;
+}
+
+int test_sky_data_file_add_event_with_appending_path() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/1/b", 0);
+    ADD_EVENT(11LL, 4LL, 22);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/1/d");
+    sky_data_file_free(data_file);
+    return 0;
+}
+
+int test_sky_data_file_add_event_with_prepending_path() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/1/b", 0);
+    ADD_EVENT(11LL, 2LL, 22);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/1/e");
     sky_data_file_free(data_file);
     return 0;
 }
@@ -150,6 +168,8 @@ int all_tests() {
     mu_run_test(test_sky_data_file_add_event_to_new_block);
     mu_run_test(test_sky_data_file_prepend_event_to_existing_path);
     mu_run_test(test_sky_data_file_append_event_to_existing_path);
+    mu_run_test(test_sky_data_file_add_event_with_appending_path);
+    mu_run_test(test_sky_data_file_add_event_with_prepending_path);
     return 0;
 }
 
