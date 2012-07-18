@@ -165,6 +165,20 @@ int test_sky_data_file_add_event_with_prepending_path() {
 }
 
 
+//--------------------------------------
+// Add Event (Block Splits)
+//--------------------------------------
+
+int test_sky_data_file_add_event_to_existing_path_causing_block_split() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
+    ADD_EVENT(12LL, 10LL, 20);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/b");
+    sky_data_file_free(data_file);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -183,7 +197,7 @@ int all_tests() {
     mu_run_test(test_sky_data_file_add_event_with_appending_path);
     mu_run_test(test_sky_data_file_add_event_with_prepending_path);
 
-    //mu_run_test(test_sky_data_file_add_event_causing_block_split);
+    mu_run_test(test_sky_data_file_add_event_to_existing_path_causing_block_split);
     return 0;
 }
 

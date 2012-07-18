@@ -21,6 +21,9 @@
 int sky_block_get_insertion_info(sky_block *block, sky_event *event,
     void **path_ptr, void **event_ptr, size_t *block_data_length);
 
+int sky_block_split_with_event(sky_block *block, sky_event *event,
+    sky_block **target_block);
+
 
 //==============================================================================
 //
@@ -74,13 +77,29 @@ int sky_block_save(sky_block *block)
     int rc;
     check(block != NULL, "Block required");
 
-    // Retrieve the location of 
+    // Retrieve the location of the block in memory.
     void *ptr = NULL;
     rc = sky_block_get_ptr(block, &ptr);
     check(rc == 0, "Unable to retrieve block data pointer");
     
+    // Determine the page size.
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    
+    // Adjust the pointer to align to page size.
+    size_t offset = ptr - block->data_file->data;
+    if(offset % page_size != 0) {
+        ptr -= offset % page_size;
+    }
+    
+    // Adjust the block size to align to page size.
+    uint32_t block_size = block->data_file->block_size;
+    if(block_size % page_size != 0) {
+        block_size -= (block_size % page_size);
+        block_size += page_size;
+    }
+    
     // Sync the memory for the block.
-    rc = msync(ptr, block->data_file->block_size, MS_SYNC);
+    rc = msync(ptr, block_size, MS_SYNC);
     check(rc == 0, "Unable to sync block to disk");
     
     return 0;
@@ -180,11 +199,58 @@ error:
 // timestamp - The timestamp being added to the block.
 //
 // Returns 0 if successful, otherwise returns -1.
+int sky_block_save_header(sky_block *block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+
+    // Open header file.
+    int fd = open(bdata(block->data_file->header_path), O_WRONLY);
+    check(fd != 0, "Unable to open header file for block update");
+    FILE *file = fdopen(fd, "w");
+    check(file != NULL, "Unable to open header file stream for block update");
+    
+    // Write to buffer.
+    size_t sz;
+    uint8_t *buffer[SKY_BLOCK_HEADER_SIZE];
+    rc = sky_block_pack(block, buffer, &sz);
+    check(rc == 0, "Unable to pack block header data");
+    
+    // Determine header file position.
+    off_t offset;
+    rc = sky_block_get_header_offset(block, &offset);
+    check(rc == 0, "Unable to determine block offset in header file");
+    rc = fseek(file, offset, SEEK_SET);
+    check(rc == 0, "Unable to position file at block position: %lld", offset);
+    
+    // Write to file.
+    rc = fwrite(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
+    check(rc == 1, "Unable to write block to header file");
+    
+    // Close header file.
+    fclose(file);
+    close(fd);
+
+    return 0;
+
+error:
+    if(file) fclose(file);
+    if(fd) close(fd);
+    return -1;
+}    
+
+// Updates the block object id and timestamp ranges and saves the changes to
+// the header file as required.
+//
+// block     - The block to update ranges for.
+// object_id - The object id being added to the block.
+// timestamp - The timestamp being added to the block.
+//
+// Returns 0 if successful, otherwise returns -1.
 int sky_block_update(sky_block *block, sky_object_id_t object_id,
                      sky_timestamp_t timestamp)
 {
-    int rc, fd;
-    FILE *file;
+    int rc;
     check(block != NULL, "Block required");
     check(object_id != 0, "Object id cannot be zero");
 
@@ -209,41 +275,106 @@ int sky_block_update(sky_block *block, sky_object_id_t object_id,
             block->max_timestamp = timestamp;
         }
         
-        // Open header file.
-        fd = open(bdata(block->data_file->header_path), O_WRONLY);
-        check(fd != 0, "Unable to open header file for block update");
-        file = fdopen(fd, "w");
-        check(file != NULL, "Unable to open header file stream for block update");
-        
-        // Write to buffer.
-        size_t sz;
-        uint8_t *buffer[SKY_BLOCK_HEADER_SIZE];
-        rc = sky_block_pack(block, buffer, &sz);
-        check(rc == 0, "Unable to pack block header data");
-        
-        // Determine header file position.
-        off_t offset;
-        rc = sky_block_get_header_offset(block, &offset);
-        check(rc == 0, "Unable to determine block offset in header file");
-        rc = fseek(file, offset, SEEK_SET);
-        check(rc == 0, "Unable to position file at block position: %lld", offset);
-        
-        // Write to file.
-        rc = fwrite(buffer, SKY_BLOCK_HEADER_SIZE, 1, file);
-        check(rc == 1, "Unable to write block to header file");
-        
-        // Close header file.
-        fclose(file);
-        close(fd);
+        // Save to file.
+        rc = sky_block_save_header(block);
+        check(rc == 0, "Unable to save block header");
     }
 
     return 0;
 
 error:
-    if(file) fclose(file);
-    if(fd) close(fd);
     return -1;
 }    
+
+// Loops over all paths and events in the block to determine the object id
+// and timestamp ranges. This occurs when large changes occur to a block
+// (such as a block split).
+//
+// block - The block to update.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_full_update(sky_block *block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+
+    // Initialize path iterator.
+    sky_path_iterator iterator;
+    sky_path_iterator_init(&iterator);
+    rc = sky_path_iterator_set_block(&iterator, block);
+    check(rc == 0, "Unable to set path iterator block");
+
+    // Initialize flags.
+    bool path_initialized  = false;
+    bool event_initialized = false;
+
+    // Initialize ranges.
+    block->min_object_id = 0;
+    block->max_object_id = 0;
+    block->min_timestamp = 0;
+    block->max_timestamp = 0;
+
+    // Loop over iterator to find each path.
+    while(!iterator.eof) {
+        // Save path pointer.
+        void *ptr = NULL;
+        rc = sky_path_iterator_get_ptr(&iterator, &ptr);
+        check(rc == 0, "Unable to retrieve iterator's current pointer");
+
+        // Update object id ranges.
+        if(!path_initialized || iterator.current_object_id < block->min_object_id) {
+            block->min_object_id = iterator.current_object_id;
+        }
+        if(!path_initialized || iterator.current_object_id > block->max_object_id) {
+            block->max_object_id = iterator.current_object_id;
+        }
+        path_initialized = true;
+        
+        // Use cursor to loop over each event.
+        sky_cursor cursor;
+        sky_cursor_init(&cursor);
+        sky_cursor_set_path(&cursor, ptr);
+        check(rc == 0, "Unable to set cursor path");
+            
+        // Loop over cursor until we reach the event insertion point.
+        while(!cursor.eof) {
+            sky_timestamp_t timestamp;
+            sky_action_id_t action_id;
+            sky_event_data_length_t data_length;
+
+            // Retrieve current timestamp in cursor.
+            size_t hdrsz;
+            rc = sky_event_unpack_hdr(&timestamp, &action_id, &data_length, cursor.ptr, &hdrsz);
+            check(rc == 0, "Unable to unpack event header");
+                
+            // Update timestamp ranges.
+            if(!event_initialized || timestamp < block->min_timestamp) {
+                block->min_timestamp = timestamp;
+            }
+            if(!event_initialized || timestamp > block->max_timestamp) {
+                block->max_timestamp = timestamp;
+            }
+            event_initialized = true;
+
+            // Move to next event.
+            rc = sky_cursor_next(&cursor);
+            check(rc == 0, "Unable to move to next event");
+        }
+        
+        // Move to next path.
+        rc = sky_path_iterator_next(&iterator);
+        check(rc == 0, "Unable to move to next path");
+    }
+    
+    // Save to file.
+    rc = sky_block_save_header(block);
+    check(rc == 0, "Unable to save block header");
+
+    return 0;
+
+error:
+    return -1;
+}
 
 // Calculates the byte position of the block inside the header file using the
 // block's index.
@@ -373,108 +504,6 @@ error:
 
 
 //======================================
-// Splitting
-//======================================
-
-// Splits a block into multiple blocks based on the the addition of an event.
-// The paths are placed into multiple buckets depending on their sizes and
-// order and then are evenly distributed across the blocks.
-//
-// block - The block to split.
-// event - The event that will be added to the block.
-// ret   - A reference to the block that the event will be added to.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_block_split_with_event(sky_block *block, sky_event *event,
-                               sky_block **ret)
-{
-    int rc;
-    check(block != NULL, "Block required");
-    check(event != NULL, "Event required");
-    
-    // Initialize the return value.
-    *ret = NULL;
-    
-    // Create a path iterator and point it at the block.
-    sky_path_iterator *iterator = sky_path_iterator_create();
-    rc = sky_path_iterator_set_block(iterator, block);
-    check(rc == 0, "Unable to set path iterator block");
-    
-    void *ptr;
-    sky_object_id_t object_id = event->object_id;
-
-    // Loop over paths in block.
-    while(!iterator->eof) {
-        // If the current path matches then save the ptr and exit.
-        if(object_id == iterator->current_object_id) {
-            rc = sky_path_iterator_get_ptr(iterator, &ptr);
-            check(rc == 0, "Unable to retrieve iterator's current pointer");
-            break;
-        }
-    }
-    
-    sky_path_iterator_free(iterator);
-    
-    return 0;
-
-error:
-    return -1;
-}
-
-
-//======================================
-// Path Management
-//======================================
-
-// Retrieves a pointer to the start of a path with a given object id inside
-// the block. If no path exists with the given object id exists then a null
-// pointer is returned.
-//
-// block     - The block to search.
-// object_id - The object id to search for.
-// ret       - A pointer to where the path's pointer should be returned to.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
-                           void **ret)
-{
-    int rc;
-    check(block != NULL, "Block required");
-    check(object_id > 0, "Object id required");
-
-    // Create a path iterator and point it at the block.
-    sky_path_iterator iterator;
-    sky_path_iterator_init(&iterator);
-    rc = sky_path_iterator_set_block(&iterator, block);
-    check(rc == 0, "Unable to set path iterator block");
-    
-    // Initialize the return value.
-    *ret = NULL;
-    
-    // Loop over iterator until we find the path matching the object id.
-    while(!iterator.eof) {
-        // If the current path matches then save the ptr and exit.
-        if(object_id == iterator.current_object_id) {
-            rc = sky_path_iterator_get_ptr(&iterator, ret);
-            check(rc == 0, "Unable to retrieve iterator's current pointer");
-            break;
-        }
-        
-        // Move to next path.
-        rc = sky_path_iterator_next(&iterator);
-        check(rc == 0, "Unable to move to next path");
-    }
-    
-    return 0;
-
-error:
-    *ret = NULL;
-    return -1;
-}
-
-
-
-//======================================
 // Event Management
 //======================================
 
@@ -491,6 +520,8 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     int rc;
     check(block != NULL, "Block required");
     check(event != NULL, "Event required");
+    check(block->data_file != NULL, "Block data file required");
+    check(block->data_file->block_size > 0, "Block data file must have a nonzero block size");
 
     // Store the block pointer.
     void *block_ptr;
@@ -509,17 +540,33 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     rc = sky_block_get_insertion_info(block, event, &path_ptr, &event_ptr, &block_data_length);
     check(rc == 0, "Unable to determine insertion info to add event");
 
+    // Determine size.
+    bool path_exists = (event_ptr != NULL);
+    size_t event_length = sky_event_sizeof(event);
+    size_t sz = event_length + (path_exists ? 0 : SKY_PATH_HEADER_LENGTH);
+    
+    // If adding the event will cause a split then go ahead and split and
+    // recall this function.
+    if(block_data_length + sz >= block->data_file->block_size) {
+        sky_block *target_block;
+        rc = sky_block_split_with_event(block, event, &target_block);
+        check(rc == 0, "Unable to split block");
+        
+        // Attempt to add the event again now.
+        rc = sky_block_add_event(target_block, event);
+        check(rc == 0, "Unable to add event into target block");
+        
+        // Exit here since the event was added in the previous add_event
+        // invocation.
+        return 0;
+    }
+
     // If we reached EOF and found no path insertion point then move the
     // pointer to the end of the last path.
     if(path_ptr == NULL) {
         path_ptr = block_ptr + block_data_length;
     }
 
-    // Determine size.
-    bool path_exists = (event_ptr != NULL);
-    size_t event_length = sky_event_sizeof(event);
-    size_t sz = event_length + (path_exists ? 0 : SKY_PATH_HEADER_LENGTH);
-    
     // Shift data down in the block so we have enough room.
     void *ptr = (path_exists ? event_ptr : path_ptr);
     // debug("[SHIFT] %p (%ld) | %p (%ld)", block_ptr, block_data_length, ptr, sz);
@@ -656,5 +703,131 @@ error:
     *path_ptr  = NULL;
     *event_ptr = NULL;
     *block_data_length = 0;
+    return -1;
+}
+
+// Iterates over a block and splits it into smaller blocks. The block attempts
+// to create blocks which are half the maximum size although this is not
+// always possible because of path sizes.
+//
+// This function also creates spanned blocks when a single path is too large
+// for a single block. If an event is added that will exceed the block size
+// then the function will fail.
+//
+// block        - The block to add the event to.
+// event        - The event to add to the block.
+// target_block - A pointer to where insertion block for the event will be.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_split_with_event(sky_block *block, sky_event *event,
+                               sky_block **target_block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(event != NULL, "Event required");
+    check(block->data_file != NULL, "Block data file required");
+    check(block->data_file->block_size > 0, "Block data file must have a nonzero block size");
+
+    // Target block size.
+    uint32_t block_size = block->data_file->block_size;
+    uint32_t target_block_size = (block->data_file->block_size/2);
+
+    // Store the block pointer.
+    void *block_ptr;
+    rc = sky_block_get_ptr(block, &block_ptr);
+    check(rc == 0, "Unable to retrieve block pointer");
+
+    // The checkpoint saves where a split should occur from. The split pointer
+    // states where the last split occurred. The split pointer is initialized
+    // to the beginning of the block.
+    void *checkpoint_ptr = NULL;
+    void *split_ptr = block_ptr;
+    
+    // Calculate the size of event.
+    size_t event_length = sky_event_sizeof_raw(event);
+    
+    // Initialize path iterator.
+    sky_path_iterator iterator;
+    sky_path_iterator_init(&iterator);
+    rc = sky_path_iterator_set_block(&iterator, block);
+    check(rc == 0, "Unable to set path iterator block");
+
+    // Event should be added to the existing block unless a new block with
+    // the appropriate range is created later.
+    *target_block = block;
+
+    // Loop over iterator until we find the path or insertion point.
+    bool is_first_path = true;
+    while(!iterator.eof) {
+        // Save path pointer.
+        void *path_ptr = NULL;
+        rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
+        check(rc == 0, "Unable to retrieve iterator's current pointer");
+
+        // Calculate the size of the path. If this is the target path then
+        // also add the size of the event.
+        size_t path_length = sky_path_sizeof_raw(path_ptr);
+        if(iterator.current_object_id == event->object_id) {
+            path_length += event_length;
+        }
+        
+        // TODO: Check for new path length.
+        
+        // TODO: Create a spanned block if current path exceeds block size.
+        
+        // If we are beyond the target block size then checkpoint.
+        if(checkpoint_ptr == NULL && !is_first_path && (path_ptr + path_length) - split_ptr >= target_block_size) {
+            checkpoint_ptr = path_ptr;
+        }
+
+        // If we have exceeded the block size then create a new block and move
+        // everything from the checkpoint over.
+        if((path_ptr + path_length) - split_ptr >= block_size) {
+            // Create block.
+            sky_block *new_block;
+            rc = sky_data_file_create_block(block->data_file, &new_block);
+            check(rc == 0, "Unable to create new block");
+            
+            // Retrieve new block's pointer.
+            void *new_block_ptr = NULL;
+            rc = sky_block_get_ptr(new_block, &new_block_ptr);
+            check(rc == 0, "Unable to determine new block pointer");
+            
+            // Copy over everything since the checkpoint.
+            size_t move_length = (path_ptr + sky_path_sizeof_raw(path_ptr)) - checkpoint_ptr;
+            memmove(new_block_ptr, checkpoint_ptr, move_length);
+            
+            // Clear out data from the source block.
+            memset(checkpoint_ptr, 0, move_length);
+            
+            // Save the split pointer.
+            split_ptr = path_ptr + sky_path_sizeof_raw(path_ptr);
+            
+            // If event object id is in the new block's range then change the
+            // target block to point to the new block.
+            if(iterator.current_object_id >= event->object_id) {
+                *target_block = new_block;
+            }
+            
+            // Reinitialize flag for first path in new block.
+            is_first_path = true;
+        }
+
+        // Move to next path.
+        rc = sky_path_iterator_next(&iterator);
+        check(rc == 0, "Unable to move to next path");
+
+        // Update flag to show that we are no longer in the first path.
+        is_first_path = false;
+    }
+
+    // Update block ranges on original block.
+    rc = sky_block_full_update(block);
+    check(rc == 0, "Unable to update block ranges");
+    
+    return 0;
+
+error:
+    *target_block = NULL;
     return -1;
 }
