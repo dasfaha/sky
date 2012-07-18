@@ -106,7 +106,7 @@ int test_sky_data_file_load_empty() {
 
 
 //--------------------------------------
-// Add Event
+// Add Event (New Block)
 //--------------------------------------
 
 int test_sky_data_file_add_event_to_new_block() {
@@ -117,6 +117,11 @@ int test_sky_data_file_add_event_to_new_block() {
     sky_data_file_free(data_file);
     return 0;
 }
+
+
+//--------------------------------------
+// Add Event (Existing Path)
+//--------------------------------------
 
 int test_sky_data_file_prepend_event_to_existing_path() {
     sky_data_file *data_file;
@@ -135,6 +140,11 @@ int test_sky_data_file_append_event_to_existing_path() {
     sky_data_file_free(data_file);
     return 0;
 }
+
+
+//--------------------------------------
+// Add Event (Existing Block, New Path)
+//--------------------------------------
 
 int test_sky_data_file_add_event_with_appending_path() {
     sky_data_file *data_file;
@@ -165,11 +175,15 @@ int all_tests() {
     mu_run_test(test_sky_data_file_set_path);
     mu_run_test(test_sky_data_file_set_header_path);
     mu_run_test(test_sky_data_file_load_empty);
+
     mu_run_test(test_sky_data_file_add_event_to_new_block);
     mu_run_test(test_sky_data_file_prepend_event_to_existing_path);
     mu_run_test(test_sky_data_file_append_event_to_existing_path);
+
     mu_run_test(test_sky_data_file_add_event_with_appending_path);
     mu_run_test(test_sky_data_file_add_event_with_prepending_path);
+
+    //mu_run_test(test_sky_data_file_add_event_causing_block_split);
     return 0;
 }
 
