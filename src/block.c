@@ -547,6 +547,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     
     // If adding the event will cause a split then go ahead and split and
     // recall this function.
+    //debug("split? %ld >= %d", block_data_length + sz, block->data_file->block_size);
     if(block_data_length + sz >= block->data_file->block_size) {
         sky_block *target_block;
         rc = sky_block_split_with_event(block, event, &target_block);
@@ -569,7 +570,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
 
     // Shift data down in the block so we have enough room.
     void *ptr = (path_exists ? event_ptr : path_ptr);
-    // debug("[SHIFT] %p (%ld) | %p (%ld)", block_ptr, block_data_length, ptr, sz);
+    //debug("[SHIFT] %p (%ld) | %p (%ld)", block_ptr, block_data_length, ptr, sz);
     memmove(ptr+sz, ptr, block_data_length-(ptr-block_ptr));
     
     // Pack the path first if it is missing.
@@ -756,6 +757,9 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     // the appropriate range is created later.
     *target_block = block;
 
+    // Track the position of the block which includes the soon-to-be-added event.
+    size_t pos = 0;
+
     // Loop over iterator until we find the path or insertion point.
     bool is_first_path = true;
     while(!iterator.eof) {
@@ -770,19 +774,20 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
         if(iterator.current_object_id == event->object_id) {
             path_length += event_length;
         }
+        pos += path_length;
         
         // TODO: Check for new path length.
         
         // TODO: Create a spanned block if current path exceeds block size.
         
         // If we are beyond the target block size then checkpoint.
-        if(checkpoint_ptr == NULL && !is_first_path && (path_ptr + path_length) - split_ptr >= target_block_size) {
+        if(checkpoint_ptr == NULL && !is_first_path && pos >= target_block_size) {
             checkpoint_ptr = path_ptr;
         }
 
         // If we have exceeded the block size then create a new block and move
         // everything from the checkpoint over.
-        if((path_ptr + path_length) - split_ptr >= block_size) {
+        if(pos >= block_size) {
             // Create block.
             sky_block *new_block;
             rc = sky_data_file_create_block(block->data_file, &new_block);
@@ -805,12 +810,20 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
             
             // If event object id is in the new block's range then change the
             // target block to point to the new block.
-            if(iterator.current_object_id >= event->object_id) {
+            sky_object_id_t new_block_min_object_id = *((sky_object_id_t*)new_block_ptr);
+            if(event->object_id >= new_block_min_object_id) {
                 *target_block = new_block;
             }
+
+            // Perform a full update on the block header. This is probably not
+            // needed but we're going to be safe. The amortized cost of this
+            // should be small considering splits shouldn't happen often.
+            rc = sky_block_full_update(new_block);
+            check(rc == 0, "Unable to update block ranges on new block");
             
             // Reinitialize flag for first path in new block.
             is_first_path = true;
+            pos = 0;
         }
 
         // Move to next path.
