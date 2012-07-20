@@ -25,7 +25,7 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     sky_block **target_block);
 
 int sky_block_attempt_split(sky_block *block, uint32_t target_size,
-    void *start_ptr, void *current_ptr, size_t offset,
+    void **start_ptr, void *current_ptr, size_t offset,
     size_t path_length, bool is_new_path, void **chkpt_ptr,
     sky_block **new_block);
 
@@ -784,7 +784,7 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
             
             // Check for split here.
             rc = sky_block_attempt_split(block, target_block_size,
-                                         start_ptr, path_ptr, offset, new_path_length,
+                                         &start_ptr, path_ptr, offset, new_path_length,
                                          true, &chkpt_ptr, &new_block);
             check(rc == 0, "Unable to attempt a block split on new path");
 
@@ -808,8 +808,8 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
         
         // Attempt split on existing path.
         rc = sky_block_attempt_split(block, target_block_size,
-                                     start_ptr, path_ptr, offset, path_length,
-                                    false, &chkpt_ptr, &new_block);
+                                     &start_ptr, path_ptr, offset, path_length,
+                                     false, &chkpt_ptr, &new_block);
         check(rc == 0, "Unable to attempt a block split on existing path");
 
         // Increase the offset.
@@ -865,14 +865,15 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_block_attempt_split(sky_block *block, uint32_t target_size,
-                            void *start_ptr, void *current_ptr, size_t offset,
+                            void **start_ptr, void *current_ptr, size_t offset,
                             size_t path_length, bool is_new_path,
                             void **chkpt_ptr, sky_block **new_block)
 {
     int rc;
     check(block != NULL, "Block required");
     check(target_size > 0, "Target block size must be greater than zero");
-    check(start_ptr != NULL, "Start pointer required");
+    check(start_ptr != NULL, "Start pointer reference required");
+    check(*start_ptr != NULL, "Start pointer required");
     check(current_ptr != NULL, "Current pointer required");
     check(chkpt_ptr != NULL, "Checkpoint return pointer required");
     check(new_block != NULL, "New block return pointer required");
@@ -882,8 +883,8 @@ int sky_block_attempt_split(sky_block *block, uint32_t target_size,
     *new_block = NULL;
 
     // Determine the size of the data in the new block.
-    bool is_first_path = (start_ptr == current_ptr);
-    size_t sz = ((current_ptr + path_length) - start_ptr) + offset;
+    bool is_first_path = ((*start_ptr) == current_ptr);
+    size_t sz = ((current_ptr + path_length) - (*start_ptr)) + offset;
 
     // If we are beyond the target block size then checkpoint.
     if(*chkpt_ptr == NULL && sz >= target_size) {
@@ -897,6 +898,7 @@ int sky_block_attempt_split(sky_block *block, uint32_t target_size,
 
     // If we have exceeded the block size then create a new block and move
     // everything from the checkpoint over.
+    debug("sz: %ld", sz);
     if(sz >= block->data_file->block_size) {
         size_t existing_path_length = (is_new_path ? 0 : sky_path_sizeof_raw(current_ptr));
         void *end_ptr = current_ptr + existing_path_length;
@@ -923,14 +925,16 @@ int sky_block_attempt_split(sky_block *block, uint32_t target_size,
         // Clear out data from the source block.
         memset(*chkpt_ptr, 0, new_block_data_length);
         
-        //debug("[move] %ld / %ld / %ld - %ld", ((*chkpt_ptr)-start_ptr), (end_ptr-start_ptr), (new_block_ptr-start_ptr), new_block_data_length);
+        debug("[move] %ld / %ld / %ld - %ld", ((*chkpt_ptr)-(*start_ptr)), (end_ptr-(*start_ptr)), (new_block_ptr-(*start_ptr)), new_block_data_length);
+
         // Perform a full update on the block header. This is probably not
         // needed but we're going to be safe. The amortized cost of this
         // should be small considering splits shouldn't happen often.
         rc = sky_block_full_update(*new_block);
         check(rc == 0, "Unable to update block ranges on new block");
         
-        // Clear checkpoint.
+        // Move the range start and clear the checkpoint.
+        *start_ptr = (*chkpt_ptr) + new_block_data_length;
         *chkpt_ptr = NULL;
     }
 

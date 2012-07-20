@@ -28,6 +28,14 @@
     sky_event_free(event); \
 } while (0)
 
+#define ADD_EVENT_WITH_DATA(OBJECT_ID, TIMESTAMP, ACTION_ID, KEY, VALUE) do { \
+    struct tagbstring value = bsStatic(VALUE); \
+    sky_event *event = sky_event_create(OBJECT_ID, TIMESTAMP, ACTION_ID); \
+    sky_event_set_data(event, KEY, &value); \
+    mu_assert_int_equals(sky_data_file_add_event(data_file, event), 0); \
+    sky_event_free(event); \
+} while (0)
+
 
 #define ASSERT_DATA_FILE(FIXTURE) \
     mu_assert_file("tmp/data", FIXTURE "/data"); \
@@ -196,6 +204,24 @@ int test_sky_data_file_add_event_to_new_starting_path_causing_block_split() {
     return 0;
 }
 
+int test_sky_data_file_add_small_event_to_new_middle_path_causing_block_split() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
+    ADD_EVENT(5LL, 12LL, 20);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/e");
+    sky_data_file_free(data_file);
+    return 0;
+}
+
+int test_sky_data_file_add_medium_event_to_new_middle_path_causing_block_split() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
+    ADD_EVENT_WITH_DATA(5LL, 12LL, 0, 30, "");
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/f");
+    sky_data_file_free(data_file);
+    return 0;
+}
+
 
 //==============================================================================
 //
@@ -218,6 +244,8 @@ int all_tests() {
     mu_run_test(test_sky_data_file_add_event_to_starting_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_event_to_ending_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_event_to_new_starting_path_causing_block_split);
+    mu_run_test(test_sky_data_file_add_small_event_to_new_middle_path_causing_block_split);
+    mu_run_test(test_sky_data_file_add_medium_event_to_new_middle_path_causing_block_split);
     return 0;
 }
 

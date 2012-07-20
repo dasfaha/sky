@@ -552,7 +552,8 @@ int sky_event_set_data(sky_event *event, sky_property_id_t key, bstring value)
         }
     
         // Assign new value.
-        data->value = value;
+        data->value = bstrcpy(value);
+        if(value != NULL) check_mem(data->value);
     }
     // Otherwise append a new data item.
     else {
