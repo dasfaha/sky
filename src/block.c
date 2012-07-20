@@ -26,7 +26,7 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
 
 int sky_block_attempt_split(sky_block *block, uint32_t target_size,
     void **start_ptr, void *current_ptr, size_t offset,
-    bool is_new_path, sky_block **new_block);
+    bool is_new_path, bool force, sky_block **new_block);
 
 
 //==============================================================================
@@ -551,6 +551,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     
     // If adding the event will cause a split then go ahead and split and
     // recall this function.
+    debug("[block.add_event.check_split] %ld + %ld >= %d", block_data_length, sz, block->data_file->block_size);
     if(block_data_length + sz >= block->data_file->block_size) {
         sky_block *target_block;
         rc = sky_block_split_with_event(block, event, &target_block);
@@ -573,7 +574,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
 
     // Shift data down in the block so we have enough room.
     void *ptr = (path_exists ? event_ptr : path_ptr);
-    //debug("[shift] %p (%ld) (%ld)", ptr, sz, block_data_length);
+    //debug("[block.add_event.shift] %p (%ld) (%ld)", ptr, sz, block_data_length);
     memmove(ptr+sz, ptr, block_data_length-(ptr-block_ptr));
     
     // Pack the path first if it is missing.
@@ -757,15 +758,15 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
 
     // Event should be added to the existing block unless a new block with
     // the appropriate range is created later.
+    sky_block *new_block = NULL;
     *target_block = block;
 
     // Loop over iterator until we find the path or insertion point.
     size_t offset = 0;
     sky_object_id_t last_object_id = 0;
 
+    debug("[block.split_with_event.begin]");
     while(!iterator.eof) {
-        sky_block *new_block = NULL;
-
         // Save path pointer.
         void *path_ptr = NULL;
         rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
@@ -776,14 +777,16 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
         if(event->object_id > last_object_id &&
            event->object_id < iterator.current_object_id)
         {
+            debug("[block.split_with_event.new_path]");
+            
+            // Increase offset from now on.
+            offset += SKY_PATH_HEADER_LENGTH + event_length;
+
             // Check for split here.
             rc = sky_block_attempt_split(block, target_block_size,
                                          &start_ptr, path_ptr, offset,
-                                         true, &new_block);
+                                         true, false, &new_block);
             check(rc == 0, "Unable to attempt a block split on new path");
-
-            // Increase offset from now on.
-            offset += SKY_PATH_HEADER_LENGTH + event_length;
 
             // If event object id is in the new block's range then change the
             // target block to point to the new block.
@@ -791,17 +794,19 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
                 *target_block = new_block;
             }
         }
+        // Otherwise check if the event is inserted into the current path.
+        else if(iterator.current_object_id == event->object_id) {
+            offset += event_length;
+        }
+
+        debug("[block.split_with_event.existing_path]");
+
 
         // Attempt split on existing path.
         rc = sky_block_attempt_split(block, target_block_size,
                                      &start_ptr, path_ptr, offset,
-                                     false, &new_block);
+                                     false, false, &new_block);
         check(rc == 0, "Unable to attempt a block split on existing path");
-
-        // Increase the offset.
-        if(iterator.current_object_id == event->object_id) {
-            offset += event_length;
-        }
 
         // If event object id is in the new block's range then change the
         // target block to point to the new block.
@@ -822,18 +827,21 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     size_t block_data_length = iterator.block_data_length;
     size_t remaining_bytes = (block_ptr + block_data_length) - start_ptr;
     bool was_split = (block_ptr != start_ptr);
+    bool new_event_in_last_block = (event->object_id > (*target_block)->max_object_id);
     if(was_split && remaining_bytes > 0) {
-        sky_block *new_block = NULL;
-        rc = sky_data_file_move_to_new_block(block->data_file, &start_ptr, remaining_bytes, &new_block);
-        check(rc == 0, "Unable to move remaining bytes to new block");
+        debug("[block.split_with_event.remaining_bytes] %ld", remaining_bytes);
+
+        // Force a split here.
+        rc = sky_block_attempt_split(block, target_block_size,
+                                     &start_ptr, start_ptr+remaining_bytes, offset,
+                                     false, true, &new_block);
+        check(rc == 0, "Unable to attempt a block split on new path");
+
+        debug("new block: %p", new_block);
         
-        // Update block ranges on original block.
-        rc = sky_block_full_update(block);
-        check(rc == 0, "Unable to update block ranges");
-    
         // If the target is still the original block and the event is above
         // the object id range then it belongs in the last block.
-        if(new_block != NULL && event->object_id > (*target_block)->max_object_id) {
+        if(new_event_in_last_block) {
             *target_block = new_block;
         }
     }
@@ -842,6 +850,10 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
         rc = sky_block_full_update(block);
         check(rc == 0, "Unable to update block ranges");
     }
+
+    sky_block_memdump(block);
+
+    debug("[block.split_with_event.end] target:%d", (*target_block)->index);
 
     return 0;
 
@@ -866,13 +878,15 @@ error:
 // offset       - The number of bytes to offset the size to account for new
 //                paths or events.
 // path_length  - The length of the current path or new path being inserted.
+// force        - Forces a split on whatever is remaining in the range. This
+//                occurs at the end of a block where a split has occurred.
 // is_new_path  - A flag stating if there is a new path that is being inserted
 //                at the current pointer after the split.
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_block_attempt_split(sky_block *block, uint32_t target_size,
                             void **start_ptr, void *current_ptr, size_t offset,
-                            bool is_new_path, sky_block **new_block)
+                            bool is_new_path, bool force, sky_block **new_block)
 {
     int rc;
     check(block != NULL, "Block required");
@@ -903,10 +917,13 @@ int sky_block_attempt_split(sky_block *block, uint32_t target_size,
     // block.
     size_t pos = (current_ptr - (*start_ptr)) + offset;
     size_t sz = (current_ptr - (*start_ptr));
-    if(pos >= target_size) {
+    debug("block.attempt_split %ld - %ld - %ld (%d)", pos, sz, offset, has_split);
+    if(pos >= target_size || force) {
         // Don't move the first split. It stays in the original block. Move
         // anything after the first split.
-        if(has_split) {
+        if(has_split || force) {
+            debug("block.attempt_split !");
+
             // Move bytes to new block.
             rc = sky_data_file_move_to_new_block(block->data_file, start_ptr, sz, new_block);
             check(rc == 0, "Unable to move bytes to new block");
