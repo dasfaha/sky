@@ -90,6 +90,9 @@ int sky_data_file_create_block(sky_data_file *data_file, sky_block **ret);
 int sky_data_file_find_insertion_block(sky_data_file *data_file,
     sky_event *event, sky_block **ret);
 
+int sky_data_file_move_to_new_block(sky_data_file *data_file, void **ptr,
+    size_t sz, sky_block **new_block);
+
 
 //======================================
 // Event Management

@@ -75,6 +75,8 @@ int sky_block_unpack(sky_block *block, void *ptr, size_t *sz);
 
 int sky_block_get_header_offset(sky_block *block, off_t *offset);
 
+int sky_block_full_update(sky_block *block);
+
 
 //======================================
 // Block Position

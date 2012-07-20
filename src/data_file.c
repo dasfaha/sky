@@ -566,9 +566,58 @@ int sky_data_file_normalize(sky_data_file *data_file)
     return 0;
 }
 
+// Moves a specific number of bytes from a given pointer to a newly created
+// block. The pointer passed in may change if the data file is remapped to a
+// different memory location.
+//
+// data_file - The data file that contains the pointer.
+// ptr       - A pointer to a location on the data file.
+// sz        - The number of bytes to move to a new block.
+// new_block - A pointer to where the new block should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_data_file_move_to_new_block(sky_data_file *data_file, void **ptr,
+                                    size_t sz, sky_block **new_block)
+{
+    int rc;
+    check(data_file != NULL, "Data file required");
+
+    // Store offset before data file remap.
+    off_t ptr_off = (*ptr) - data_file->data;
+
+    // Create block.
+    rc = sky_data_file_create_block(data_file, new_block);
+    check(rc == 0, "Unable to create new block");
+    
+    // Restore pointers in case remap relocated data.
+    *ptr = data_file->data + ptr_off;
+
+    // Retrieve new block's pointer.
+    void *new_block_ptr = NULL;
+    rc = sky_block_get_ptr(*new_block, &new_block_ptr);
+    check(rc == 0, "Unable to determine new block pointer");
+    
+    // Copy over everything since the checkpoint.
+    memmove(new_block_ptr, (*ptr), sz);
+
+    // Clear out data from the source block.
+    memset((*ptr), 0, sz);
+    
+    // Perform a full update on the block header. This is probably not
+    // needed but we're going to be safe. The amortized cost of this
+    // should be small considering splits shouldn't happen often.
+    rc = sky_block_full_update(*new_block);
+    check(rc == 0, "Unable to update block ranges on new block");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
 
 //======================================
-// Block Management
+// Event Management
 //======================================
 
 // Adds an event to the data file.
