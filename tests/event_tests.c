@@ -47,7 +47,7 @@ char ACTION_DATA_EVENT_DATA[] =
 //--------------------------------------
 
 int test_sky_event_create() {
-    sky_event *event = sky_event_create(1325376000000LL, 10, 200);
+    sky_event *event = sky_event_create(10, 1325376000000LL, 200);
     mu_assert(event != NULL, "Unable to allocate event");
     mu_assert(event->timestamp == 1325376000000LL, "Event timestamp not assigned");
     mu_assert(event->object_id == 10, "Event object id not assigned");
@@ -113,7 +113,7 @@ int test_sky_event_unset_data() {
 
 // Action-only event.
 int test_sky_event_action_event_sizeof() {
-    sky_event *event = sky_event_create(1325376000000LL, 0, 20);
+    sky_event *event = sky_event_create(0, 1325376000000LL, 20);
     size_t sz = sky_event_sizeof(event);
     mu_assert_long_equals(sz, 13L);
     sky_event_free(event);
@@ -122,7 +122,7 @@ int test_sky_event_action_event_sizeof() {
 
 // Data-only event.
 int test_sky_event_data_event_sizeof() {
-    sky_event *event = sky_event_create(1325376000000LL, 0, 0);
+    sky_event *event = sky_event_create(0, 1325376000000LL, 0);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     size_t sz = sky_event_sizeof(event);
@@ -133,7 +133,7 @@ int test_sky_event_data_event_sizeof() {
 
 // Action + data event.
 int test_sky_event_action_data_event_sizeof() {
-    sky_event *event = sky_event_create(1325376000000LL, 0, 100);
+    sky_event *event = sky_event_create(0, 1325376000000LL, 100);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     size_t sz = sky_event_sizeof(event);
@@ -150,7 +150,7 @@ int test_sky_event_action_data_event_sizeof() {
 int test_sky_event_action_event_pack() {
     size_t sz;
     void *addr = calloc(ACTION_EVENT_DATA_LENGTH, 1);
-    sky_event *event = sky_event_create(30LL, 0, 20);
+    sky_event *event = sky_event_create(0, 30LL, 20);
     sky_event_pack(event, addr, &sz);
     sky_event_free(event);
     mu_assert_long_equals(sz, ACTION_EVENT_DATA_LENGTH);
@@ -163,7 +163,7 @@ int test_sky_event_action_event_pack() {
 int test_sky_event_data_event_pack() {
     size_t sz;
     void *addr = calloc(DATA_EVENT_DATA_LENGTH, 1);
-    sky_event *event = sky_event_create(30LL, 0, 0);
+    sky_event *event = sky_event_create(0, 30LL, 0);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     sky_event_pack(event, addr, &sz);
@@ -178,7 +178,7 @@ int test_sky_event_data_event_pack() {
 int test_sky_event_action_data_event_pack() {
     size_t sz;
     void *addr = calloc(ACTION_DATA_EVENT_DATA_LENGTH, 1);
-    sky_event *event = sky_event_create(30LL, 0, 20);
+    sky_event *event = sky_event_create(0, 30LL, 20);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     sky_event_pack(event, addr, &sz);

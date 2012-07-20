@@ -34,17 +34,17 @@ sky_path *create_test_path0()
     sky_path *path = sky_path_create(2);
 
     // Action-only event
-    event = sky_event_create(26LL, 2, 6);
+    event = sky_event_create(2, 26LL, 6);
     sky_path_add_event(path, event);
 
     // Action+data event
-    event = sky_event_create(27LL, 2, 7);
+    event = sky_event_create(2, 27LL, 7);
     sky_event_set_data(event, 1, &foo);
     sky_event_set_data(event, 2, &bar);
     sky_path_add_event(path, event);
 
     // Data-only event
-    event = sky_event_create(28LL, 2, 0);
+    event = sky_event_create(2, 28LL, 0);
     sky_event_set_data(event, 1, &foo);
     sky_path_add_event(path, event);
 
@@ -79,9 +79,9 @@ int test_sky_path_create() {
 int test_sky_path_add_remove_event() {
     sky_path *path = sky_path_create(2);
 
-    sky_event *event0 = sky_event_create(27LL, 2, 11);
+    sky_event *event0 = sky_event_create(2, 27LL, 11);
     sky_path_add_event(path, event0);
-    sky_event *event1 = sky_event_create(26LL, 2, 10);
+    sky_event *event1 = sky_event_create(2, 26LL, 10);
     sky_path_add_event(path, event1);
     
     // Check order of events (e0 should be after e1 based on timestamp).

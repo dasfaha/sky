@@ -24,6 +24,11 @@ int sky_block_get_insertion_info(sky_block *block, sky_event *event,
 int sky_block_split_with_event(sky_block *block, sky_event *event,
     sky_block **target_block);
 
+int sky_block_attempt_split(sky_block *block, uint32_t target_size,
+    void *start_ptr, void *current_ptr, size_t offset,
+    size_t path_length, bool is_new_path, void **chkpt_ptr,
+    sky_block **new_block);
+
 
 //==============================================================================
 //
@@ -547,7 +552,6 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     
     // If adding the event will cause a split then go ahead and split and
     // recall this function.
-    //debug("split? %ld >= %d", block_data_length + sz, block->data_file->block_size);
     if(block_data_length + sz >= block->data_file->block_size) {
         sky_block *target_block;
         rc = sky_block_split_with_event(block, event, &target_block);
@@ -570,7 +574,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
 
     // Shift data down in the block so we have enough room.
     void *ptr = (path_exists ? event_ptr : path_ptr);
-    //debug("[SHIFT] %p (%ld) | %p (%ld)", block_ptr, block_data_length, ptr, sz);
+    //debug("[shift] %p (%ld) (%ld)", ptr, sz, block_data_length);
     memmove(ptr+sz, ptr, block_data_length-(ptr-block_ptr));
     
     // Pack the path first if it is missing.
@@ -730,7 +734,6 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     check(block->data_file->block_size > 0, "Block data file must have a nonzero block size");
 
     // Target block size.
-    uint32_t block_size = block->data_file->block_size;
     uint32_t target_block_size = (block->data_file->block_size/2);
 
     // Store the block pointer.
@@ -741,11 +744,11 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     // The checkpoint saves where a split should occur from. The split pointer
     // states where the last split occurred. The split pointer is initialized
     // to the beginning of the block.
-    void *checkpoint_ptr = NULL;
-    void *split_ptr = block_ptr;
+    void *chkpt_ptr = NULL;
+    void *start_ptr = block_ptr;
     
     // Calculate the size of event.
-    size_t event_length = sky_event_sizeof_raw(event);
+    size_t event_length = sky_event_sizeof(event);
     
     // Initialize path iterator.
     sky_path_iterator iterator;
@@ -761,12 +764,39 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     size_t pos = 0;
 
     // Loop over iterator until we find the path or insertion point.
-    bool is_first_path = true;
+    size_t offset = 0;
+    sky_object_id_t last_object_id = 0;
     while(!iterator.eof) {
+        sky_block *new_block = NULL;
+
         // Save path pointer.
         void *path_ptr = NULL;
         rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
         check(rc == 0, "Unable to retrieve iterator's current pointer");
+
+        // If the new event creates a new path then check if this is the
+        // insertion point.
+        if(event->object_id > last_object_id &&
+           event->object_id < iterator.current_object_id)
+        {
+            // Determine size of new path.
+            size_t new_path_length = SKY_PATH_HEADER_LENGTH + event_length;
+            
+            // Check for split here.
+            rc = sky_block_attempt_split(block, target_block_size,
+                                         start_ptr, path_ptr, offset, new_path_length,
+                                         true, &chkpt_ptr, &new_block);
+            check(rc == 0, "Unable to attempt a block split on new path");
+
+            // Increase offset from now on.
+            offset += new_path_length;
+
+            // If event object id is in the new block's range then change the
+            // target block to point to the new block.
+            if(new_block != NULL && (new_block->min_object_id == 0 || event->object_id > new_block->min_object_id)) {
+                *target_block = new_block;
+            }
+        }
 
         // Calculate the size of the path. If this is the target path then
         // also add the size of the event.
@@ -776,62 +806,29 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
         }
         pos += path_length;
         
-        // TODO: Check for new path length.
-        
-        // TODO: Create a spanned block if current path exceeds block size.
-        
-        // If we are beyond the target block size then checkpoint.
-        if(checkpoint_ptr == NULL && !is_first_path && pos >= target_block_size) {
-            checkpoint_ptr = path_ptr;
+        // Attempt split on existing path.
+        rc = sky_block_attempt_split(block, target_block_size,
+                                     start_ptr, path_ptr, offset, path_length,
+                                    false, &chkpt_ptr, &new_block);
+        check(rc == 0, "Unable to attempt a block split on existing path");
+
+        // Increase the offset.
+        if(iterator.current_object_id == event->object_id) {
+            offset += event_length;
         }
 
-        // If we have exceeded the block size then create a new block and move
-        // everything from the checkpoint over.
-        if(pos >= block_size) {
-            // Create block.
-            sky_block *new_block;
-            rc = sky_data_file_create_block(block->data_file, &new_block);
-            check(rc == 0, "Unable to create new block");
-            
-            // Retrieve new block's pointer.
-            void *new_block_ptr = NULL;
-            rc = sky_block_get_ptr(new_block, &new_block_ptr);
-            check(rc == 0, "Unable to determine new block pointer");
-            
-            // Copy over everything since the checkpoint.
-            size_t move_length = (path_ptr + sky_path_sizeof_raw(path_ptr)) - checkpoint_ptr;
-            memmove(new_block_ptr, checkpoint_ptr, move_length);
-            
-            // Clear out data from the source block.
-            memset(checkpoint_ptr, 0, move_length);
-            
-            // Save the split pointer.
-            split_ptr = path_ptr + sky_path_sizeof_raw(path_ptr);
-            
-            // If event object id is in the new block's range then change the
-            // target block to point to the new block.
-            sky_object_id_t new_block_min_object_id = *((sky_object_id_t*)new_block_ptr);
-            if(event->object_id >= new_block_min_object_id) {
-                *target_block = new_block;
-            }
-
-            // Perform a full update on the block header. This is probably not
-            // needed but we're going to be safe. The amortized cost of this
-            // should be small considering splits shouldn't happen often.
-            rc = sky_block_full_update(new_block);
-            check(rc == 0, "Unable to update block ranges on new block");
-            
-            // Reinitialize flag for first path in new block.
-            is_first_path = true;
-            pos = 0;
+        // If event object id is in the new block's range then change the
+        // target block to point to the new block.
+        if(new_block != NULL && event->object_id >= new_block->min_object_id) {
+            *target_block = new_block;
         }
+
+        // Save last object id.
+        last_object_id = iterator.current_object_id;
 
         // Move to next path.
         rc = sky_path_iterator_next(&iterator);
         check(rc == 0, "Unable to move to next path");
-
-        // Update flag to show that we are no longer in the first path.
-        is_first_path = false;
     }
 
     // Update block ranges on original block.
@@ -842,5 +839,133 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
 
 error:
     *target_block = NULL;
+    return -1;
+}
+
+// Attempts to split a block based on an available pointer range and a 
+// checkpoint that may or may not have already been made.
+//
+// A checkpoint denotes the closest point at which a split would size the
+// block to the target block size. If a checkpoint has not already been made
+// then this function can generate one and return it back to the caller.
+// 
+// block        - The original block being split.
+// target_size  - The size that the block should be split into.
+// start_ptr    - The start of the range in the block that is being split.
+// current_ptr  - The pointer the current location. If this is a new path
+//                then it is the end of the range. If it is an existing path
+//                then this is a pointer to the start of the current path.
+// offset       - A size offset to include the size of the soon-to-be-added
+//                event.
+// path_length  - The length of the current path or new path being inserted.
+// is_new_path  - A flag stating if there is a new path that is being inserted
+//                at the current pointer after the split.
+// chkpt_ptr    - A pointer to where the block should be split. If NULL is
+//                passed in then a checkpoint may be generated.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_attempt_split(sky_block *block, uint32_t target_size,
+                            void *start_ptr, void *current_ptr, size_t offset,
+                            size_t path_length, bool is_new_path,
+                            void **chkpt_ptr, sky_block **new_block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(target_size > 0, "Target block size must be greater than zero");
+    check(start_ptr != NULL, "Start pointer required");
+    check(current_ptr != NULL, "Current pointer required");
+    check(chkpt_ptr != NULL, "Checkpoint return pointer required");
+    check(new_block != NULL, "New block return pointer required");
+    check(target_size < block->data_file->block_size, "Target block size must be less than block size");
+
+    // Initilize return value.
+    *new_block = NULL;
+
+    // Determine the size of the data in the new block.
+    bool is_first_path = (start_ptr == current_ptr);
+    size_t sz = ((current_ptr + path_length) - start_ptr) + offset;
+
+    // If we are beyond the target block size then checkpoint.
+    if(*chkpt_ptr == NULL && sz >= target_size) {
+        // Do not perform a checkpoint if this is the first path since we'll
+        // end up with an empty block. The exception, however, is if this is
+        // a new path then allow it.
+        if(is_new_path || !is_first_path) {
+            *chkpt_ptr = current_ptr;
+        }
+    }
+
+    // If we have exceeded the block size then create a new block and move
+    // everything from the checkpoint over.
+    if(sz >= block->data_file->block_size) {
+        size_t existing_path_length = (is_new_path ? 0 : sky_path_sizeof_raw(current_ptr));
+        void *end_ptr = current_ptr + existing_path_length;
+        size_t new_block_data_length = end_ptr - *chkpt_ptr;
+
+        // Store offsets before data file remap.
+        off_t chkpt_off = (*chkpt_ptr) - block->data_file->data;
+
+        // Create block.
+        rc = sky_data_file_create_block(block->data_file, new_block);
+        check(rc == 0, "Unable to create new block");
+            
+        // Restore pointers in case remap relocated data.
+        *chkpt_ptr = block->data_file->data + chkpt_off;
+        
+        // Retrieve new block's pointer.
+        void *new_block_ptr = NULL;
+        rc = sky_block_get_ptr(*new_block, &new_block_ptr);
+        check(rc == 0, "Unable to determine new block pointer");
+            
+        // Copy over everything since the checkpoint.
+        memmove(new_block_ptr, *chkpt_ptr, new_block_data_length);
+        
+        // Clear out data from the source block.
+        memset(*chkpt_ptr, 0, new_block_data_length);
+        
+        //debug("[move] %ld / %ld / %ld - %ld", ((*chkpt_ptr)-start_ptr), (end_ptr-start_ptr), (new_block_ptr-start_ptr), new_block_data_length);
+        // Perform a full update on the block header. This is probably not
+        // needed but we're going to be safe. The amortized cost of this
+        // should be small considering splits shouldn't happen often.
+        rc = sky_block_full_update(*new_block);
+        check(rc == 0, "Unable to update block ranges on new block");
+        
+        // Clear checkpoint.
+        *chkpt_ptr = NULL;
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//======================================
+// Debugging
+//======================================
+
+// Dumps the contents of a block out to STDERR.
+//
+// block - The block to dump.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_block_memdump(sky_block *block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+
+    // Retrieve block pointer.
+    void *ptr = NULL;
+    rc = sky_block_get_ptr(block, &ptr);
+    check(rc == 0  && ptr != NULL, "Unable to retrieve block pointer");
+    
+    // Dump block contents.
+    fprintf(stderr, "BLOCK #%d @ %p\n", block->index, ptr);
+    memdump(ptr, block->data_file->block_size);
+
+    return 0;
+    
+error:
     return -1;
 }

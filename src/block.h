@@ -105,4 +105,12 @@ int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
 
 int sky_block_add_event(sky_block *block, sky_event *event);
 
+
+//======================================
+// Debugging
+//======================================
+
+int sky_block_memdump(sky_block *block);
+
+
 #endif

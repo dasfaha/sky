@@ -22,8 +22,8 @@
     data_file->header_path = bfromcstr("tmp/header"); \
     sky_data_file_load(data_file);
 
-#define ADD_EVENT(TIMESTAMP, OBJECT_ID, ACTION_ID) do { \
-    sky_event *event = sky_event_create(TIMESTAMP, OBJECT_ID, ACTION_ID); \
+#define ADD_EVENT(OBJECT_ID, TIMESTAMP, ACTION_ID) do { \
+    sky_event *event = sky_event_create(OBJECT_ID, TIMESTAMP, ACTION_ID); \
     mu_assert_int_equals(sky_data_file_add_event(data_file, event), 0); \
     sky_event_free(event); \
 } while (0)
@@ -112,7 +112,7 @@ int test_sky_data_file_load_empty() {
 int test_sky_data_file_add_event_to_new_block() {
     sky_data_file *data_file;
     INIT_DATA_FILE("", 64);
-    ADD_EVENT(10LL, 3LL, 20);
+    ADD_EVENT(3LL, 10LL, 20);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/a");
     sky_data_file_free(data_file);
     return 0;
@@ -126,7 +126,7 @@ int test_sky_data_file_add_event_to_new_block() {
 int test_sky_data_file_prepend_event_to_existing_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/1/a", 0);
-    ADD_EVENT(8LL, 3LL, 21);
+    ADD_EVENT(3LL, 8LL, 21);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/b");
     sky_data_file_free(data_file);
     return 0;
@@ -135,7 +135,7 @@ int test_sky_data_file_prepend_event_to_existing_path() {
 int test_sky_data_file_append_event_to_existing_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/1/b", 0);
-    ADD_EVENT(11LL, 3LL, 22);
+    ADD_EVENT(3LL, 11LL, 22);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/c");
     sky_data_file_free(data_file);
     return 0;
@@ -149,7 +149,7 @@ int test_sky_data_file_append_event_to_existing_path() {
 int test_sky_data_file_add_event_with_appending_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/1/b", 0);
-    ADD_EVENT(11LL, 4LL, 22);
+    ADD_EVENT(4LL, 11LL, 22);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/d");
     sky_data_file_free(data_file);
     return 0;
@@ -158,7 +158,7 @@ int test_sky_data_file_add_event_with_appending_path() {
 int test_sky_data_file_add_event_with_prepending_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/1/b", 0);
-    ADD_EVENT(11LL, 2LL, 22);
+    ADD_EVENT(2LL, 11LL, 22);
     ASSERT_DATA_FILE("tests/fixtures/data_files/1/e");
     sky_data_file_free(data_file);
     return 0;
@@ -172,7 +172,7 @@ int test_sky_data_file_add_event_with_prepending_path() {
 int test_sky_data_file_add_event_to_starting_path_causing_block_split() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
-    ADD_EVENT(12LL, 3LL, 20);
+    ADD_EVENT(3LL, 12LL, 20);
     ASSERT_DATA_FILE("tests/fixtures/data_files/2/b");
     sky_data_file_free(data_file);
     return 0;
@@ -181,8 +181,17 @@ int test_sky_data_file_add_event_to_starting_path_causing_block_split() {
 int test_sky_data_file_add_event_to_ending_path_causing_block_split() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
-    ADD_EVENT(12LL, 10LL, 20);
+    ADD_EVENT(10LL, 12LL, 20);
     ASSERT_DATA_FILE("tests/fixtures/data_files/2/c");
+    sky_data_file_free(data_file);
+    return 0;
+}
+
+int test_sky_data_file_add_event_to_new_starting_path_causing_block_split() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
+    ADD_EVENT(2LL, 12LL, 20);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/d");
     sky_data_file_free(data_file);
     return 0;
 }
@@ -208,6 +217,7 @@ int all_tests() {
 
     mu_run_test(test_sky_data_file_add_event_to_starting_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_event_to_ending_path_causing_block_split);
+    mu_run_test(test_sky_data_file_add_event_to_new_starting_path_causing_block_split);
     return 0;
 }
 

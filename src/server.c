@@ -308,7 +308,7 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     }
 
     // Create event.
-    sky_event *event = sky_event_create(message->timestamp, message->object_id, action_id);
+    sky_event *event = sky_event_create(message->object_id, message->timestamp, action_id);
     
     // Add data to event.
     int i;

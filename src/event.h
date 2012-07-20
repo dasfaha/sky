@@ -76,8 +76,8 @@ typedef struct sky_event {
 // Create/Destroy
 //======================================
 
-sky_event *sky_event_create(sky_timestamp_t timestamp,
-                            sky_object_id_t object_id,
+sky_event *sky_event_create(sky_object_id_t object_id,
+                            sky_timestamp_t timestamp,
                             sky_action_id_t action_id);
 
 void sky_event_free(sky_event *event);

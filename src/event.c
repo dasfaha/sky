@@ -108,8 +108,8 @@ error:
 // action    - The name of the action that was performed.
 //
 // Returns a reference to the new event.
-sky_event *sky_event_create(sky_timestamp_t timestamp,
-                            sky_object_id_t object_id,
+sky_event *sky_event_create(sky_object_id_t object_id,
+                            sky_timestamp_t timestamp,
                             sky_action_id_t action_id)
 {
     sky_event *event;
@@ -164,7 +164,7 @@ int sky_event_copy(sky_event *source, sky_event **target)
     check(source != NULL, "Source event is required for copy");
 
     // Copy basic properties.
-    sky_event *event = sky_event_create(source->timestamp, source->object_id, source->action_id);
+    sky_event *event = sky_event_create(source->object_id, source->timestamp, source->action_id);
     
     // Copy event data.
     if(source->data_count > 0) {

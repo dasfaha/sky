@@ -261,7 +261,7 @@ int sky_path_unpack(sky_path *path, void *ptr, size_t *sz)
         path->events = realloc(path->events, sizeof(sky_event*) * path->event_count);
         check_mem(path->events);
 
-        path->events[index] = sky_event_create(0, path->object_id, 0);
+        path->events[index] = sky_event_create(path->object_id, 0, 0);
         rc = sky_event_unpack(path->events[index], ptr, &_sz);
         check(rc == 0, "Unable to unpack event at %p", ptr);
         ptr += _sz;
