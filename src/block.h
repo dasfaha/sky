@@ -44,6 +44,17 @@ struct sky_block {
     bool spanned;
 };
 
+// This structure is used for splitting blocks. It contains positional
+// information about where a path in a block is located and also includes
+// the future size of a path after a pending event is added.
+typedef struct sky_block_path_stat {
+    sky_block *block;
+    sky_object_id_t object_id;
+    void *start_ptr;
+    void *end_ptr;
+    size_t sz;
+} sky_block_path_stat;
+
 
 //==============================================================================
 //
@@ -100,6 +111,10 @@ int sky_block_get_span_count(sky_block *block, uint32_t *count);
 
 int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
     void **ret);
+
+int sky_block_get_path_stats(sky_block *block, sky_event *event,
+    sky_block_path_stat **paths, uint32_t *path_count);
+
 
 //======================================
 // Event Management

@@ -12,6 +12,7 @@
 #include "path.h"
 #include "path_iterator.h"
 
+
 //==============================================================================
 //
 // Forward Declarations
@@ -27,6 +28,7 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
 int sky_block_attempt_split(sky_block *block, uint32_t target_size,
     void **start_ptr, void *current_ptr, size_t offset,
     bool is_new_path, bool force, sky_block **new_block);
+
 
 
 //==============================================================================
@@ -733,213 +735,124 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     check(block->data_file != NULL, "Block data file required");
     check(block->data_file->block_size > 0, "Block data file must have a nonzero block size");
 
-    // Target block size.
-    uint32_t block_size = block->data_file->block_size;
-    uint32_t target_block_size = (block_size / 2);
+    // Initialize path stats.
+    uint32_t path_count = 0;
+    sky_block_path_stat *paths;
 
-    // Store the block pointer.
-    void *block_ptr;
-    rc = sky_block_get_ptr(block, &block_ptr);
-    check(rc == 0, "Unable to retrieve block pointer");
+    // Retrieve a list of path sizes in the current block (plus new event).
+    rc = sky_block_get_path_stats(block, event, &paths, &path_count);
+    check(rc == 0, "Unable to calculate path stats on block");
+    
+    // Distribute paths across blocks.
+    //rc = sky_block_distribute_paths(block, paths, path_count);
+    //check(rc == 0, "Unable to distribute paths");
+    
+    *target_block = NULL;
+    
+    free(paths);
+    return 0;
 
-    // The checkpoint saves where a split should occur from. The split pointer
-    // states where the last split occurred. The split pointer is initialized
-    // to the beginning of the block.
-    void *start_ptr = block_ptr;
-    
-    // Calculate the size of event.
-    size_t event_length = sky_event_sizeof(event);
-    
+error:
+    free(paths);
+    return -1;
+}
+
+
+// Generates an index of stats on all the paths in the block. If an event is
+// passed in then it also generates stats on the path the event would be
+// added to or a new path that would be created from that event.
+//
+// block      - The block to calculate stats on.
+// event      - A soon-to-be-added event to calculate into the paths. If null then
+//              the stats are calculated as they exist in the block.
+// paths      - A pointer to where the stats should be returned.
+// path_count - A pointer to where the number of paths should be returned.
+int sky_block_get_path_stats(sky_block *block, sky_event *event,
+                             sky_block_path_stat **paths,
+                             uint32_t *path_count)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(paths != NULL, "Paths return address required");
+    check(path_count != NULL, "Path count return address required");
+
     // Initialize path iterator.
     sky_path_iterator iterator;
     sky_path_iterator_init(&iterator);
     rc = sky_path_iterator_set_block(&iterator, block);
     check(rc == 0, "Unable to set path iterator block");
 
-    // Event should be added to the existing block unless a new block with
-    // the appropriate range is created later.
-    sky_block *new_block = NULL;
-    *target_block = block;
+    // Calculate size of the event.
+    size_t event_length = (event != NULL ? sky_event_sizeof(event) : 0);
 
-    // Loop over iterator until we find the path or insertion point.
-    size_t offset = 0;
+    // Initialize return values.
+    *path_count = 0;
+    *paths = NULL;
+ 
+    // Loop over iterator to calculate sizes of the paths.
     sky_object_id_t last_object_id = 0;
-
-    debug("[block.split_with_event.begin]");
     while(!iterator.eof) {
-        // Save path pointer.
+        // Check if event is a new path inserted between the last path and
+        // this current path.
+        if(event != NULL && event->object_id > last_object_id && event->object_id < iterator.current_object_id) {
+            // Increment paths array.
+            (*path_count)++;
+            *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
+            sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
+            stat->block = NULL;
+            stat->object_id = event->object_id;
+            stat->start_ptr = stat->end_ptr = NULL;
+            stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
+        }
+        
+        // Retrieve path pointer.
         void *path_ptr = NULL;
         rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
         check(rc == 0, "Unable to retrieve iterator's current pointer");
 
-        // If the new event creates a new path then check if this is the
-        // insertion point.
-        if(event->object_id > last_object_id &&
-           event->object_id < iterator.current_object_id)
-        {
-            debug("[block.split_with_event.new_path]");
-            
-            // Increase offset from now on.
-            offset += SKY_PATH_HEADER_LENGTH + event_length;
-
-            // Check for split here.
-            rc = sky_block_attempt_split(block, target_block_size,
-                                         &start_ptr, path_ptr, offset,
-                                         true, false, &new_block);
-            check(rc == 0, "Unable to attempt a block split on new path");
-
-            // If event object id is in the new block's range then change the
-            // target block to point to the new block.
-            if(new_block != NULL && (new_block->min_object_id == 0 || event->object_id > new_block->min_object_id)) {
-                *target_block = new_block;
-            }
-        }
-        // Otherwise check if the event is inserted into the current path.
-        else if(iterator.current_object_id == event->object_id) {
-            offset += event_length;
+        // Calculate current path stats.
+        size_t path_length = sky_path_sizeof_raw(path_ptr);
+        (*path_count)++;
+        *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
+        sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
+        stat->block = NULL;
+        stat->object_id = iterator.current_object_id;
+        stat->start_ptr = path_ptr;
+        stat->end_ptr = path_ptr + path_length;
+        stat->sz = path_length;
+    
+        // Add insertion event length if this is the matching path.
+        if(event != NULL && event->object_id == iterator.current_object_id) {
+            stat->sz += event_length;
         }
 
-        debug("[block.split_with_event.existing_path]");
-
-
-        // Attempt split on existing path.
-        rc = sky_block_attempt_split(block, target_block_size,
-                                     &start_ptr, path_ptr, offset,
-                                     false, false, &new_block);
-        check(rc == 0, "Unable to attempt a block split on existing path");
-
-        // If event object id is in the new block's range then change the
-        // target block to point to the new block.
-        if(new_block != NULL && event->object_id >= new_block->min_object_id) {
-            *target_block = new_block;
-        }
-
-        // Save last object id.
+        // Save off this object id.
         last_object_id = iterator.current_object_id;
-
+    
         // Move to next path.
         rc = sky_path_iterator_next(&iterator);
         check(rc == 0, "Unable to move to next path");
     }
 
-    // If a split has occurred but there is remaining unsplit data at the end
-    // then we need to split it now.
-    size_t block_data_length = iterator.block_data_length;
-    size_t remaining_bytes = (block_ptr + block_data_length) - start_ptr;
-    bool was_split = (block_ptr != start_ptr);
-    bool new_event_in_last_block = (event->object_id > (*target_block)->max_object_id);
-    if(was_split && remaining_bytes > 0) {
-        debug("[block.split_with_event.remaining_bytes] %ld", remaining_bytes);
-
-        // Force a split here.
-        rc = sky_block_attempt_split(block, target_block_size,
-                                     &start_ptr, start_ptr+remaining_bytes, offset,
-                                     false, true, &new_block);
-        check(rc == 0, "Unable to attempt a block split on new path");
-
-        debug("new block: %p", new_block);
-        
-        // If the target is still the original block and the event is above
-        // the object id range then it belongs in the last block.
-        if(new_event_in_last_block) {
-            *target_block = new_block;
-        }
+    // Check if event is a new path inserted at the end.
+    if(event != NULL && event->object_id > last_object_id) {
+        (*path_count)++;
+        *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
+        sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
+        stat->block = NULL;
+        stat->object_id = event->object_id;
+        stat->start_ptr = stat->end_ptr = NULL;
+        stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
     }
-    else {
-        // Update block ranges on original block.
-        rc = sky_block_full_update(block);
-        check(rc == 0, "Unable to update block ranges");
-    }
-
-    sky_block_memdump(block);
-
-    debug("[block.split_with_event.end] target:%d", (*target_block)->index);
-
+    
     return 0;
 
 error:
-    *target_block = NULL;
+    free(*paths);
+    *paths = NULL;
+    *path_count = 0;
     return -1;
 }
-
-// Attempts to split a block based on an available pointer range and a 
-// checkpoint that may or may not have already been made.
-//
-// A checkpoint denotes the closest point at which a split would size the
-// block to the target block size. If a checkpoint has not already been made
-// then this function can generate one and return it back to the caller.
-// 
-// block        - The original block being split.
-// target_size  - The size that the block should be split into.
-// start_ptr    - The start of the range in the block that is being split.
-// current_ptr  - The pointer the current location. If this is a new path
-//                then it is the end of the range. If it is an existing path
-//                then this is a pointer to the start of the current path.
-// offset       - The number of bytes to offset the size to account for new
-//                paths or events.
-// path_length  - The length of the current path or new path being inserted.
-// force        - Forces a split on whatever is remaining in the range. This
-//                occurs at the end of a block where a split has occurred.
-// is_new_path  - A flag stating if there is a new path that is being inserted
-//                at the current pointer after the split.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_block_attempt_split(sky_block *block, uint32_t target_size,
-                            void **start_ptr, void *current_ptr, size_t offset,
-                            bool is_new_path, bool force, sky_block **new_block)
-{
-    int rc;
-    check(block != NULL, "Block required");
-    check(target_size > 0, "Target block size must be greater than zero");
-    check(start_ptr != NULL, "Start pointer reference required");
-    check(*start_ptr != NULL, "Start pointer required");
-    check(current_ptr != NULL, "Current pointer required");
-    check(new_block != NULL, "New block return pointer required");
-    check(target_size < block->data_file->block_size, "Target block size must be less than block size");
-
-    // Initilize return value.
-    *new_block = NULL;
-
-    // Determine if a split has occurred yet.
-    void *block_ptr = NULL;
-    rc = sky_block_get_ptr(block, &block_ptr);
-    check(rc == 0, "Unable to retrieve block pointer");
-    bool has_split = ((*start_ptr) != block_ptr);
-
-    // Exit if this is the first path and it's not a new path.
-    bool is_first_path = ((*start_ptr) == current_ptr);
-    if(is_first_path && !is_new_path) {
-        return 0;
-    }
-
-    // If we have exceeded the target size then split. Note that the first 
-    // split is effectively ignored since that data stays in the original
-    // block.
-    size_t pos = (current_ptr - (*start_ptr)) + offset;
-    size_t sz = (current_ptr - (*start_ptr));
-    debug("block.attempt_split %ld - %ld - %ld (%d)", pos, sz, offset, has_split);
-    if(pos >= target_size || force) {
-        // Don't move the first split. It stays in the original block. Move
-        // anything after the first split.
-        if(has_split || force) {
-            debug("block.attempt_split !");
-
-            // Move bytes to new block.
-            rc = sky_data_file_move_to_new_block(block->data_file, start_ptr, sz, new_block);
-            check(rc == 0, "Unable to move bytes to new block");
-        }
-
-        // Update the start pointer to the end of the source of the
-        // copied data.
-        *start_ptr += sz;
-    }
-
-    return 0;
-
-error:
-    return -1;
-}
-
 
 
 //======================================
