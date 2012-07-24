@@ -105,7 +105,7 @@ int sky_block_get_span_count(sky_block *block, uint32_t *count);
 
 
 //======================================
-// Path Management
+// Stats
 //======================================
 
 int sky_block_get_path_stats(sky_block *block, sky_event *event,

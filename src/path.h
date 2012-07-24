@@ -29,7 +29,7 @@
 
 //==============================================================================
 //
-// Typedefs
+// Definitions
 //
 //==============================================================================
 
@@ -38,6 +38,17 @@ typedef struct sky_path {
     uint32_t event_count;
     sky_event **events;
 } sky_path;
+
+// This structure is used for spanning blocks. It contains positional
+// information about where an event in a path is located and also allows for
+// placeholders and size changes to account for events being added.
+typedef struct sky_path_event_stat {
+    sky_timestamp_t timestamp;
+    size_t start_pos;
+    size_t end_pos;
+    size_t sz;
+} sky_path_event_stat;
+
 
 
 //==============================================================================
@@ -72,6 +83,14 @@ int sky_path_unpack(sky_path *path, void *addr, size_t *length);
 
 int sky_path_unpack_hdr(sky_object_id_t *object_id, uint32_t *event_data_length,
     void *addr, size_t *length);
+
+
+//======================================
+// Stats
+//======================================
+
+int sky_path_get_event_stats(void *path_ptr, sky_event *event,
+    sky_path_event_stat **events, uint32_t *event_count);
 
 
 //======================================

@@ -259,6 +259,22 @@ int test_sky_data_file_add_large_event_to_new_ending_path_causing_block_split() 
 }
 
 
+//--------------------------------------
+// Add Event (Block Spans)
+//--------------------------------------
+
+/*
+int test_sky_data_file_add_event_to_starting_path_causing_block_span() {
+    sky_data_file *data_file;
+    INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
+    ADD_EVENT(3LL, 12LL, 20);
+    ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/b");
+    sky_data_file_free(data_file);
+    return 0;
+}
+*/
+
+
 //==============================================================================
 //
 // Setup

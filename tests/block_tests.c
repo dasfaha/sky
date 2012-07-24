@@ -174,7 +174,7 @@ int test_sky_block_get_span_count() {
 // Path Stats
 //--------------------------------------
 
-int test_sky_data_file_get_path_stats_with_no_event() {
+int test_sky_block_get_path_stats_with_no_event() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/blocks/path_stats/a");
     sky_block_path_stat *paths = NULL;
@@ -188,7 +188,7 @@ int test_sky_data_file_get_path_stats_with_no_event() {
     return 0;
 }
 
-int test_sky_data_file_get_path_stats_with_event_in_existing_path() {
+int test_sky_block_get_path_stats_with_event_in_existing_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/blocks/path_stats/a");
     sky_block_path_stat *paths = NULL;
@@ -204,7 +204,7 @@ int test_sky_data_file_get_path_stats_with_event_in_existing_path() {
     return 0;
 }
 
-int test_sky_data_file_get_path_stats_with_event_in_new_starting_path() {
+int test_sky_block_get_path_stats_with_event_in_new_starting_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/blocks/path_stats/a");
     sky_block_path_stat *paths = NULL;
@@ -221,7 +221,7 @@ int test_sky_data_file_get_path_stats_with_event_in_new_starting_path() {
     return 0;
 }
 
-int test_sky_data_file_get_path_stats_with_event_in_new_middle_path() {
+int test_sky_block_get_path_stats_with_event_in_new_middle_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/blocks/path_stats/a");
     sky_block_path_stat *paths = NULL;
@@ -238,7 +238,7 @@ int test_sky_data_file_get_path_stats_with_event_in_new_middle_path() {
     return 0;
 }
 
-int test_sky_data_file_get_path_stats_with_event_in_new_ending_path() {
+int test_sky_block_get_path_stats_with_event_in_new_ending_path() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/blocks/path_stats/a");
     sky_block_path_stat *paths = NULL;
@@ -270,11 +270,11 @@ int all_tests() {
     mu_run_test(test_sky_block_get_ptr);
     mu_run_test(test_sky_block_get_span_count);
 
-    mu_run_test(test_sky_data_file_get_path_stats_with_no_event);
-    mu_run_test(test_sky_data_file_get_path_stats_with_event_in_existing_path);
-    mu_run_test(test_sky_data_file_get_path_stats_with_event_in_new_starting_path);
-    mu_run_test(test_sky_data_file_get_path_stats_with_event_in_new_middle_path);
-    mu_run_test(test_sky_data_file_get_path_stats_with_event_in_new_ending_path);
+    mu_run_test(test_sky_block_get_path_stats_with_no_event);
+    mu_run_test(test_sky_block_get_path_stats_with_event_in_existing_path);
+    mu_run_test(test_sky_block_get_path_stats_with_event_in_new_starting_path);
+    mu_run_test(test_sky_block_get_path_stats_with_event_in_new_middle_path);
+    mu_run_test(test_sky_block_get_path_stats_with_event_in_new_ending_path);
 
     return 0;
 }

@@ -4,6 +4,7 @@
 
 #include "dbg.h"
 #include "path.h"
+#include "cursor.h"
 #include "mem.h"
 
 //==============================================================================
@@ -278,6 +279,100 @@ int sky_path_unpack(sky_path *path, void *ptr, size_t *sz)
 
 error:
     *sz = 0;
+    return -1;
+}
+
+//======================================
+// Stats
+//======================================
+
+// Generates an index of stats on all the events in a raw path. If an event is
+// passed in then it also generates stats and includes the event where it
+// would be added.
+//
+// path_ptr    - The start of the raw path data.
+// event       - A soon-to-be-added event to calculate into the stats. If null
+//               then the stats are calculated as they exist in the raw data.
+// event       - A pointer to where the stats should be returned.
+// event_count - A pointer to where the number of events should be returned.
+int sky_path_get_event_stats(void *path_ptr, sky_event *event,
+                             sky_path_event_stat **events,
+                             uint32_t *event_count)
+{
+    int rc;
+    check(path_ptr != NULL, "Path pointer required");
+    check(events != NULL, "Events return address required");
+    check(event_count != NULL, "Event count return address required");
+
+    // Initialize cursor.
+    sky_cursor cursor;
+    sky_cursor_init(&cursor);
+    rc = sky_cursor_set_path(&cursor, path_ptr);
+    check(rc == 0, "Unable to set cursor for path");
+
+    // Calculate size of the event and path.
+    size_t path_length = sky_path_sizeof_raw(path_ptr);
+    size_t event_length = (event != NULL ? sky_event_sizeof(event) : 0);
+
+    // Initialize return values.
+    *event_count = 0;
+    *events = NULL;
+ 
+    // Loop over cursor to calculate sizes of the events.
+    sky_timestamp_t last_timestamp = SKY_TIMESTAMP_MIN;
+    while(!cursor.eof) {
+        // Retrieve timestamp from current event.
+        sky_timestamp_t timestamp;
+        sky_action_id_t action_id;
+        sky_event_data_length_t data_length;
+        size_t sz;
+        rc = sky_event_unpack_hdr(&timestamp, &action_id, &data_length, cursor.ptr, &sz);
+        check(rc == 0, "Unable to unpack current event header");
+        
+        // Check if event is inserted between the last event and current event.
+        if(event != NULL && event->timestamp >= last_timestamp && event->timestamp < timestamp) {
+            (*event_count)++;
+            *events = realloc(*events, sizeof(sky_path_event_stat) * (*event_count));
+            sky_path_event_stat *stat = &((*events)[(*event_count)-1]);
+            stat->timestamp = event->timestamp;
+            stat->start_pos = stat->end_pos = cursor.ptr - path_ptr;
+            stat->sz = event_length;
+        }
+        
+        // Calculate current event stats.
+        size_t current_event_length = sky_event_sizeof_raw(cursor.ptr);
+        (*event_count)++;
+        *events = realloc(*events, sizeof(sky_path_event_stat) * (*event_count));
+        sky_path_event_stat *stat = &((*events)[(*event_count)-1]);
+        stat->timestamp = timestamp;
+        stat->start_pos = cursor.ptr - path_ptr;
+        stat->end_pos = stat->start_pos + current_event_length;
+        stat->sz = current_event_length;
+    
+        // Save off this timestamp.
+        last_timestamp = timestamp;
+    
+        // Move to next event.
+        rc = sky_cursor_next(&cursor);
+        check(rc == 0, "Unable to move to next event");
+    }
+
+    // Check if event is inserted at the end.
+    if(event != NULL && event->timestamp >= last_timestamp) {
+        (*event_count)++;
+        *events = realloc(*events, sizeof(sky_path_event_stat) * (*event_count));
+        sky_path_event_stat *stat = &((*events)[(*event_count)-1]);
+        stat->timestamp = event->timestamp;
+        stat->start_pos = stat->end_pos = path_length;
+        stat->sz = event_length;
+    }
+    
+    return 0;
+
+error:
+    free(*events);
+    *events = NULL;
+    *event_count = 0;
     return -1;
 }
 

@@ -506,7 +506,7 @@ error:
 
 
 //======================================
-// Path Management
+// Path & Event Stats
 //======================================
 
 // Generates an index of stats on all the paths in the block. If an event is
@@ -606,6 +606,7 @@ error:
     *path_count = 0;
     return -1;
 }
+
 
 
 //======================================
