@@ -206,30 +206,31 @@ int test_sky_data_file_add_event_to_new_starting_path_causing_block_split() {
 
 int test_sky_data_file_add_small_event_to_new_middle_path_causing_block_split() {
     sky_data_file *data_file;
-    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
+    INIT_DATA_FILE("tests/fixtures/data_files/2/e", 0);
     ADD_EVENT(5LL, 12LL, 20);
-    ASSERT_DATA_FILE("tests/fixtures/data_files/2/e");
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/f");
     sky_data_file_free(data_file);
     return 0;
 }
 
 int test_sky_data_file_add_medium_event_to_new_middle_path_causing_block_split() {
     sky_data_file *data_file;
-    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
-    ADD_EVENT_WITH_DATA(5LL, 12LL, 0, 30, "");
-    ASSERT_DATA_FILE("tests/fixtures/data_files/2/f");
+    INIT_DATA_FILE("tests/fixtures/data_files/2/e", 0);
+    ADD_EVENT_WITH_DATA(5LL, 12LL, 20, 30, "1234567890123456789");
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/g");
     sky_data_file_free(data_file);
     return 0;
 }
 
 int test_sky_data_file_add_large_event_to_new_middle_path_causing_block_split() {
     sky_data_file *data_file;
-    INIT_DATA_FILE("tests/fixtures/data_files/2/a", 0);
-    ADD_EVENT_WITH_DATA(5LL, 12LL, 0, 30, "1234567890123456789012");
-    ASSERT_DATA_FILE("tests/fixtures/data_files/2/g");
+    INIT_DATA_FILE("tests/fixtures/data_files/2/e", 0);
+    ADD_EVENT_WITH_DATA(5LL, 12LL, 20, 30, "12345678901234567890");
+    ASSERT_DATA_FILE("tests/fixtures/data_files/2/h");
     sky_data_file_free(data_file);
     return 0;
 }
+
 
 
 //==============================================================================
@@ -250,14 +251,12 @@ int all_tests() {
     mu_run_test(test_sky_data_file_add_event_with_appending_path);
     mu_run_test(test_sky_data_file_add_event_with_prepending_path);
 
-    /*
     mu_run_test(test_sky_data_file_add_event_to_starting_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_event_to_ending_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_event_to_new_starting_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_small_event_to_new_middle_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_medium_event_to_new_middle_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_large_event_to_new_middle_path_causing_block_split);
-    */
     
     return 0;
 }

@@ -25,10 +25,6 @@ int sky_block_get_insertion_info(sky_block *block, sky_event *event,
 int sky_block_split_with_event(sky_block *block, sky_event *event,
     sky_block **target_block);
 
-int sky_block_attempt_split(sky_block *block, uint32_t target_size,
-    void **start_ptr, void *current_ptr, size_t offset,
-    bool is_new_path, bool force, sky_block **new_block);
-
 
 
 //==============================================================================
@@ -510,6 +506,112 @@ error:
 
 
 //======================================
+// Path Management
+//======================================
+
+// Generates an index of stats on all the paths in the block. If an event is
+// passed in then it also generates stats on the path the event would be
+// added to or a new path that would be created from that event.
+//
+// block      - The block to calculate stats on.
+// event      - A soon-to-be-added event to calculate into the paths. If null then
+//              the stats are calculated as they exist in the block.
+// paths      - A pointer to where the stats should be returned.
+// path_count - A pointer to where the number of paths should be returned.
+int sky_block_get_path_stats(sky_block *block, sky_event *event,
+                             sky_block_path_stat **paths,
+                             uint32_t *path_count)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(paths != NULL, "Paths return address required");
+    check(path_count != NULL, "Path count return address required");
+
+    // Initialize data file & block pointers.
+    void *block_ptr = NULL;
+    rc = sky_block_get_ptr(block, &block_ptr);
+    check(rc == 0, "Unable to retrieve block pointer");
+    
+    // Initialize path iterator.
+    sky_path_iterator iterator;
+    sky_path_iterator_init(&iterator);
+    rc = sky_path_iterator_set_block(&iterator, block);
+    check(rc == 0, "Unable to set path iterator block");
+
+    // Calculate size of the event.
+    size_t event_length = (event != NULL ? sky_event_sizeof(event) : 0);
+
+    // Initialize return values.
+    *path_count = 0;
+    *paths = NULL;
+ 
+    // Loop over iterator to calculate sizes of the paths.
+    sky_object_id_t last_object_id = 0;
+    while(!iterator.eof) {
+        // Retrieve path pointer.
+        void *path_ptr = NULL;
+        rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
+        check(rc == 0, "Unable to retrieve iterator's current pointer");
+
+        // Check if event is a new path inserted between the last path and
+        // this current path.
+        if(event != NULL && event->object_id > last_object_id && event->object_id < iterator.current_object_id) {
+            // Increment paths array.
+            (*path_count)++;
+            *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
+            sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
+            stat->block = NULL;
+            stat->object_id = event->object_id;
+            stat->start_pos = stat->end_pos = (path_ptr - block_ptr);
+            stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
+        }
+        
+        // Calculate current path stats.
+        size_t path_length = sky_path_sizeof_raw(path_ptr);
+        (*path_count)++;
+        *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
+        sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
+        stat->block = NULL;
+        stat->object_id = iterator.current_object_id;
+        stat->start_pos = path_ptr - block_ptr;
+        stat->end_pos = stat->start_pos + path_length;
+        stat->sz = path_length;
+    
+        // Add insertion event length if this is the matching path.
+        if(event != NULL && event->object_id == iterator.current_object_id) {
+            stat->sz += event_length;
+        }
+
+        // Save off this object id.
+        last_object_id = iterator.current_object_id;
+    
+        // Move to next path.
+        rc = sky_path_iterator_next(&iterator);
+        check(rc == 0, "Unable to move to next path");
+    }
+
+    // Check if event is a new path inserted at the end.
+    if(event != NULL && event->object_id > last_object_id) {
+        (*path_count)++;
+        *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
+        sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
+        stat->block = NULL;
+        stat->object_id = event->object_id;
+        stat->start_pos = stat->end_pos = iterator.block_data_length;
+        stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
+    }
+    
+    return 0;
+
+error:
+    free(*paths);
+    *paths = NULL;
+    *path_count = 0;
+    return -1;
+}
+
+
+//======================================
 // Event Management
 //======================================
 
@@ -553,7 +655,6 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     
     // If adding the event will cause a split then go ahead and split and
     // recall this function.
-    debug("[block.add_event.check_split] %ld + %ld >= %d", block_data_length, sz, block->data_file->block_size);
     if(block_data_length + sz >= block->data_file->block_size) {
         sky_block *target_block;
         rc = sky_block_split_with_event(block, event, &target_block);
@@ -576,7 +677,6 @@ int sky_block_add_event(sky_block *block, sky_event *event)
 
     // Shift data down in the block so we have enough room.
     void *ptr = (path_exists ? event_ptr : path_ptr);
-    //debug("[block.add_event.shift] %p (%ld) (%ld)", ptr, sz, block_data_length);
     memmove(ptr+sz, ptr, block_data_length-(ptr-block_ptr));
     
     // Pack the path first if it is missing.
@@ -739,118 +839,95 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     uint32_t path_count = 0;
     sky_block_path_stat *paths;
 
+    // Calculate target block size.
+    sky_data_file *data_file = block->data_file;
+    uint32_t block_size = data_file->block_size;
+    uint32_t target_size = (block_size / 2);
+
     // Retrieve a list of path sizes in the current block (plus new event).
     rc = sky_block_get_path_stats(block, event, &paths, &path_count);
     check(rc == 0, "Unable to calculate path stats on block");
     
+    // Initialize the return value.
+    *target_block = block;
+    
     // Distribute paths across blocks.
-    //rc = sky_block_distribute_paths(block, paths, path_count);
-    //check(rc == 0, "Unable to distribute paths");
-    
-    *target_block = NULL;
-    
-    free(paths);
-    return 0;
-
-error:
-    free(paths);
-    return -1;
-}
-
-
-// Generates an index of stats on all the paths in the block. If an event is
-// passed in then it also generates stats on the path the event would be
-// added to or a new path that would be created from that event.
-//
-// block      - The block to calculate stats on.
-// event      - A soon-to-be-added event to calculate into the paths. If null then
-//              the stats are calculated as they exist in the block.
-// paths      - A pointer to where the stats should be returned.
-// path_count - A pointer to where the number of paths should be returned.
-int sky_block_get_path_stats(sky_block *block, sky_event *event,
-                             sky_block_path_stat **paths,
-                             uint32_t *path_count)
-{
-    int rc;
-    check(block != NULL, "Block required");
-    check(paths != NULL, "Paths return address required");
-    check(path_count != NULL, "Path count return address required");
-
-    // Initialize path iterator.
-    sky_path_iterator iterator;
-    sky_path_iterator_init(&iterator);
-    rc = sky_path_iterator_set_block(&iterator, block);
-    check(rc == 0, "Unable to set path iterator block");
-
-    // Calculate size of the event.
-    size_t event_length = (event != NULL ? sky_event_sizeof(event) : 0);
-
-    // Initialize return values.
-    *path_count = 0;
-    *paths = NULL;
- 
-    // Loop over iterator to calculate sizes of the paths.
-    sky_object_id_t last_object_id = 0;
-    while(!iterator.eof) {
-        // Check if event is a new path inserted between the last path and
-        // this current path.
-        if(event != NULL && event->object_id > last_object_id && event->object_id < iterator.current_object_id) {
-            // Increment paths array.
-            (*path_count)++;
-            *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
-            sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
-            stat->block = NULL;
-            stat->object_id = event->object_id;
-            stat->start_ptr = stat->end_ptr = NULL;
-            stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
-        }
+    uint32_t i;
+    uint32_t last_index = 0;
+    size_t sz = 0;
+    for(i=0; i<path_count; i++) {
+        sky_block_path_stat *path = &(paths[i]);
         
-        // Retrieve path pointer.
-        void *path_ptr = NULL;
-        rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
-        check(rc == 0, "Unable to retrieve iterator's current pointer");
-
-        // Calculate current path stats.
-        size_t path_length = sky_path_sizeof_raw(path_ptr);
-        (*path_count)++;
-        *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
-        sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
-        stat->block = NULL;
-        stat->object_id = iterator.current_object_id;
-        stat->start_ptr = path_ptr;
-        stat->end_ptr = path_ptr + path_length;
-        stat->sz = path_length;
-    
-        // Add insertion event length if this is the matching path.
-        if(event != NULL && event->object_id == iterator.current_object_id) {
-            stat->sz += event_length;
+        // If we exceed the block size then create a spanned block.
+        if(path->sz > block_size) {
+            sentinel("Path too large for block. Spanned blocks not yet supported.");
         }
+        // Otherwise treat path as non-spanned.
+        else {
+            // Add the path size to the running total.
+            sz += path->sz;
+        
+            // If we exceeded the target size or if there is remaining data
+            // in an already split block then move everything to a new block.
+            if(sz >= target_size || (i == path_count-1 && last_index > 0)) {
+                sky_block_path_stat *last_path = &(paths[last_index]);
 
-        // Save off this object id.
-        last_object_id = iterator.current_object_id;
-    
-        // Move to next path.
-        rc = sky_path_iterator_next(&iterator);
-        check(rc == 0, "Unable to move to next path");
+                // If this is the first split then leave it in the first block.
+                if(last_index > 0) {
+                    // Create a new block.
+                    sky_block *new_block = NULL;
+                    rc = sky_data_file_create_block(data_file, &new_block);
+                    check(rc == 0, "Unable to create new block");
+                    
+                    // Retrieve the new block's pointer.
+                    void *new_block_ptr = NULL;
+                    rc = sky_block_get_ptr(new_block, &new_block_ptr);
+                    check(rc == 0, "Unable to retrieve new block's data pointer");
+
+                    // Retrieve the original block's pointer
+                    void *block_ptr = NULL;
+                    rc = sky_block_get_ptr(block, &block_ptr);
+                    check(rc == 0, "Unable to retrieve source block pointer");
+
+                    // Calculate offsets.
+                    size_t start_pos = last_path->start_pos;
+                    size_t end_pos   = path->end_pos;
+                    void *ptr = block_ptr + start_pos;
+                    size_t len = end_pos - start_pos;
+                    
+                    // Move data into new block.
+                    memmove(new_block_ptr, ptr, len);
+                    memset(ptr, 0, len);
+                    
+                    // Update block ranges.
+                    rc = sky_block_full_update(new_block);
+                    check(rc == 0, "Unable to update block ranges");
+                    
+                    // If new block contains the event object id in range then
+                    // set it as the target block.
+                    if(event->object_id >= last_path->object_id && event->object_id <= path->object_id) {
+                        *target_block = new_block;
+                    }
+                }
+                
+                // Save where we left off.
+                last_index = i+1;
+                sz = 0;
+            }
+        }
     }
 
-    // Check if event is a new path inserted at the end.
-    if(event != NULL && event->object_id > last_object_id) {
-        (*path_count)++;
-        *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
-        sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
-        stat->block = NULL;
-        stat->object_id = event->object_id;
-        stat->start_ptr = stat->end_ptr = NULL;
-        stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
+    // Update block range on the original block if a split occurred.
+    if(last_index > 0) {
+        rc = sky_block_full_update(block);
+        check(rc == 0, "Unable to update block ranges");
     }
     
+    free(paths);
     return 0;
 
 error:
-    free(*paths);
-    *paths = NULL;
-    *path_count = 0;
+    free(paths);
     return -1;
 }
 

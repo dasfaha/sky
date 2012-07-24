@@ -50,8 +50,8 @@ struct sky_block {
 typedef struct sky_block_path_stat {
     sky_block *block;
     sky_object_id_t object_id;
-    void *start_ptr;
-    void *end_ptr;
+    size_t start_pos;
+    size_t end_pos;
     size_t sz;
 } sky_block_path_stat;
 
@@ -108,9 +108,6 @@ int sky_block_get_span_count(sky_block *block, uint32_t *count);
 //======================================
 // Path Management
 //======================================
-
-int sky_block_get_path_ptr(sky_block *block, sky_object_id_t object_id,
-    void **ret);
 
 int sky_block_get_path_stats(sky_block *block, sky_event *event,
     sky_block_path_stat **paths, uint32_t *path_count);

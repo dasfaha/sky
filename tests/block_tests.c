@@ -37,8 +37,8 @@ char DATA[] =
 #define ASSERT_PATH_STAT(PATH_STAT, OBJECT_ID, START_POS, END_POS, SZ) do { \
     mu_assert(PATH_STAT.block == NULL, ""); \
     mu_assert_int_equals(PATH_STAT.object_id, OBJECT_ID); \
-    if(START_POS != -1) mu_assert_long_equals(PATH_STAT.start_ptr - data_file->data, START_POS); \
-    if(END_POS != -1) mu_assert_long_equals(PATH_STAT.end_ptr - data_file->data, END_POS); \
+    mu_assert_long_equals(PATH_STAT.start_pos, START_POS); \
+    mu_assert_long_equals(PATH_STAT.end_pos, END_POS); \
     mu_assert_long_equals(PATH_STAT.sz, SZ); \
 } while(0)
 
@@ -214,7 +214,7 @@ int test_sky_data_file_get_path_stats_with_event_in_new_starting_path() {
     int rc = sky_block_get_path_stats(data_file->blocks[0], event, &paths, &path_count);
     mu_assert_int_equals(rc, 0);
     mu_assert_int_equals(path_count, 3);
-    ASSERT_PATH_STAT(paths[0], 2, -1L, -1L, 19L);
+    ASSERT_PATH_STAT(paths[0], 2, 0L, 0L, 19L);
     ASSERT_PATH_STAT(paths[1], 3, 0L, 41L, 41L);
     ASSERT_PATH_STAT(paths[2], 10, 41L, 60L, 19L);
     sky_event_free(event);
@@ -232,7 +232,7 @@ int test_sky_data_file_get_path_stats_with_event_in_new_middle_path() {
     mu_assert_int_equals(rc, 0);
     mu_assert_int_equals(path_count, 3);
     ASSERT_PATH_STAT(paths[0], 3, 0L, 41L, 41L);
-    ASSERT_PATH_STAT(paths[1], 4, -1L, -1L, 19L);
+    ASSERT_PATH_STAT(paths[1], 4, 41L, 41L, 19L);
     ASSERT_PATH_STAT(paths[2], 10, 41L, 60L, 19L);
     sky_event_free(event);
     sky_data_file_free(data_file);
@@ -250,7 +250,7 @@ int test_sky_data_file_get_path_stats_with_event_in_new_ending_path() {
     mu_assert_int_equals(path_count, 3);
     ASSERT_PATH_STAT(paths[0], 3, 0L, 41L, 41L);
     ASSERT_PATH_STAT(paths[1], 10, 41L, 60L, 19L);
-    ASSERT_PATH_STAT(paths[2], 11, -1L, -1L, 19L);
+    ASSERT_PATH_STAT(paths[2], 11, 60L, 60L, 19L);
     sky_event_free(event);
     sky_data_file_free(data_file);
     return 0;
