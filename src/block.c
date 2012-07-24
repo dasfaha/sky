@@ -560,7 +560,6 @@ int sky_block_get_path_stats(sky_block *block, sky_event *event,
             (*path_count)++;
             *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
             sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
-            stat->block = NULL;
             stat->object_id = event->object_id;
             stat->start_pos = stat->end_pos = (path_ptr - block_ptr);
             stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
@@ -571,7 +570,6 @@ int sky_block_get_path_stats(sky_block *block, sky_event *event,
         (*path_count)++;
         *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
         sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
-        stat->block = NULL;
         stat->object_id = iterator.current_object_id;
         stat->start_pos = path_ptr - block_ptr;
         stat->end_pos = stat->start_pos + path_length;
@@ -595,7 +593,6 @@ int sky_block_get_path_stats(sky_block *block, sky_event *event,
         (*path_count)++;
         *paths = realloc(*paths, sizeof(sky_block_path_stat) * (*path_count));
         sky_block_path_stat *stat = &((*paths)[(*path_count)-1]);
-        stat->block = NULL;
         stat->object_id = event->object_id;
         stat->start_pos = stat->end_pos = iterator.block_data_length;
         stat->sz = SKY_PATH_HEADER_LENGTH + event_length;
@@ -851,8 +848,6 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     // Initialize the return value.
     *target_block = block;
     
-    debug("swe: %d", block->index);
-
     // Distribute paths across blocks.
     uint32_t i;
     uint32_t last_index = 0;
@@ -875,11 +870,8 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
             bool exceeds_target_size = (sz >= target_size);
             bool is_last_path = (i == path_count-1 && last_index > 0);
             bool next_path_exceeds_max = (next_path != NULL && sz + next_path->sz > block_size);
-            debug("W %d : %d", i, path_count);
-            if(next_path != NULL) debug("X %p - %ld + %ld >= %d", next_path, sz, next_path->sz, block_size);
             if(exceeds_target_size || is_last_path || next_path_exceeds_max) {
                 sky_block_path_stat *last_path = &(paths[last_index]);
-                debug("! %d - %d (%ld, %ld)", last_index, i, last_path->start_pos, path->end_pos);
 
                 // If this is the first split then leave it in the first block.
                 if(last_index > 0) {

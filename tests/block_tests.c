@@ -35,7 +35,6 @@ char DATA[] =
     sky_data_file_load(data_file);
 
 #define ASSERT_PATH_STAT(PATH_STAT, OBJECT_ID, START_POS, END_POS, SZ) do { \
-    mu_assert(PATH_STAT.block == NULL, ""); \
     mu_assert_int_equals(PATH_STAT.object_id, OBJECT_ID); \
     mu_assert_long_equals(PATH_STAT.start_pos, START_POS); \
     mu_assert_long_equals(PATH_STAT.end_pos, END_POS); \

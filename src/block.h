@@ -48,7 +48,6 @@ struct sky_block {
 // information about where a path in a block is located and also includes
 // the future size of a path after a pending event is added.
 typedef struct sky_block_path_stat {
-    sky_block *block;
     sky_object_id_t object_id;
     size_t start_pos;
     size_t end_pos;
