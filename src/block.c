@@ -655,7 +655,7 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     
     // If adding the event will cause a split then go ahead and split and
     // recall this function.
-    if(block_data_length + sz >= block->data_file->block_size) {
+    if(block_data_length + sz > block->data_file->block_size) {
         sky_block *target_block;
         rc = sky_block_split_with_event(block, event, &target_block);
         check(rc == 0, "Unable to split block");
@@ -851,12 +851,15 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     // Initialize the return value.
     *target_block = block;
     
+    debug("swe: %d", block->index);
+
     // Distribute paths across blocks.
     uint32_t i;
     uint32_t last_index = 0;
     size_t sz = 0;
     for(i=0; i<path_count; i++) {
         sky_block_path_stat *path = &(paths[i]);
+        sky_block_path_stat *next_path = (i < path_count-1 ? &(paths[i+1]) : NULL);
         
         // If we exceed the block size then create a spanned block.
         if(path->sz > block_size) {
@@ -869,8 +872,14 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
         
             // If we exceeded the target size or if there is remaining data
             // in an already split block then move everything to a new block.
-            if(sz >= target_size || (i == path_count-1 && last_index > 0)) {
+            bool exceeds_target_size = (sz >= target_size);
+            bool is_last_path = (i == path_count-1 && last_index > 0);
+            bool next_path_exceeds_max = (next_path != NULL && sz + next_path->sz > block_size);
+            debug("W %d : %d", i, path_count);
+            if(next_path != NULL) debug("X %p - %ld + %ld >= %d", next_path, sz, next_path->sz, block_size);
+            if(exceeds_target_size || is_last_path || next_path_exceeds_max) {
                 sky_block_path_stat *last_path = &(paths[last_index]);
+                debug("! %d - %d (%ld, %ld)", last_index, i, last_path->start_pos, path->end_pos);
 
                 // If this is the first split then leave it in the first block.
                 if(last_index > 0) {
