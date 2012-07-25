@@ -513,6 +513,7 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
                               sky_block **target_block)
 {
     int rc;
+    size_t _sz;
     check(block != NULL, "Block required");
     check(new_event != NULL, "Event required");
     check(path_ptr != NULL, "Path pointer required");
@@ -570,11 +571,16 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
         bool next_event_exceeds_max = (next_event != NULL && sz + next_event->sz > block_size);
         debug("! %d %d %d (%d-%d) [%d] [%ld]", exceeds_target_size, is_last_event, next_event_exceeds_max, last_index, i, block->index, sz);
         if(exceeds_target_size || is_last_event || next_event_exceeds_max) {
+            sky_path_event_stat *last_event = &(events[last_index]);
+
+            // Calculate lengths and positions of event range.
+            size_t start_pos = last_event->start_pos;
+            size_t end_pos   = event->end_pos;
+            size_t len = end_pos - start_pos;
+
             // If this is the first span of the first path of a block then
             // just leave the data where it is. Otherwise move the data.
             if(!is_first_path_in_block || last_index > 0) {
-                sky_path_event_stat *last_event = &(events[last_index]);
-
                 // Save path pointer.
                 off_t path_off = path_ptr - data_file->data;
 
@@ -592,14 +598,10 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
                 check(rc == 0, "Unable to retrieve new block's data pointer");
 
                 // Calculate offsets.
-                size_t start_pos = last_event->start_pos;
-                size_t end_pos   = event->end_pos;
                 void *ptr = path_ptr + start_pos;
-                size_t len = end_pos - start_pos;
 
                 // Write the path header unless it is entirely a new event.
                 if(len > 0) {
-                    size_t _sz;
                     rc = sky_path_pack_hdr(object_id, sz-SKY_PATH_HEADER_LENGTH, new_block_ptr, &_sz);
                     check(rc == 0, "Unable to write path header to new block");
 
@@ -618,15 +620,23 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
                     *target_block = new_block;
                 }
             }
+            
+            // Update the path header in the original block.
+            if(is_first_path_in_block && last_index == 0) {
+                if(len > 0) {
+                    rc = sky_path_pack_hdr(object_id, len, path_ptr, &_sz);
+                    check(rc == 0, "Unable to write path header on original spanned block");
+                }
+                else {
+                    memset(path_ptr, 0, SKY_PATH_HEADER_LENGTH);
+                }
+            }
 
             // Save where we left off.
             last_index = i+1;
             sz = SKY_PATH_HEADER_LENGTH;
         }
     }
-
-    // Clear out original path header.
-    memset(path_ptr, 0, SKY_PATH_HEADER_LENGTH);
 
     // Update block range on the original block if a split occurred.
     if(last_index > 0) {
