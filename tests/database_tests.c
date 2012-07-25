@@ -10,11 +10,12 @@
 //
 //==============================================================================
 
-int test_sky_database_create() {
+int test_sky_database_set_path() {
     struct tagbstring root = bsStatic("/etc/sky/data");
-    sky_database *database = sky_database_create(&root);
-    mu_assert(database != NULL, "Could not create database");
-    mu_assert(biseqcstr(database->path, "/etc/sky/data"), "Invalid path");
+    sky_database *database = sky_database_create();
+    int rc = sky_database_set_path(database, &root);
+    mu_assert_int_equals(rc, 0);
+    mu_assert_bstring(database->path, "/etc/sky/data");
     sky_database_free(database);
     return 0;
 }
@@ -28,7 +29,7 @@ int test_sky_database_create() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_database_create);
+    mu_run_test(test_sky_database_set_path);
     return 0;
 }
 

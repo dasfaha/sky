@@ -3,21 +3,10 @@
 
 #include "bstring.h"
 
-//==============================================================================
-//
-// Overview
-//
-//==============================================================================
-
-/**
- * The database is a collection of tables. For more information on the
- * data storage format, read the table.c source.
- */
-
 
 //==============================================================================
 //
-// Typedefs
+// Definitions
 //
 //==============================================================================
 
@@ -32,9 +21,19 @@ typedef struct sky_database {
 //
 //==============================================================================
 
-sky_database *sky_database_create(bstring path);
+//--------------------------------------
+// Lifecycle
+//--------------------------------------
+
+sky_database *sky_database_create();
 
 void sky_database_free(sky_database *database);
 
+
+//--------------------------------------
+// Path Management
+//--------------------------------------
+
+int sky_database_set_path(sky_database *database, bstring path);
 
 #endif
