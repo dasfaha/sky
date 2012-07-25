@@ -577,15 +577,22 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
             size_t start_pos = last_event->start_pos;
             size_t end_pos   = event->end_pos;
             size_t len = end_pos - start_pos;
+            void *ptr = path_ptr + start_pos;
 
             // If this is the first span of the first path of a block then
-            // just leave the data where it is. Otherwise move the data.
-            if(!is_first_path_in_block || last_index > 0) {
+            // just leave the data where it is.
+            sky_block *new_block = NULL;
+            void *new_block_ptr = NULL;
+            if(is_first_path_in_block && last_index == 0) {
+                new_block = block;
+                new_block_ptr = path_ptr;
+            }
+            // Otherwise move the data to a new block.
+            else {
                 // Save path pointer.
                 off_t path_off = path_ptr - data_file->data;
 
                 // Create a new block.
-                sky_block *new_block = NULL;
                 rc = sky_data_file_create_block(data_file, &new_block);
                 check(rc == 0, "Unable to create new block");
 
@@ -593,45 +600,45 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
                 path_ptr = data_file->data + path_off;
 
                 // Retrieve the new block's pointer.
-                void *new_block_ptr = NULL;
                 rc = sky_block_get_ptr(new_block, &new_block_ptr);
                 check(rc == 0, "Unable to retrieve new block's data pointer");
 
-                // Calculate offsets.
-                void *ptr = path_ptr + start_pos;
-
-                // Write the path header unless it is entirely a new event.
+                // Move data.
                 if(len > 0) {
-                    rc = sky_path_pack_hdr(object_id, sz-SKY_PATH_HEADER_LENGTH, new_block_ptr, &_sz);
-                    check(rc == 0, "Unable to write path header to new block");
-
-                    // Move data into new block.
                     memmove(new_block_ptr + SKY_PATH_HEADER_LENGTH, ptr, len);
                     memset(ptr, 0, len);
                 }
+            }
 
-                // Update block ranges.
-                rc = sky_block_full_update(new_block);
-                check(rc == 0, "Unable to update block ranges");
+            // Clear out original header.
+            if(last_index == 0) {
+                memset(path_ptr, 0, SKY_PATH_HEADER_LENGTH);
+            }
 
-                // If new block contains the event timestamp in range then
-                // set it as the target block.
-                if(new_event->timestamp >= last_event->timestamp && event->timestamp <= new_event->timestamp) {
-                    *target_block = new_block;
-                }
+            // If we are leaving an empty block then clear the path header.
+            debug("update path header: %ld", len);
+            if(len == 0) {
+                memset(new_block_ptr, 0, SKY_PATH_HEADER_LENGTH);
+            }
+            // Otherwise write the header.
+            else {
+                rc = sky_path_pack_hdr(object_id, len, new_block_ptr, &_sz);
+                check(rc == 0, "Unable to write path header");
+            }
+
+            sky_block_memdump(block);
+            sky_block_memdump(new_block);
+            
+            // Update block ranges.
+            rc = sky_block_full_update(new_block);
+            check(rc == 0, "Unable to update block ranges");
+
+            // If new block contains the event timestamp in range then
+            // set it as the target block.
+            if(new_event->timestamp >= last_event->timestamp && event->timestamp <= new_event->timestamp) {
+                *target_block = new_block;
             }
             
-            // Update the path header in the original block.
-            if(is_first_path_in_block && last_index == 0) {
-                if(len > 0) {
-                    rc = sky_path_pack_hdr(object_id, len, path_ptr, &_sz);
-                    check(rc == 0, "Unable to write path header on original spanned block");
-                }
-                else {
-                    memset(path_ptr, 0, SKY_PATH_HEADER_LENGTH);
-                }
-            }
-
             // Save where we left off.
             last_index = i+1;
             sz = SKY_PATH_HEADER_LENGTH;
