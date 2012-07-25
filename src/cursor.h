@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "bstring.h"
+#include "types.h"
 
 
 //==============================================================================
@@ -74,6 +75,13 @@ int sky_cursor_set_paths(sky_cursor *cursor, void **ptrs, int count);
 //======================================
 
 int sky_cursor_next(sky_cursor *cursor);
+
+
+//======================================
+// Event Management
+//======================================
+
+int sky_cursor_get_action_id(sky_cursor *cursor, sky_action_id_t *action_id);
 
 
 #endif

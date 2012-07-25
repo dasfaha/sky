@@ -232,3 +232,35 @@ int sky_cursor_set_eof(sky_cursor *cursor)
 error:
     return -1;
 }
+
+
+//======================================
+// Event Management
+//======================================
+
+// Retrieves a the action identifier of the current event.
+//
+// cursor    - The cursor.
+// action_id - A pointer to where the action id should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_cursor_get_action_id(sky_cursor *cursor, sky_action_id_t *action_id)
+{
+    check(cursor != NULL, "Cursor required");
+    check(!cursor->eof, "Cursor cannot be EOF");
+    check(action_id != NULL, "Action id return pointer required");
+
+    // Retrieve the action id.
+    if(*((sky_event_flag_t*)cursor->ptr) & SKY_EVENT_FLAG_ACTION) {
+        *action_id = *((sky_action_id_t*)(cursor->ptr + sizeof(sky_event_flag_t) + sizeof(sky_timestamp_t)));
+    }
+    else {
+        *action_id = 0;
+    }
+    
+    return 0;
+
+error:
+    *action_id = 0;
+    return -1;
+}

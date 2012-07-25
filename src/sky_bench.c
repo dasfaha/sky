@@ -31,7 +31,7 @@
 
 typedef struct Options {
     bstring path;
-    bstring object_type;
+    bstring table_name;
     int32_t iterations;
 } Options;
 
@@ -54,7 +54,7 @@ Options *parseopts(int argc, char **argv)
     
     // Command line options.
     struct option long_options[] = {
-        {"object-type", required_argument, 0, 'o'},
+        {"table-name", required_argument, 0, 't'},
         {"iterations", required_argument, 0, 'i'},
         {0, 0, 0, 0}
     };
@@ -71,9 +71,9 @@ Options *parseopts(int argc, char **argv)
         
         // Parse each option.
         switch(c) {
-            case 'o': {
-                options->object_type = bfromcstr(optarg);
-                check_mem(options->object_type);
+            case 't': {
+                options->table_name = bfromcstr(optarg);
+                check_mem(options->table_name);
                 break;
             }
             
@@ -95,10 +95,12 @@ Options *parseopts(int argc, char **argv)
     options->path = bfromcstr(argv[0]);
 
     // Validate input.
+    /*
     if(options->object_type == NULL) {
         fprintf(stderr, "Error: Object type (-o) is required.\n\n");
         exit(1);
     }
+    */
 
     // Default input.
     if(options->iterations <= 0) {
@@ -115,8 +117,8 @@ void Options_free(Options *options)
 {
     if(options) {
         bdestroy(options->path);
-        bdestroy(options->object_type);
-        options->object_type = NULL;
+        bdestroy(options->table_name);
+        options->table_name = NULL;
         free(options);
     }
 }
@@ -153,76 +155,84 @@ void usage()
 // options - A list of options to use.
 void benchmark_dag(Options *options)
 {
+    int rc;
     sky_event *event = NULL;
     uint32_t event_count = 0;
-    //int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
+    int32_t action_count = 100;     // TODO: Retrieve action count from actions file.
     
-    // Create database.
-    sky_database *database = sky_database_create(options->path);
-    check_mem(database);
+    // Initialize table.
+    sky_table *table = sky_table_create(); check_mem(table);
+    rc = sky_table_set_path(table, options->path);
+    check(rc == 0, "Unable to set path on table");
     
-    // Open table.
-    sky_table *table = sky_table_create(database, options->object_type);
-    check_mem(table);
-    
-    check(sky_table_open(table) == 0, "Unable to open table");
+    // Open table
+    rc = sky_table_open(table);
+    check(rc == 0, "Unable to open table");
 
     // Loop for desired number of iterations.
-    /*
     int i;
     for(i=0; i<options->iterations; i++) {
-        // Create a path iterator for the table.
-        sky_cursor *cursor = sky_cursor_create();
-        sky_path_iterator *iterator = sky_path_iterator_create(table);
-        sky_path_iterator_next(iterator, cursor);
+        sky_path_iterator iterator;
+        sky_path_iterator_init(&iterator);
+        
+        // Attach data file.
+        rc = sky_path_iterator_set_data_file(&iterator, table->data_file);
+        check(rc == 0, "Unable to initialze path iterator");
         
         // Create a square matrix of structs.
-        //Step *steps = calloc(action_count*action_count, sizeof(Step));
+        Step *steps = calloc(action_count*action_count, sizeof(Step));
     
         // Iterate over each path.
-        while(!iterator->eof) {
-            // int32_t action_id, prev_action_id;
+        while(!iterator.eof) {
+            sky_action_id_t action_id, prev_action_id;
+
+            // Retrieve the path pointer.
+            void *path_ptr;
+            rc = sky_path_iterator_get_ptr(&iterator, &path_ptr);
+            check(rc == 0, "Unable to retrieve the path iterator pointer");
+        
+            // Initialize the cursor.
+            sky_cursor cursor;
+            sky_cursor_init(&cursor);
+            rc = sky_cursor_set_path(&cursor, path_ptr);
+            check(rc == 0, "Unable to set cursor path");
 
             // Increment total event count.
             event_count++;
             
             // Initialize the previous action.
-            //rc = sky_cursor_get_action(cursor, &prev_action_id);
-            //check(rc == 0, "Unable to retrieve first action");
+            rc = sky_cursor_get_action_id(&cursor, &prev_action_id);
+            check(rc == 0, "Unable to retrieve first action");
 
-            // Find first event.
-            rc = sky_cursor_next_event(cursor);
+            // Find next event.
+            rc = sky_cursor_next(&cursor);
             check(rc == 0, "Unable to find next event");
 
             // Loop over each event in the path.
-            while(!cursor->eof) {
+            while(!cursor.eof) {
                 // Increment total event count.
                 event_count++;
 
                 // Retrieve action.
-                //rc = sky_cursor_get_action(cursor, &action_id);
-                //check(rc == 0, "Unable to retrieve first action");
+                rc = sky_cursor_get_action_id(&cursor, &action_id);
+                check(rc == 0, "Unable to retrieve first action");
 
                 // Aggregate step information.
-                //int32_t index = ((prev_action_id-1)*action_count) + (action_id-1);
-                //steps[index].count++;
+                int32_t index = ((prev_action_id-1)*action_count) + (action_id-1);
+                steps[index].count++;
 
                 // Assign current action as previous action.
-                //prev_action_id = action_id;
+                prev_action_id = action_id;
 
                 // Find next event.
-                rc = sky_cursor_next_event(cursor);
+                rc = sky_cursor_next(&cursor);
                 check(rc == 0, "Unable to find next event");
             }
             
-            rc = sky_path_iterator_next(iterator, cursor);
+            rc = sky_path_iterator_next(&iterator);
             check(rc == 0, "Unable to find next path");
         }
         
-        // Clean up.
-        sky_cursor_free(cursor);
-        sky_path_iterator_free(iterator);
-
         // Show DAG data.
         //int x;
         //int total=0;
@@ -232,13 +242,10 @@ void benchmark_dag(Options *options)
         //}
         //printf("total: %d\n", total);
     }
-    */
-    
-    // Close table
-    check(sky_table_close(table) == 0, "Unable to close table");
     
     // Clean up
-    sky_database_free(database);
+    rc = sky_table_close(table);
+    check(rc == 0, "Unable to close table");
     sky_table_free(table);
 
     // Show stats.
@@ -248,9 +255,6 @@ void benchmark_dag(Options *options)
     
 error:
     sky_event_free(event);
-    sky_table_close(table);
-
-    sky_database_free(database);
     sky_table_free(table);
 }
 
