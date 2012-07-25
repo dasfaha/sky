@@ -37,6 +37,12 @@
     sky_event_free(event); \
 } while (0)
 
+#define ASSERT_BLOCK(DATA_FILE, NUM, INDEX, SPANNED) do {\
+    sky_data_file *_data_file = DATA_FILE; \
+    sky_block *_block = _data_file->blocks[NUM]; \
+    mu_assert_int_equals(_block->index, INDEX); \
+    mu_assert(_block->spanned == SPANNED, ""); \
+} while(0)
 
 #define ASSERT_DATA_FILE(FIXTURE) \
     mu_assert_file("tmp/data", FIXTURE "/data"); \
@@ -269,6 +275,10 @@ int test_sky_data_file_add_event_to_start_of_starting_path_causing_block_span() 
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 7LL, 20, 30, "1234567890");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/b");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -278,6 +288,10 @@ int test_sky_data_file_add_small_event_to_middle_of_starting_path_causing_block_
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 9LL, 20, 30, "1234567890");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/c");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -287,6 +301,10 @@ int test_sky_data_file_add_medium_event_to_middle_of_starting_path_causing_block
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 9LL, 20, 30, "1234567890123456789012345678");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/d");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -296,6 +314,11 @@ int test_sky_data_file_add_large_event_to_middle_of_starting_path_causing_block_
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 9LL, 20, 30, "12345678901234567890123456789");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/e");
+    mu_assert_int_equals(data_file->block_count, 4);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, true);
+    ASSERT_BLOCK(data_file, 3, 3, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -305,6 +328,10 @@ int test_sky_data_file_add_small_event_to_end_of_starting_path_causing_block_spa
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 12LL, 20, 30, "1234567890");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/f");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -314,6 +341,10 @@ int test_sky_data_file_add_medium_event_to_end_of_starting_path_causing_block_sp
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 12LL, 20, 30, "1234567890123456789012345678");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/g");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -323,6 +354,10 @@ int test_sky_data_file_add_large_event_to_end_of_starting_path_causing_block_spa
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(3, 12LL, 20, 30, "1234567890123456789012345678901234567");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/h");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, true);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, false);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -332,6 +367,10 @@ int test_sky_data_file_add_event_to_start_of_ending_path_causing_block_span() {
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(10, 10LL, 20, 30, "12345678901234567890123456789");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/i");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, false);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, true);
     sky_data_file_free(data_file);
     return 0;
 }
@@ -341,6 +380,10 @@ int test_sky_data_file_add_event_to_end_of_ending_path_causing_block_span() {
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
     ADD_EVENT_WITH_DATA(10, 12LL, 20, 30, "12345678901234567890123456789");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/j");
+    mu_assert_int_equals(data_file->block_count, 3);
+    ASSERT_BLOCK(data_file, 0, 0, false);
+    ASSERT_BLOCK(data_file, 1, 1, true);
+    ASSERT_BLOCK(data_file, 2, 2, true);
     sky_data_file_free(data_file);
     return 0;
 }

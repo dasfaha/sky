@@ -640,6 +640,9 @@ int sky_data_file_add_event(sky_data_file *data_file, sky_event *event)
     // Add the event to the block.
     rc = sky_block_add_event(block, event);
     check(rc == 0, "Unable to add event to block");
+
+    // Re-sort blocks.
+    qsort(data_file->blocks, data_file->block_count, sizeof(sky_block*), compare_blocks);
     
     return 0;
 
