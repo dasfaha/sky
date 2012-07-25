@@ -89,6 +89,35 @@ void sky_table_free(sky_table *table)
 }
 
 
+//--------------------------------------
+// Path Management
+//--------------------------------------
+
+// Sets the file path of a table.
+//
+// table - The table.
+// path  - The file path to set.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_table_set_path(sky_table *table, bstring path)
+{
+    check(table != NULL, "Table required");
+
+    if(table->path) {
+        bdestroy(table->path);
+    }
+    
+    table->path = bstrcpy(path);
+    if(path) check_mem(table->path);
+
+    return 0;
+
+error:
+    table->path = NULL;
+    return -1;
+}
+
+
 //======================================
 // Data file management
 //======================================
@@ -362,3 +391,32 @@ error:
     bdestroy(path);
     return -1;
 }
+
+
+//======================================
+// Event Management
+//======================================
+
+// Adds an event to the table.
+//
+// table - The table to add the event to..
+// event - The event to add.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_table_add_event(sky_table *table, sky_event *event)
+{
+    int rc;
+    check(table != NULL, "Table required");
+    check(event != NULL, "Event required");
+    check(table->opened, "Table must be open to add an event");
+
+    // Delegate to the data file.
+    rc = sky_data_file_add_event(table->data_file, event);
+    check(rc == 0, "Unable to add event to data file");
+    
+    return 0;
+
+error:
+    return -1;
+}
+

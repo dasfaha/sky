@@ -29,7 +29,7 @@
 
 typedef struct Options {
     bstring path;
-    bstring object_type;
+    bstring table_name;
     int32_t path_count;
     int32_t avg_event_count;
     int32_t action_count;
@@ -50,7 +50,7 @@ Options *parseopts(int argc, char **argv)
     
     // Command line options.
     struct option long_options[] = {
-        {"object-type", required_argument, 0, 'o'},
+        {"table-name", required_argument, 0, 't'},
         {"path-count", required_argument, 0, 'p'},
         {"avg-event-count", required_argument, 0, 'e'},
         {"action-count", required_argument, 0, 'a'},
@@ -61,7 +61,7 @@ Options *parseopts(int argc, char **argv)
     // Parse command line options.
     while(1) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "o:p:e:s:a:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "t:p:e:s:a:", long_options, &option_index);
         
         // Check for end of options.
         if(c == -1) {
@@ -70,9 +70,9 @@ Options *parseopts(int argc, char **argv)
         
         // Parse each option.
         switch(c) {
-            case 'o': {
-                options->object_type = bfromcstr(optarg);
-                check_mem(options->object_type);
+            case 't': {
+                options->table_name = bfromcstr(optarg);
+                check_mem(options->table_name);
                 break;
             }
             
@@ -109,10 +109,12 @@ Options *parseopts(int argc, char **argv)
     options->path = bfromcstr(argv[0]);
 
     // Validate input.
-    if(options->object_type == NULL) {
+    /*
+    if(options->table_name == NULL) {
         fprintf(stderr, "Error: Object type (-o) is required.\n\n");
         exit(1);
     }
+    */
 
     // Default input.
     if(options->path_count <= 0) {
@@ -140,8 +142,8 @@ error:
 void Options_free(Options *options)
 {
     if(options) {
-        bdestroy(options->object_type);
-        options->object_type = NULL;
+        bdestroy(options->table_name);
+        options->table_name = NULL;
         free(options);
     }
 }
@@ -174,23 +176,26 @@ void usage()
 // Generates a database with random data at a given path.
 //
 // options - A list of options to use while generating the database.
-void generate(Options *options)
+// event_count - The number of events generated.
+void generate(Options *options, uint32_t *total)
 {
-    //int rc;
+    int rc;
     sky_event *event = NULL;
+    
+    // Initialize the return value.
+    *total = 0;
     
     // Seed the randomizer.
     srandom(options->seed);
     
-    // Create database.
-    sky_database *database = sky_database_create(options->path);
-    check_mem(database);
+    // Initialize table.
+    sky_table *table = sky_table_create(); check_mem(table);
+    rc = sky_table_set_path(table, options->path);
+    check(rc == 0, "Unable to set table path");
     
     // Open table.
-    sky_table *table = sky_table_create(database, options->object_type);
-    check_mem(table);
-    
-    check(sky_table_open(table) == 0, "Unable to open table");
+    rc = sky_table_open(table);
+    check(rc == 0, "Unable to open table");
 
     // Loop over paths and create events.
     int i, j;
@@ -203,26 +208,24 @@ void generate(Options *options)
             sky_timestamp_t timestamp = random() % INT64_MAX;
             sky_action_id_t action_id = (random() % options->action_count) + 1;
             event = sky_event_create(object_id, timestamp, action_id);
-            //rc = sky_table_add_event(table, event);
-            //check(rc == 0, "Unable to add event: ts:%lld, oid:%lld, action:%lld", event->timestamp, event->object_id, event->action_id);
+            rc = sky_table_add_event(table, event);
+            check(rc == 0, "Unable to add event: ts:%lld, oid:%d, action:%d", event->timestamp, event->object_id, event->action_id);
             sky_event_free(event);
+            
+            // Increment event count.
+            (*total)++;
         }
     }
     
-    // Close table
-    check(sky_table_close(table) == 0, "Unable to close table");
-    
     // Clean up
-    sky_database_free(database);
+    sky_table_close(table);
+    check(rc == 0, "Unable to close table");
     sky_table_free(table);
     
     return;
     
 error:
     sky_event_free(event);
-    sky_table_close(table);
-
-    sky_database_free(database);
     sky_table_free(table);
 }
 
@@ -242,9 +245,11 @@ int main(int argc, char **argv)
     time_t t0 = time(NULL);
 
     // Generate database.
-    generate(options);
+    uint32_t total;
+    generate(options, &total);
 
     // Show wall clock time.
+    printf("Event Count: %d events\n", total);
     printf("Elapsed Time: %ld seconds\n", (time(NULL)-t0));
 
     // Clean up.
