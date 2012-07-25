@@ -24,7 +24,7 @@
 
 #define sky_path_event_data_length_t uint32_t
 
-#define SKY_PATH_HEADER_LENGTH sizeof(sky_object_id_t) + sizeof(sky_path_event_data_length_t)
+#define SKY_PATH_HEADER_LENGTH (sizeof(sky_object_id_t) + sizeof(sky_path_event_data_length_t))
 
 
 //==============================================================================

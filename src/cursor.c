@@ -200,6 +200,12 @@ int sky_cursor_next(sky_cursor *cursor)
         }
     }
 
+    // Make sure that we are point at an event.
+    if(!cursor->eof) {
+        sky_event_flag_t flag = *((sky_event_flag_t*)cursor->ptr);
+        check(flag & SKY_EVENT_FLAG_ACTION || flag & SKY_EVENT_FLAG_DATA, "Cursor pointing at invalid raw event data: %p", cursor->ptr);
+    }
+
     return 0;
 
 error:

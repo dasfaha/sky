@@ -25,6 +25,9 @@ int sky_block_get_insertion_info(sky_block *block, sky_event *event,
 int sky_block_split_with_event(sky_block *block, sky_event *event,
     sky_block **target_block);
 
+int sky_block_span_with_event(sky_block *block, sky_event *new_event,
+    void *path_ptr, uint32_t target_size, sky_block **target_block);
+
 
 
 //==============================================================================
@@ -504,9 +507,145 @@ error:
     return -1;
 }
 
+// Spans a path across multiple blocks.
+int sky_block_span_with_event(sky_block *block, sky_event *new_event,
+                              void *path_ptr, uint32_t target_size,
+                              sky_block **target_block)
+{
+    int rc;
+    check(block != NULL, "Block required");
+    check(new_event != NULL, "Event required");
+    check(path_ptr != NULL, "Path pointer required");
+    check(target_size > 0, "Target size must be greater than zero");
+    check(target_block > 0, "Target block pointer required");
+    
+    // Initialize events stats.
+    uint32_t event_count = 0;
+    sky_path_event_stat *events;
+
+    // Retrieve block size.
+    sky_data_file *data_file = block->data_file;
+    uint32_t block_size = data_file->block_size;
+    
+    // Retrieve block pointer.
+    void *block_ptr = NULL;
+    rc = sky_block_get_ptr(block, &block_ptr);
+    check(rc == 0, "Unable to retrieve block pointer");
+
+    // Retrieve a list of event sizes in the current block (plus new event).
+    rc = sky_path_get_event_stats(path_ptr, new_event, &events, &event_count);
+    check(rc == 0, "Unable to calculate event stats on path");
+    
+    debug("event stat count: %d", event_count);
+    
+    // Initialize the return value.
+    *target_block = block;
+
+    // Retrieve path info.
+    bool is_first_path_in_block = (path_ptr == block_ptr);
+    sky_object_id_t object_id = *((sky_object_id_t*)path_ptr);
+
+    debug("sp_w_e %d", is_first_path_in_block);
+    
+    // Distribute events across blocks.
+    uint32_t i;
+    uint32_t last_index = 0;
+    size_t sz = SKY_PATH_HEADER_LENGTH;
+    for(i=0; i<event_count; i++) {
+        sky_path_event_stat *event = &(events[i]);
+        sky_path_event_stat *next_event = (i < event_count-1 ? &(events[i+1]) : NULL);
+
+        // If we exceed the block size then create a spanned block.
+        if(SKY_PATH_HEADER_LENGTH + event->sz > block_size) {
+            sentinel("Event is too large for block");
+        }
+        
+        // Add the event size to the running total.
+        sz += event->sz;
+
+        // If we exceeded the target size or if there is remaining data
+        // in an already split block then move everything to a new block.
+        bool exceeds_target_size = (sz >= target_size);
+        bool is_last_event = (i == event_count-1 && last_index > 0);
+        bool next_event_exceeds_max = (next_event != NULL && sz + next_event->sz > block_size);
+        debug("! %d %d %d (%d-%d) [%d] [%ld]", exceeds_target_size, is_last_event, next_event_exceeds_max, last_index, i, block->index, sz);
+        if(exceeds_target_size || is_last_event || next_event_exceeds_max) {
+            // If this is the first span of the first path of a block then
+            // just leave the data where it is. Otherwise move the data.
+            if(!is_first_path_in_block || last_index > 0) {
+                sky_path_event_stat *last_event = &(events[last_index]);
+
+                // Save path pointer.
+                off_t path_off = path_ptr - data_file->data;
+
+                // Create a new block.
+                sky_block *new_block = NULL;
+                rc = sky_data_file_create_block(data_file, &new_block);
+                check(rc == 0, "Unable to create new block");
+
+                // Restore path pointer.
+                path_ptr = data_file->data + path_off;
+
+                // Retrieve the new block's pointer.
+                void *new_block_ptr = NULL;
+                rc = sky_block_get_ptr(new_block, &new_block_ptr);
+                check(rc == 0, "Unable to retrieve new block's data pointer");
+
+                // Calculate offsets.
+                size_t start_pos = last_event->start_pos;
+                size_t end_pos   = event->end_pos;
+                void *ptr = path_ptr + start_pos;
+                size_t len = end_pos - start_pos;
+
+                // Write the path header unless it is entirely a new event.
+                if(len > 0) {
+                    size_t _sz;
+                    rc = sky_path_pack_hdr(object_id, sz-SKY_PATH_HEADER_LENGTH, new_block_ptr, &_sz);
+                    check(rc == 0, "Unable to write path header to new block");
+
+                    // Move data into new block.
+                    memmove(new_block_ptr + SKY_PATH_HEADER_LENGTH, ptr, len);
+                    memset(ptr, 0, len);
+                }
+
+                // Update block ranges.
+                rc = sky_block_full_update(new_block);
+                check(rc == 0, "Unable to update block ranges");
+
+                // If new block contains the event timestamp in range then
+                // set it as the target block.
+                if(new_event->timestamp >= last_event->timestamp && event->timestamp <= new_event->timestamp) {
+                    *target_block = new_block;
+                }
+            }
+
+            // Save where we left off.
+            last_index = i+1;
+            sz = SKY_PATH_HEADER_LENGTH;
+        }
+    }
+
+    // Clear out original path header.
+    memset(path_ptr, 0, SKY_PATH_HEADER_LENGTH);
+
+    // Update block range on the original block if a split occurred.
+    if(last_index > 0) {
+        rc = sky_block_full_update(block);
+        check(rc == 0, "Unable to update block ranges");
+    }
+    
+    free(events);
+    return 0;
+
+error:
+    *target_block = NULL;
+    free(events);
+    return -1;
+}
+
 
 //======================================
-// Path & Event Stats
+// Path Stats
 //======================================
 
 // Generates an index of stats on all the paths in the block. If an event is
@@ -649,10 +788,11 @@ int sky_block_add_event(sky_block *block, sky_event *event)
     // Determine size.
     bool path_exists = (event_ptr != NULL);
     size_t event_length = sky_event_sizeof(event);
-    size_t sz = event_length + (path_exists ? 0 : SKY_PATH_HEADER_LENGTH);
+    size_t sz = event_length + (!path_exists ? SKY_PATH_HEADER_LENGTH : 0);
     
     // If adding the event will cause a split then go ahead and split and
     // recall this function.
+    debug("split? %ld + %ld > %d", block_data_length, sz, block->data_file->block_size);
     if(block_data_length + sz > block->data_file->block_size) {
         sky_block *target_block;
         rc = sky_block_split_with_event(block, event, &target_block);
@@ -828,6 +968,7 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
                                sky_block **target_block)
 {
     int rc;
+    uint32_t i;
     check(block != NULL, "Block required");
     check(event != NULL, "Event required");
     check(block->data_file != NULL, "Block data file required");
@@ -849,23 +990,73 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
     // Initialize the return value.
     *target_block = block;
     
-    // Distribute paths across blocks.
-    uint32_t i;
-    uint32_t last_index = 0;
-    size_t sz = 0;
+    // If a span is occurring then treat it as a special case.
+    bool is_spanning = false;
     for(i=0; i<path_count; i++) {
         sky_block_path_stat *path = &(paths[i]);
-        sky_block_path_stat *next_path = (i < path_count-1 ? &(paths[i+1]) : NULL);
-        
-        // If we exceed the block size then create a spanned block.
+
+        // If this path will exceed the block size then create a span.
         if(path->sz > block_size) {
-            sentinel("Path too large for block. Spanned blocks not yet supported.");
+            // Retrieve the block pointer.
+            void *block_ptr = NULL;
+            rc = sky_block_get_ptr(block, &block_ptr);
+            check(rc == 0, "Unable to retrieve source block pointer");
+            
+            // Span the path across multiple blocks and set the target block.
+            rc = sky_block_span_with_event(block, event, block_ptr + path->start_pos, target_size, target_block);
+            check(rc == 0, "Unable to create span");
+            
+            // Move remaining paths to new block.
+            if(i < path_count-1) {
+                // Create a new block.
+                sky_block *new_block = NULL;
+                rc = sky_data_file_create_block(data_file, &new_block);
+                check(rc == 0, "Unable to create new block");
+
+                // Retrieve the new block's pointer.
+                void *new_block_ptr = NULL;
+                rc = sky_block_get_ptr(new_block, &new_block_ptr);
+                check(rc == 0, "Unable to retrieve new block's data pointer");
+
+                // Retrieve the original block's pointer
+                void *block_ptr = NULL;
+                rc = sky_block_get_ptr(block, &block_ptr);
+                check(rc == 0, "Unable to retrieve source block pointer");
+
+                // Calculate offsets.
+                size_t start_pos = paths[i+1].start_pos;
+                size_t end_pos   = paths[path_count-1].end_pos;
+                void *ptr = block_ptr + start_pos;
+                size_t len = end_pos - start_pos;
+
+                debug("shift remaining %ld, %ld, %ld | %d", start_pos, end_pos, len, new_block->index);
+
+                // Move data into new block.
+                memmove(new_block_ptr, ptr, len);
+                memset(ptr, 0, len);
+
+                // Update block ranges.
+                rc = sky_block_full_update(new_block);
+                check(rc == 0, "Unable to update block ranges");
+            }
+            
+            // Set a flag stating that a span has occurred.
+            is_spanning = true;
+            break;
         }
-        // Otherwise treat path as non-spanned.
-        else {
+    }
+    
+    // Distribute paths across blocks if a span did not occur.
+    if(!is_spanning) {
+        uint32_t last_index = 0;
+        size_t sz = 0;
+        for(i=0; i<path_count; i++) {
+            sky_block_path_stat *path = &(paths[i]);
+            sky_block_path_stat *next_path = (i < path_count-1 ? &(paths[i+1]) : NULL);
+
             // Add the path size to the running total.
             sz += path->sz;
-        
+
             // If we exceeded the target size or if there is remaining data
             // in an already split block then move everything to a new block.
             bool exceeds_target_size = (sz >= target_size);
@@ -880,7 +1071,7 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
                     sky_block *new_block = NULL;
                     rc = sky_data_file_create_block(data_file, &new_block);
                     check(rc == 0, "Unable to create new block");
-                    
+
                     // Retrieve the new block's pointer.
                     void *new_block_ptr = NULL;
                     rc = sky_block_get_ptr(new_block, &new_block_ptr);
@@ -896,35 +1087,33 @@ int sky_block_split_with_event(sky_block *block, sky_event *event,
                     size_t end_pos   = path->end_pos;
                     void *ptr = block_ptr + start_pos;
                     size_t len = end_pos - start_pos;
-                    
+
                     // Move data into new block.
                     memmove(new_block_ptr, ptr, len);
                     memset(ptr, 0, len);
-                    
+
                     // Update block ranges.
                     rc = sky_block_full_update(new_block);
                     check(rc == 0, "Unable to update block ranges");
-                    
+
                     // If new block contains the event object id in range then
                     // set it as the target block.
                     if(event->object_id >= last_path->object_id && event->object_id <= path->object_id) {
                         *target_block = new_block;
                     }
                 }
-                
+
                 // Save where we left off.
                 last_index = i+1;
                 sz = 0;
             }
         }
     }
-
-    // Update block range on the original block if a split occurred.
-    if(last_index > 0) {
-        rc = sky_block_full_update(block);
-        check(rc == 0, "Unable to update block ranges");
-    }
     
+    // Update block range on the original block.
+    rc = sky_block_full_update(block);
+    check(rc == 0, "Unable to update block ranges");
+
     free(paths);
     return 0;
 

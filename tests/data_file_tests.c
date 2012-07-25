@@ -263,16 +263,14 @@ int test_sky_data_file_add_large_event_to_new_ending_path_causing_block_split() 
 // Add Event (Block Spans)
 //--------------------------------------
 
-/*
-int test_sky_data_file_add_event_to_starting_path_causing_block_span() {
+int test_sky_data_file_add_event_to_start_of_starting_path_causing_block_span() {
     sky_data_file *data_file;
     INIT_DATA_FILE("tests/fixtures/data_files/spanning/a", 0);
-    ADD_EVENT(3LL, 12LL, 20);
+    ADD_EVENT_WITH_DATA(3LL, 7LL, 20, 30, "1234567890");
     ASSERT_DATA_FILE("tests/fixtures/data_files/spanning/b");
     sky_data_file_free(data_file);
     return 0;
 }
-*/
 
 
 //==============================================================================
@@ -302,6 +300,8 @@ int all_tests() {
     mu_run_test(test_sky_data_file_add_small_event_to_new_ending_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_medium_event_to_new_ending_path_causing_block_split);
     mu_run_test(test_sky_data_file_add_large_event_to_new_ending_path_causing_block_split);
+
+    mu_run_test(test_sky_data_file_add_event_to_start_of_starting_path_causing_block_span);
     
     return 0;
 }
