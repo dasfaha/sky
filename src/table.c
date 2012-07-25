@@ -107,12 +107,20 @@ int sky_table_load_data_file(sky_table *table)
     // Unload any existing data file.
     sky_table_unload_data_file(table);
     
+    // Initialize table space (0).
+    bstring tablespace_path = bformat("%s/0", bdata(table->path));
+    if(!sky_file_exists(tablespace_path)) {
+        rc = mkdir(bdata(tablespace_path), S_IRWXU);
+        check(rc == 0, "Unable to create tablespace directory: %s", bdata(tablespace_path));
+    }
+    bdestroy(tablespace_path);
+    
     // Initialize data file.
     table->data_file = sky_data_file_create();
     check_mem(table->data_file);
-    table->data_file->path = bformat("%s/data0", bdata(table->path));
+    table->data_file->path = bformat("%s/0/data", bdata(table->path));
     check_mem(table->data_file->path);
-    table->data_file->header_path = bformat("%s/hdr0", bdata(table->path));
+    table->data_file->header_path = bformat("%s/0/header", bdata(table->path));
     check_mem(table->data_file->header_path);
     
     // Load data
@@ -121,6 +129,7 @@ int sky_table_load_data_file(sky_table *table)
 
     return 0;
 error:
+    bdestroy(tablespace_path);
     sky_table_unload_data_file(table);
     return -1;
 }
