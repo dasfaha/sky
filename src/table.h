@@ -48,7 +48,7 @@ typedef struct sky_table sky_table;
 //
 //==============================================================================
 
-#define SKY_LOCK_NAME ".lock"
+#define SKY_LOCK_NAME ".skylock"
 
 // The table is a reference to the disk location where data is stored. The
 // table also maintains a cache of block info and predefined actions and
