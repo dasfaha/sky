@@ -3,6 +3,7 @@
 ################################################################################
 
 CFLAGS=-g -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64 `llvm-config --cflags`
+CXXFLAGS=-g -Wall -Wextra -Wno-self-assign -D_FILE_OFFSET_BITS=64 `llvm-config --libs --cflags --ldflags core analysis executionengine jit interpreter native`
 
 SOURCES=$(wildcard src/**/*.c src/**/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES}) $(patsubst %.l,%.o,${LEX_SOURCES}) $(patsubst %.y,%.o,${YACC_SOURCES})
@@ -16,32 +17,32 @@ TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 # Default Target
 ################################################################################
 
-all: build/libsky.a build/skyd build/sky-gen build/sky-bench test
+all: bin/libsky.a bin/skyd bin/sky-gen bin/sky-bench test
 
 
 ################################################################################
 # Binaries
 ################################################################################
 
-build/libsky.a: build ${LIB_OBJECTS}
-	rm -f build/libsky.a
+bin/libsky.a: bin ${LIB_OBJECTS}
+	rm -f bin/libsky.a
 	ar rcs $@ ${LIB_OBJECTS}
 	ranlib $@
 
-build/skyd: build ${OBJECTS}
-	$(CC) $(CFLAGS) src/skyd.o -o $@ build/libsky.a
+bin/skyd: bin ${OBJECTS}
+	$(CC) $(CFLAGS) src/skyd.o -o $@ bin/libsky.a
 	chmod 700 $@
 
-build/sky-gen: build ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_gen.o -o $@ build/libsky.a
+bin/sky-gen: bin ${OBJECTS}
+	$(CC) $(CFLAGS) src/sky_gen.o -o $@ bin/libsky.a
 	chmod 700 $@
 
-build/sky-bench: build ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_bench.o -o $@ build/libsky.a
+bin/sky-bench: bin ${OBJECTS}
+	$(CC) $(CFLAGS) src/sky_bench.o -o $@ bin/libsky.a
 	chmod 700 $@
 
-build:
-	mkdir -p build
+bin:
+	mkdir -p bin
 
 
 ################################################################################
@@ -52,8 +53,9 @@ build:
 test: $(TEST_OBJECTS)
 	@sh ./tests/runtests.sh
 
-$(TEST_OBJECTS): %: %.c build/libsky.a
-	$(CC) $(CFLAGS) -Isrc -o $@ $< build/libsky.a
+$(TEST_OBJECTS): %: %.c bin/libsky.a
+	$(CC) $(CFLAGS) -Isrc -c -o $@.o $<
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $@.o bin/libsky.a
 
 
 ################################################################################
@@ -61,6 +63,6 @@ $(TEST_OBJECTS): %: %.c build/libsky.a
 ################################################################################
 
 clean: 
-	rm -rf build ${OBJECTS} ${TEST_OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}
+	rm -rf bin ${OBJECTS} ${TEST_OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}
 	rm -rf tests/*.dSYM
 	rm -rf tmp/*

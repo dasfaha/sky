@@ -9,6 +9,7 @@ src/eql/lexer.h
 src/eql/parser.c
 src/eql/parser.h
 tests/*_tests
+tests/*.o
 tmp
 .DS_Store
 **/*.dSYM*

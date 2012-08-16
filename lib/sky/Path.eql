@@ -1,0 +1,26 @@
+/**
+ *  The path object is used to create cursors for the current path.
+ */
+class Path {
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  A reference to the path iterator.
+     */
+    private Ref pathPtr;
+
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    /**
+     *  Creates a cursor that can be used to access events from the path.
+     *
+     *  @return  A new cursor object.
+     */
+    [External(name="sky_eql_path_events")]
+    public Cursor events();
+}
