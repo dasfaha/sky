@@ -2,7 +2,7 @@
 # Variables
 ################################################################################
 
-CFLAGS=-g -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64
+CFLAGS=-g -Wall -Wextra -Wno-self-assign -std=c99 -D_FILE_OFFSET_BITS=64 `llvm-config --cflags`
 
 SOURCES=$(wildcard src/**/*.c src/**/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES}) $(patsubst %.l,%.o,${LEX_SOURCES}) $(patsubst %.y,%.o,${YACC_SOURCES})
