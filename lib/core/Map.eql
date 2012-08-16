@@ -1,0 +1,87 @@
+/**
+ *  The map is a structure for looking up objects given a key.
+ */
+class Map <T, U> {
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    public void init()
+    {
+        return;
+    }
+
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  The size, in bytes, of each element in the map. This is initialized
+     *  in the constructor and is used by the external implementation for
+     *  storage.
+     */
+    private Int elemsz;
+
+    /**
+     *  The number of elements currently stored in the map.
+     */
+    private Int count;
+
+    /**
+     *  A pointer to where the elements are stored.
+     */
+    private Ref elements;
+
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    /**
+     *  Finds an element in the map given a key.
+     *
+     *  @param key  The key to search for.
+     *
+     *  @return     The element with the given key if found. Otherwise returns
+     *              null.
+     */
+    [External(name="eql_map_find")]
+    public U find(T key);
+
+    /**
+     *  Retrieves an element from the map with the given key. If no element is
+     *  found then one is created.
+     *
+     *  @param key  The key to search on.
+     *
+     *  @return     An element with the matching key.
+     */
+    public U get(T key)
+    {
+        // Attempt to find the item first.
+        U element = this.find(key);
+        
+        // If the item isn't found then create it.
+        if(element == null) {
+            this.elemsz = sizeof(U);
+            element = this.elalloc();
+            element.setHashFields(key);
+            this.refresh();
+        }
+        
+        return element;
+    }
+
+    [External("eql_map_elalloc")]
+    /**
+     *  Allocates memory for a single element.
+     */
+    private U elalloc();
+
+    [External("eql_map_refresh")]
+    /**
+     *  Internally refreshes the map. This occurs whenever an element is added
+     *  to the map.
+     */
+    private void refresh();
+}

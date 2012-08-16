@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# Make sure one arg is passed in which contains the path to the archive.
+if [ $# -ne 1 ]
+then
+    echo "usage: `basename $0` [tarball_path]"
+    exit 65
+fi
+
+# Create temp directory.
+TMPDIR=/tmp/`basename $0`
+rm -rf $TMPDIR
+mkdir -p $TMPDIR
+echo $TMPDIR
+
+# Extract to tmp.
+TMPPKG=$TMPDIR/`basename $1`
+cp $1 $TMPPKG
+tar zxvf $TMPPKG -C $TMPDIR
+
+# Copy from extracted directory.
+PKGDIR=`basename ${1/.tar.gz//}`
+LIBDIR=$TMPDIR/$PKGDIR/lib
+SRCDIR=$TMPDIR/$PKGDIR/src
+
+mkdir -p lib
+mkdir -p src/eql
+cp -r $LIBDIR .
+cp -r $SRCDIR/* src/eql
