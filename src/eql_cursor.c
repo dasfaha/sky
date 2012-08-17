@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "eql_cursor.h"
+#include "qip_cursor.h"
 #include "dbg.h"
 
 
@@ -15,9 +15,9 @@
 //======================================
 
 // Creates a cursor.
-sky_eql_cursor *sky_eql_cursor_create()
+sky_qip_cursor *sky_qip_cursor_create()
 {
-    sky_eql_cursor *cursor = malloc(sizeof(sky_eql_cursor));
+    sky_qip_cursor *cursor = malloc(sizeof(sky_qip_cursor));
     cursor->cursor = sky_cursor_create();
     return cursor;
 }
@@ -25,7 +25,7 @@ sky_eql_cursor *sky_eql_cursor_create()
 // Frees a cursor.
 //
 // cursor - The cursor to free.
-void sky_eql_cursor_free(sky_eql_cursor *cursor)
+void sky_qip_cursor_free(sky_qip_cursor *cursor)
 {
     if(cursor) {
         cursor->cursor = NULL;
@@ -43,7 +43,7 @@ void sky_eql_cursor_free(sky_eql_cursor *cursor)
 // event  - The event object to update.
 //
 // Returns nothing.
-void sky_eql_cursor_next(sky_eql_cursor *cursor, sky_eql_event *event)
+void sky_qip_cursor_next(sky_qip_cursor *cursor, sky_qip_event *event)
 {
     // Update the action id on the event.
     sky_action_id_t action_id;
@@ -59,7 +59,7 @@ void sky_eql_cursor_next(sky_eql_cursor *cursor, sky_eql_event *event)
 // Checks whether the cursor is at the end.
 //
 // Returns a flag stating if the cursor is done.
-bool sky_eql_cursor_eof(sky_eql_cursor *cursor)
+bool sky_qip_cursor_eof(sky_qip_cursor *cursor)
 {
     return cursor->cursor->eof;
 }

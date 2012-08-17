@@ -24,6 +24,6 @@ LIBDIR=$TMPDIR/$PKGDIR/lib
 SRCDIR=$TMPDIR/$PKGDIR/src
 
 mkdir -p lib
-mkdir -p src/eql
+mkdir -p src/qip
 cp -r $LIBDIR .
-cp -r $SRCDIR/* src/eql
+cp -r $SRCDIR/* src/qip

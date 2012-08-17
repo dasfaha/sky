@@ -45,7 +45,7 @@ class Map <T, U> {
      *  @return     The element with the given key if found. Otherwise returns
      *              null.
      */
-    [External(name="eql_map_find")]
+    [External(name="qip_map_find")]
     public U find(T key);
 
     /**
@@ -72,13 +72,13 @@ class Map <T, U> {
         return element;
     }
 
-    [External("eql_map_elalloc")]
+    [External("qip_map_elalloc")]
     /**
      *  Allocates memory for a single element.
      */
     private U elalloc();
 
-    [External("eql_map_refresh")]
+    [External("qip_map_refresh")]
     /**
      *  Internally refreshes the map. This occurs whenever an element is added
      *  to the map.

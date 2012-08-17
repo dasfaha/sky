@@ -1,5 +1,5 @@
-#ifndef _sky_eql_event_h
-#define _sky_eql_event_h
+#ifndef _sky_qip_event_h
+#define _sky_qip_event_h
 
 #include <inttypes.h>
 
@@ -13,7 +13,7 @@
 // The event represents a state change or action at a specific point in time.
 typedef struct {
     int64_t action_id;
-} sky_eql_event;
+} sky_qip_event;
 
 
 //==============================================================================
@@ -26,8 +26,8 @@ typedef struct {
 // Lifecycle
 //======================================
 
-sky_eql_event *sky_eql_event_create();
+sky_qip_event *sky_qip_event_create();
 
-void sky_eql_event_free(sky_eql_event *event);
+void sky_qip_event_free(sky_qip_event *event);
 
 #endif

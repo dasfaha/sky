@@ -11,8 +11,8 @@
 #include "path_iterator.h"
 #include "version.h"
 
-#include "eql/eql.h"
-#include "eql_path.h"
+#include "qip/qip.h"
+#include "qip_path.h"
 
 
 //==============================================================================
@@ -50,7 +50,7 @@ struct Result {
     int64_t count;
 };
 
-typedef void (*sky_eql_path_map_func)(sky_eql_path *path, eql_map *map);
+typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
 
 
 //==============================================================================
@@ -272,35 +272,35 @@ error:
 
 
 // Executes the benchmark to count the number of times an action occurred
-// using the EQL language.
+// using the QIP language.
 //
 // options - A list of options to use.
-void benchmark_count_with_eql(Options *options)
+void benchmark_count_with_qip(Options *options)
 {
     int rc;
     uint32_t path_count = 0;
     
     // Initialize the query.
-    eql_ast_node *type_ref, *var_decl;
+    qip_ast_node *type_ref, *var_decl;
     uint32_t arg_count = 2;
-    eql_ast_node *args[arg_count];
+    qip_ast_node *args[arg_count];
     
     // Path arg.
     struct tagbstring path_str = bsStatic("path");
-    type_ref = eql_ast_type_ref_create_cstr("Path");
-    var_decl = eql_ast_var_decl_create(type_ref, &path_str, NULL);
-    args[0] = eql_ast_farg_create(var_decl);
+    type_ref = qip_ast_type_ref_create_cstr("Path");
+    var_decl = qip_ast_var_decl_create(type_ref, &path_str, NULL);
+    args[0] = qip_ast_farg_create(var_decl);
     
     // Map arg.
     struct tagbstring data_str = bsStatic("data");
-    type_ref = eql_ast_type_ref_create_cstr("Map");
-    eql_ast_type_ref_add_subtype(type_ref, eql_ast_type_ref_create_cstr("Int"));
-    eql_ast_type_ref_add_subtype(type_ref, eql_ast_type_ref_create_cstr("Result"));
-    var_decl = eql_ast_var_decl_create(type_ref, &data_str, NULL);
-    args[1] = eql_ast_farg_create(var_decl);
+    type_ref = qip_ast_type_ref_create_cstr("Map");
+    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Int"));
+    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Result"));
+    var_decl = qip_ast_var_decl_create(type_ref, &data_str, NULL);
+    args[1] = qip_ast_farg_create(var_decl);
 
     // Initialize query.
-    eql_module *module = NULL;
+    qip_module *module = NULL;
     struct tagbstring query = bsStatic(
         "[Hashable(\"id\")]\n"
         "class Result {\n"
@@ -314,21 +314,21 @@ void benchmark_count_with_eql(Options *options)
         "}\n"
         "return;"
     );
-    struct tagbstring module_name = bsStatic("eql");
+    struct tagbstring module_name = bsStatic("qip");
     struct tagbstring core_class_path = bsStatic("lib/core");
     struct tagbstring sky_class_path = bsStatic("lib/sky");
-    eql_compiler *compiler = eql_compiler_create();
-    eql_compiler_add_class_path(compiler, &core_class_path);
-    eql_compiler_add_class_path(compiler, &sky_class_path);
-    rc = eql_compiler_compile(compiler, &module_name, &query, args, arg_count, &module);
+    qip_compiler *compiler = qip_compiler_create();
+    qip_compiler_add_class_path(compiler, &core_class_path);
+    qip_compiler_add_class_path(compiler, &sky_class_path);
+    rc = qip_compiler_compile(compiler, &module_name, &query, args, arg_count, &module);
     check(rc == 0, "Unable to compile");
     if(module->error_count > 0) fprintf(stderr, "Parse error [line %d] %s\n", module->errors[0]->line_no, bdata(module->errors[0]->message));
     check(module->error_count == 0, "Compile error");
-    eql_compiler_free(compiler);
+    qip_compiler_free(compiler);
 
     // Retrieve pointer to function.
-    sky_eql_path_map_func process_path = NULL;
-    eql_module_get_main_function(module, (void*)(&process_path));
+    sky_qip_path_map_func process_path = NULL;
+    qip_module_get_main_function(module, (void*)(&process_path));
 
     // Initialize table.
     sky_table *table = sky_table_create(); check_mem(table);
@@ -349,9 +349,9 @@ void benchmark_count_with_eql(Options *options)
         rc = sky_path_iterator_set_data_file(&iterator, table->data_file);
         check(rc == 0, "Unable to initialze path iterator");
 
-        // Initialize EQL args.
-        sky_eql_path *path = sky_eql_path_create();
-        eql_map *map = eql_map_create();
+        // Initialize QIP args.
+        sky_qip_path *path = sky_qip_path_create();
+        qip_map *map = qip_map_create();
         
         // Iterate over each path.
         while(!iterator.eof) {
@@ -370,7 +370,7 @@ void benchmark_count_with_eql(Options *options)
         }
         
         // Clean up iteration.
-        eql_map_free(map);
+        qip_map_free(map);
     }
     
     // Clean up
@@ -407,7 +407,7 @@ int main(int argc, char **argv)
 
     // Benchmark computation of a DAG.
     // benchmark_dag(options);
-    benchmark_count_with_eql(options);
+    benchmark_count_with_qip(options);
 
     // End time.
     gettimeofday(&tv, NULL);

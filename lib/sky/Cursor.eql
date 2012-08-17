@@ -22,7 +22,7 @@ class Cursor {
      *
      *  @param event  A pointer to the event object that will be updated.
      */
-    [External(name="sky_eql_cursor_next")]
+    [External(name="sky_qip_cursor_next")]
     public void next(Event event);
 
     /**
@@ -30,6 +30,6 @@ class Cursor {
      *
      *  @return  A flag stating if the cursor is done.
      */
-    [External(name="sky_eql_cursor_eof")]
+    [External(name="sky_qip_cursor_eof")]
     public Boolean eof();
 }

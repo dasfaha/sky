@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <eql/eql.h>
-#include <eql_path.h>
+#include <qip/qip.h>
+#include <qip_path.h>
 
 #include "minunit.h"
-#include "eql_test_util.h"
+#include "qip_test_util.h"
 
 
 //==============================================================================
@@ -33,31 +33,31 @@ char DATA[] =
 // Execution
 //--------------------------------------
 
-typedef void * (*sky_eql_path_func)(sky_eql_path *path);
+typedef void * (*sky_qip_path_func)(sky_qip_path *path);
 
-int test_sky_eql_path_execute() {
-    eql_module *module = NULL;
+int test_sky_qip_path_execute() {
+    qip_module *module = NULL;
     COMPILE_QUERY_1ARG(module, "Path", "path",
         "Cursor cursor = path.events();\n"
         "return cursor;"
     );
 
     // Initialize path.
-    sky_eql_path *path = sky_eql_path_create();
+    sky_qip_path *path = sky_qip_path_create();
     path->path_ptr = &DATA;
 
     // Execute module.
-    sky_eql_path_func f = NULL;
-    eql_module_get_main_function(module, (void*)(&f));
-    sky_eql_cursor *cursor = f(path);
+    sky_qip_path_func f = NULL;
+    qip_module_get_main_function(module, (void*)(&f));
+    sky_qip_cursor *cursor = f(path);
 
     // Validate that the cursor pointer starts at the first event.
     mu_assert_long_equals(cursor->cursor->ptr - path->path_ptr, 8L);
 
     // Clean up.
-    sky_eql_path_free(path);
-    sky_eql_cursor_free(cursor);
-    eql_module_free(module);
+    sky_qip_path_free(path);
+    sky_qip_cursor_free(cursor);
+    qip_module_free(module);
     return 0;
 }
 
@@ -69,7 +69,7 @@ int test_sky_eql_path_execute() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_eql_path_execute);
+    mu_run_test(test_sky_qip_path_execute);
     return 0;
 }
 

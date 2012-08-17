@@ -1,10 +1,10 @@
-#ifndef _sky_eql_path_h
-#define _sky_eql_path_h
+#ifndef _sky_qip_path_h
+#define _sky_qip_path_h
 
 #include <inttypes.h>
 
 #include "path_iterator.h"
-#include "eql_cursor.h"
+#include "qip_cursor.h"
 
 
 //==============================================================================
@@ -16,7 +16,7 @@
 // The path stores a reference to the current path.
 typedef struct {
     void *path_ptr;
-} sky_eql_path;
+} sky_qip_path;
 
 
 //==============================================================================
@@ -29,15 +29,15 @@ typedef struct {
 // Lifecycle
 //======================================
 
-sky_eql_path *sky_eql_path_create();
+sky_qip_path *sky_qip_path_create();
 
-void sky_eql_path_free(sky_eql_path *path);
+void sky_qip_path_free(sky_qip_path *path);
 
 
 //======================================
 // Cursor Management
 //======================================
 
-sky_eql_cursor *sky_eql_path_events(sky_eql_path *path);
+sky_qip_cursor *sky_qip_path_events(sky_qip_path *path);
 
 #endif

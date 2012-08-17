@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "cursor.h"
-#include "eql_path.h"
+#include "qip_path.h"
 
 
 //==============================================================================
@@ -15,9 +15,9 @@
 //======================================
 
 // Creates a path.
-sky_eql_path *sky_eql_path_create()
+sky_qip_path *sky_qip_path_create()
 {
-    sky_eql_path *path = malloc(sizeof(sky_eql_path));
+    sky_qip_path *path = malloc(sizeof(sky_qip_path));
     path->path_ptr = NULL;
     return path;
 }
@@ -25,7 +25,7 @@ sky_eql_path *sky_eql_path_create()
 // Frees a path.
 //
 // path - The path to free.
-void sky_eql_path_free(sky_eql_path *path)
+void sky_qip_path_free(sky_qip_path *path)
 {
     if(path) {
         path->path_ptr = NULL;
@@ -43,10 +43,10 @@ void sky_eql_path_free(sky_eql_path *path)
 // path - The path.
 //
 // Returns a new cursor.
-sky_eql_cursor *sky_eql_path_events(sky_eql_path *path)
+sky_qip_cursor *sky_qip_path_events(sky_qip_path *path)
 {
     // Initialize cursor with path.
-    sky_eql_cursor *cursor = sky_eql_cursor_create();
+    sky_qip_cursor *cursor = sky_qip_cursor_create();
     sky_cursor_set_path(cursor->cursor, path->path_ptr);
     
     return cursor;

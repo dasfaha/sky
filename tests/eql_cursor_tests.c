@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <eql/eql.h>
-#include <eql_path.h>
-#include <eql_cursor.h>
+#include <qip/qip.h>
+#include <qip_path.h>
+#include <qip_cursor.h>
 
 #include "minunit.h"
-#include "eql_test_util.h"
+#include "qip_test_util.h"
 
 
 //==============================================================================
@@ -34,10 +34,10 @@ char DATA[] =
 // Simple Cursor
 //--------------------------------------
 
-typedef int64_t (*sky_eql_path_int_func)(sky_eql_path *path);
+typedef int64_t (*sky_qip_path_int_func)(sky_qip_path *path);
 
-int test_sky_eql_cursor_execute_simple() {
-    eql_module *module = NULL;
+int test_sky_qip_cursor_execute_simple() {
+    qip_module *module = NULL;
     COMPILE_QUERY_1ARG(module, "Path", "path",
         "Int total = 0;\n"
         "Cursor cursor = path.events();\n"
@@ -48,20 +48,20 @@ int test_sky_eql_cursor_execute_simple() {
     );
 
     // Initialize path.
-    sky_eql_path *path = sky_eql_path_create();
+    sky_qip_path *path = sky_qip_path_create();
     path->path_ptr = &DATA;
 
     // Execute module.
-    sky_eql_path_int_func f = NULL;
-    eql_module_get_main_function(module, (void*)(&f));
+    sky_qip_path_int_func f = NULL;
+    qip_module_get_main_function(module, (void*)(&f));
     int64_t ret = f(path);
 
     // Validate that the sum of action ids is correct.
     mu_assert_int64_equals(ret, 24LL);
 
     // Clean up.
-    sky_eql_path_free(path);
-    eql_module_free(module);
+    sky_qip_path_free(path);
+    qip_module_free(module);
     return 0;
 }
 
@@ -76,28 +76,28 @@ struct Result {
     int64_t count;
 };
 
-typedef void (*sky_eql_path_map_func)(sky_eql_path *path, eql_map *map);
+typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
 
-int test_sky_eql_cursor_execute_with_map() {
-    eql_ast_node *type_ref, *var_decl;
+int test_sky_qip_cursor_execute_with_map() {
+    qip_ast_node *type_ref, *var_decl;
     uint32_t arg_count = 2;
-    eql_ast_node *args[arg_count];
+    qip_ast_node *args[arg_count];
     
     // Path arg.
     struct tagbstring path_str = bsStatic("path");
-    type_ref = eql_ast_type_ref_create_cstr("Path");
-    var_decl = eql_ast_var_decl_create(type_ref, &path_str, NULL);
-    args[0] = eql_ast_farg_create(var_decl);
+    type_ref = qip_ast_type_ref_create_cstr("Path");
+    var_decl = qip_ast_var_decl_create(type_ref, &path_str, NULL);
+    args[0] = qip_ast_farg_create(var_decl);
     
     // Map arg.
     struct tagbstring data_str = bsStatic("data");
-    type_ref = eql_ast_type_ref_create_cstr("Map");
-    eql_ast_type_ref_add_subtype(type_ref, eql_ast_type_ref_create_cstr("Int"));
-    eql_ast_type_ref_add_subtype(type_ref, eql_ast_type_ref_create_cstr("Result"));
-    var_decl = eql_ast_var_decl_create(type_ref, &data_str, NULL);
-    args[1] = eql_ast_farg_create(var_decl);
+    type_ref = qip_ast_type_ref_create_cstr("Map");
+    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Int"));
+    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Result"));
+    var_decl = qip_ast_var_decl_create(type_ref, &data_str, NULL);
+    args[1] = qip_ast_farg_create(var_decl);
 
-    eql_module *module = NULL;
+    qip_module *module = NULL;
     COMPILE_QUERY_RAW(module, args, arg_count,
         "[Hashable(\"id\")]\n"
         "class Result {\n"
@@ -113,13 +113,13 @@ int test_sky_eql_cursor_execute_with_map() {
     );
 
     // Initialize path & map.
-    sky_eql_path *path = sky_eql_path_create();
+    sky_qip_path *path = sky_qip_path_create();
     path->path_ptr = &DATA;
-    eql_map *map = eql_map_create();
+    qip_map *map = qip_map_create();
 
     // Execute module.
-    sky_eql_path_map_func f = NULL;
-    eql_module_get_main_function(module, (void*)(&f));
+    sky_qip_path_map_func f = NULL;
+    qip_module_get_main_function(module, (void*)(&f));
     f(path, map);
 
     // Validate the contents of the map.
@@ -136,9 +136,9 @@ int test_sky_eql_cursor_execute_with_map() {
     mu_assert_int64_equals(result->count, 1LL);
 
     // Clean up.
-    sky_eql_path_free(path);
-    eql_map_free(map);
-    eql_module_free(module);
+    sky_qip_path_free(path);
+    qip_map_free(map);
+    qip_module_free(module);
     return 0;
 }
 
@@ -150,8 +150,8 @@ int test_sky_eql_cursor_execute_with_map() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_eql_cursor_execute_simple);
-    mu_run_test(test_sky_eql_cursor_execute_with_map);
+    mu_run_test(test_sky_qip_cursor_execute_simple);
+    mu_run_test(test_sky_qip_cursor_execute_with_map);
     return 0;
 }
 

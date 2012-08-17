@@ -21,6 +21,6 @@ class Path {
      *
      *  @return  A new cursor object.
      */
-    [External(name="sky_eql_path_events")]
+    [External(name="sky_qip_path_events")]
     public Cursor events();
 }

@@ -1,10 +1,10 @@
-#ifndef _sky_eql_cursor_h
-#define _sky_eql_cursor_h
+#ifndef _sky_qip_cursor_h
+#define _sky_qip_cursor_h
 
 #include <inttypes.h>
 
 #include "cursor.h"
-#include "eql_event.h"
+#include "qip_event.h"
 
 
 //==============================================================================
@@ -16,7 +16,7 @@
 // The cursor iterates over events in a path.
 typedef struct {
     sky_cursor *cursor;
-} sky_eql_cursor;
+} sky_qip_cursor;
 
 
 //==============================================================================
@@ -29,18 +29,18 @@ typedef struct {
 // Lifecycle
 //======================================
 
-sky_eql_cursor *sky_eql_cursor_create();
+sky_qip_cursor *sky_qip_cursor_create();
 
-void sky_eql_cursor_free(sky_eql_cursor *cursor);
+void sky_qip_cursor_free(sky_qip_cursor *cursor);
 
 
 //======================================
 // Iteration
 //======================================
 
-void sky_eql_cursor_next(sky_eql_cursor *cursor, sky_eql_event *event);
+void sky_qip_cursor_next(sky_qip_cursor *cursor, sky_qip_event *event);
 
-bool sky_eql_cursor_eof(sky_eql_cursor *cursor);
+bool sky_qip_cursor_eof(sky_qip_cursor *cursor);
 
 
 #endif

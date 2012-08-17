@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "eql_event.h"
+#include "qip_event.h"
 
 //==============================================================================
 //
@@ -13,9 +13,9 @@
 //======================================
 
 // Creates an event.
-sky_eql_event *sky_eql_event_create()
+sky_qip_event *sky_qip_event_create()
 {
-    sky_eql_event *event = malloc(sizeof(sky_eql_event));
+    sky_qip_event *event = malloc(sizeof(sky_qip_event));
     event->action_id = 0LL;
     return event;
 }
@@ -23,7 +23,7 @@ sky_eql_event *sky_eql_event_create()
 // Frees an event.
 //
 // event - The event to free.
-void sky_eql_event_free(sky_eql_event *event)
+void sky_qip_event_free(sky_qip_event *event)
 {
     if(event) {
         free(event);
