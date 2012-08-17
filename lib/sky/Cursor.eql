@@ -1,6 +1,7 @@
 /**
  *  The cursor is used to iterate over a series of events.
  */
+[Enumerable]
 class Cursor {
     //-------------------------------------------------------------------------
     // Properties
@@ -10,4 +11,25 @@ class Cursor {
      *  A reference to the internal Sky cursor.
      */
     private Ref cursor;
+
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    /**
+     *  Moves the cursor to the next event.
+     *
+     *  @param event  A pointer to the event object that will be updated.
+     */
+    [External(name="sky_eql_cursor_next")]
+    public void next(Event event);
+
+    /**
+     *  Checks if the cursor is at the end.
+     *
+     *  @return  A flag stating if the cursor is done.
+     */
+    [External(name="sky_eql_cursor_eof")]
+    public Boolean eof();
 }

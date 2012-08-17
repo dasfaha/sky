@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "eql_cursor.h"
+#include "dbg.h"
 
 
 //==============================================================================
@@ -32,6 +33,33 @@ void sky_eql_cursor_free(sky_eql_cursor *cursor)
     }
 }
 
+//======================================
+// Cursor Management
+//======================================
 
-// TODO: next()
-// TODO: eof()
+// Retrieves the next event in the cursor.
+//
+// cursor - The cursor.
+// event  - The event object to update.
+//
+// Returns nothing.
+void sky_eql_cursor_next(sky_eql_cursor *cursor, sky_eql_event *event)
+{
+    // Update the action id on the event.
+    sky_action_id_t action_id;
+    sky_cursor_get_action_id(cursor->cursor, &action_id);
+    event->action_id = (int64_t)action_id;
+    
+    // TODO: Update state on event.
+
+    // Move to the next event in the cursor.
+    sky_cursor_next(cursor->cursor);
+}
+
+// Checks whether the cursor is at the end.
+//
+// Returns a flag stating if the cursor is done.
+bool sky_eql_cursor_eof(sky_eql_cursor *cursor)
+{
+    return cursor->cursor->eof;
+}

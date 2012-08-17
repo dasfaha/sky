@@ -1,0 +1,14 @@
+/**
+ *  The event object represents a state change and/or action that has occurred
+ *  at a specific point in time.
+ */
+class Event {
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  The identifier for the action that has occurred at the current event.
+     */
+    public Int actionId;
+}

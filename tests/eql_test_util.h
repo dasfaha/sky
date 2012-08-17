@@ -20,7 +20,7 @@
     eql_compiler_add_class_path(compiler, &sky_class_path); \
     int _rc = eql_compiler_compile(compiler, &module_name, &query, args, arg_count, &module); \
     mu_assert(_rc == 0, "Unable to compile"); \
-    if(module->error_count > 0) fprintf(stderr, "Parse error: %s\n", bdata(module->errors[0]->message)); \
+    if(module->error_count > 0) fprintf(stderr, "Parse error [L%d] %s\n", module->errors[0]->line_no, bdata(module->errors[0]->message)); \
     mu_assert_int_equals(module->error_count, 0); \
     eql_compiler_free(compiler); \
 } while(0)
