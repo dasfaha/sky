@@ -17,7 +17,7 @@
 sky_eql_cursor *sky_eql_cursor_create()
 {
     sky_eql_cursor *cursor = malloc(sizeof(sky_eql_cursor));
-    cursor->cursor = NULL;
+    cursor->cursor = sky_cursor_create();
     return cursor;
 }
 

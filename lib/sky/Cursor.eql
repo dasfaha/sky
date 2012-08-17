@@ -1,0 +1,13 @@
+/**
+ *  The cursor is used to iterate over a series of events.
+ */
+class Cursor {
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  A reference to the internal Sky cursor.
+     */
+    private Ref cursor;
+}
