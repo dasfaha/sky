@@ -117,6 +117,8 @@ int eql_compiler_compile(eql_compiler *compiler, bstring name,
     bstring current_module_name = name;
     bstring current_module_source = source;
     do {
+        // debug("parsing: %s | %p", bdata(current_module_name), current_module_source);
+        
         // Parse the text into an module AST.
         eql_ast_node *ast_module = NULL;
         parser = eql_parser_create(); check_mem(parser);

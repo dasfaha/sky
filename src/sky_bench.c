@@ -11,6 +11,9 @@
 #include "path_iterator.h"
 #include "version.h"
 
+#include "eql/eql.h"
+#include "eql_path.h"
+
 
 //==============================================================================
 //
@@ -40,6 +43,15 @@ typedef struct Options {
 typedef struct Step {
     int32_t count;
 } Step;
+
+struct Result {
+    int64_t hash_code;
+    int64_t id;
+    int64_t count;
+};
+
+typedef void (*sky_eql_path_map_func)(sky_eql_path *path, eql_map *map);
+
 
 //==============================================================================
 //
@@ -181,7 +193,7 @@ void benchmark_dag(Options *options)
         
         // Create a square matrix of structs.
         Step *steps = calloc(action_count*action_count, sizeof(Step));
-    
+
         // Iterate over each path.
         while(!iterator.eof) {
             sky_action_id_t action_id, prev_action_id;
@@ -259,6 +271,123 @@ error:
 }
 
 
+// Executes the benchmark to count the number of times an action occurred
+// using the EQL language.
+//
+// options - A list of options to use.
+void benchmark_count_with_eql(Options *options)
+{
+    int rc;
+    uint32_t path_count = 0;
+    
+    // Initialize the query.
+    eql_ast_node *type_ref, *var_decl;
+    uint32_t arg_count = 2;
+    eql_ast_node *args[arg_count];
+    
+    // Path arg.
+    struct tagbstring path_str = bsStatic("path");
+    type_ref = eql_ast_type_ref_create_cstr("Path");
+    var_decl = eql_ast_var_decl_create(type_ref, &path_str, NULL);
+    args[0] = eql_ast_farg_create(var_decl);
+    
+    // Map arg.
+    struct tagbstring data_str = bsStatic("data");
+    type_ref = eql_ast_type_ref_create_cstr("Map");
+    eql_ast_type_ref_add_subtype(type_ref, eql_ast_type_ref_create_cstr("Int"));
+    eql_ast_type_ref_add_subtype(type_ref, eql_ast_type_ref_create_cstr("Result"));
+    var_decl = eql_ast_var_decl_create(type_ref, &data_str, NULL);
+    args[1] = eql_ast_farg_create(var_decl);
+
+    // Initialize query.
+    eql_module *module = NULL;
+    struct tagbstring query = bsStatic(
+        "[Hashable(\"id\")]\n"
+        "class Result {\n"
+        "  public Int id;\n"
+        "  public Int count;\n"
+        "}\n"
+        "Cursor cursor = path.events();\n"
+        "for each (Event event in cursor) {\n"
+        "  Result item = data.get(event.actionId);\n"
+        "  item.count = item.count + 1;\n"
+        "}\n"
+        "return;"
+    );
+    struct tagbstring module_name = bsStatic("eql");
+    struct tagbstring core_class_path = bsStatic("lib/core");
+    struct tagbstring sky_class_path = bsStatic("lib/sky");
+    eql_compiler *compiler = eql_compiler_create();
+    eql_compiler_add_class_path(compiler, &core_class_path);
+    eql_compiler_add_class_path(compiler, &sky_class_path);
+    rc = eql_compiler_compile(compiler, &module_name, &query, args, arg_count, &module);
+    check(rc == 0, "Unable to compile");
+    if(module->error_count > 0) fprintf(stderr, "Parse error [line %d] %s\n", module->errors[0]->line_no, bdata(module->errors[0]->message));
+    check(module->error_count == 0, "Compile error");
+    eql_compiler_free(compiler);
+
+    // Retrieve pointer to function.
+    sky_eql_path_map_func process_path = NULL;
+    eql_module_get_main_function(module, (void*)(&process_path));
+
+    // Initialize table.
+    sky_table *table = sky_table_create(); check_mem(table);
+    rc = sky_table_set_path(table, options->path);
+    check(rc == 0, "Unable to set path on table");
+    
+    // Open table
+    rc = sky_table_open(table);
+    check(rc == 0, "Unable to open table");
+
+    // Loop for desired number of iterations.
+    int i;
+    for(i=0; i<options->iterations; i++) {
+        sky_path_iterator iterator;
+        sky_path_iterator_init(&iterator);
+
+        // Attach data file.
+        rc = sky_path_iterator_set_data_file(&iterator, table->data_file);
+        check(rc == 0, "Unable to initialze path iterator");
+
+        // Initialize EQL args.
+        sky_eql_path *path = sky_eql_path_create();
+        eql_map *map = eql_map_create();
+        
+        // Iterate over each path.
+        while(!iterator.eof) {
+            // Retrieve the path pointer.
+            rc = sky_path_iterator_get_ptr(&iterator, &path->path_ptr);
+            check(rc == 0, "Unable to retrieve the path iterator pointer");
+        
+            // Execute query.
+            process_path(path, map);
+
+            // Move to next path.
+            rc = sky_path_iterator_next(&iterator);
+            check(rc == 0, "Unable to find next path");
+
+            path_count++;
+        }
+        
+        // Clean up iteration.
+        eql_map_free(map);
+    }
+    
+    // Clean up
+    rc = sky_table_close(table);
+    check(rc == 0, "Unable to close table");
+    sky_table_free(table);
+
+    // Show stats.
+    printf("Total paths processed: %d\n", path_count);
+    
+    return;
+    
+error:
+    sky_table_free(table);
+}
+
+
 //==============================================================================
 //
 // Main
@@ -277,7 +406,8 @@ int main(int argc, char **argv)
     int64_t t0 = (tv.tv_sec*1000) + (tv.tv_usec/1000);
 
     // Benchmark computation of a DAG.
-    benchmark_dag(options);
+    // benchmark_dag(options);
+    benchmark_count_with_eql(options);
 
     // End time.
     gettimeofday(&tv, NULL);

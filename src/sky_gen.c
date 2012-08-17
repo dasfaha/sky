@@ -6,6 +6,7 @@
 #include "bstring.h"
 #include "dbg.h"
 #include "database.h"
+#include "mem.h"
 #include "table.h"
 #include "version.h"
 

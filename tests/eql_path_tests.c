@@ -37,7 +37,7 @@ typedef void * (*sky_eql_path_func)(sky_eql_path *path);
 
 int test_sky_eql_path_execute() {
     eql_module *module = NULL;
-    COMPILE_QUERY(module, "Path", "path",
+    COMPILE_QUERY_1ARG(module, "Path", "path",
         "Cursor cursor = path.events();\n"
         "return cursor;"
     );

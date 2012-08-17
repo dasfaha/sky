@@ -38,7 +38,9 @@ bin/sky-gen: bin ${OBJECTS}
 	chmod 700 $@
 
 bin/sky-bench: bin ${OBJECTS}
-	$(CC) $(CFLAGS) src/sky_bench.o -o $@ bin/libsky.a
+	$(CC) $(CFLAGS) -Isrc -c -o $@.o src/sky_bench.c
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $@.o bin/libsky.a
+	rm $@.o
 	chmod 700 $@
 
 bin:

@@ -4,5 +4,6 @@
 #include "node.h"
 #include "compiler.h"
 #include "parser.h"
+#include "map.h"
 
 #endif
