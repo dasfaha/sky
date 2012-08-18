@@ -6,15 +6,6 @@ class Map <T, U> {
     // Properties
     //-------------------------------------------------------------------------
 
-    public void init()
-    {
-        return;
-    }
-
-    //-------------------------------------------------------------------------
-    // Properties
-    //-------------------------------------------------------------------------
-
     /**
      *  The size, in bytes, of each element in the map. This is initialized
      *  in the constructor and is used by the external implementation for
