@@ -1,8 +1,10 @@
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #include "dbg.h"
 #include "bstring.h"
 #include "database.h"
+#include "file.h"
 
 //==============================================================================
 //
@@ -54,6 +56,7 @@ void sky_database_free(sky_database *database)
 // Returns 0 if successful, otherwise returns -1.
 int sky_database_set_path(sky_database *database, bstring path)
 {
+    int rc;
     check(database != NULL, "Database required");
 
     if(database->path) {
@@ -62,6 +65,12 @@ int sky_database_set_path(sky_database *database, bstring path)
     
     database->path = bstrcpy(path);
     if(path) check_mem(database->path);
+
+    // Create directory if it doesn't exist.
+    if(path != NULL && !sky_file_exists(database->path)) {
+        rc = mkdir(bdata(database->path), S_IRWXU);
+        check(rc == 0, "Unable to create database directory: %s", bdata(database->path));
+    }
 
     return 0;
 

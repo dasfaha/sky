@@ -11,11 +11,11 @@
 //==============================================================================
 
 int test_sky_database_set_path() {
-    struct tagbstring root = bsStatic("/etc/sky/data");
+    struct tagbstring root = bsStatic("tmp/db");
     sky_database *database = sky_database_create();
     int rc = sky_database_set_path(database, &root);
     mu_assert_int_equals(rc, 0);
-    mu_assert_bstring(database->path, "/etc/sky/data");
+    mu_assert_bstring(database->path, "tmp/db");
     sky_database_free(database);
     return 0;
 }

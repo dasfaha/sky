@@ -35,7 +35,34 @@
     sizeof(sky_message_length_t)
     
 
-#define SKY_MESSAGE_EADD 0x10001
+
+//--------------------------------------
+// Message Types
+//--------------------------------------
+
+#define SKY_MESSAGE_TYPE_EVENT 0x10000
+#define SKY_MESSAGE_TYPE_PATH  0x20000
+
+#define SKY_MESSAGE_TYPE_ADD   0x00001
+#define SKY_MESSAGE_TYPE_UPD   0x00002
+#define SKY_MESSAGE_TYPE_DEL   0x00003
+#define SKY_MESSAGE_TYPE_GET   0x00004
+#define SKY_MESSAGE_TYPE_ALL   0x00005
+#define SKY_MESSAGE_TYPE_EACH  0x00006
+
+
+//--------------------------------------
+// Event Commands
+//--------------------------------------
+
+#define SKY_MESSAGE_EADD (SKY_MESSAGE_TYPE_EVENT + SKY_MESSAGE_TYPE_ADD)
+
+
+//--------------------------------------
+// Path Commands
+//--------------------------------------
+
+#define SKY_MESSAGE_PEACH (SKY_MESSAGE_TYPE_PATH + SKY_MESSAGE_TYPE_EACH)
 
 
 //==============================================================================
@@ -57,10 +84,7 @@ typedef struct sky_eadd_message {
     bstring table_name;
     sky_object_id_t object_id;
     sky_timestamp_t timestamp;
-    bstring action_name;
-    bstring *data_keys;
-    bstring *data_values;
-    uint16_t data_count;
+    sky_action_id_t action_id;
 } sky_eadd_message;
 
 

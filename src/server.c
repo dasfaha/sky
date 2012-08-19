@@ -11,87 +11,22 @@
 
 //==============================================================================
 //
-// Functions
+// Forward Declarations
 //
 //==============================================================================
 
-//======================================
-// Table management
-//======================================
+int sky_server_open_table(sky_server *server, bstring database_name,
+    bstring table_name, sky_database **database, sky_table **table);
 
-// Opens an table.
+int sky_server_close_table(sky_server *server, sky_database *database,
+    sky_table *table);
+
+
+//==============================================================================
 //
-// server - The server that is opening the table.
-// database_name - The name of the database to open.
-// table_name - The name of the table to open.
-// database - Returns the instance of the database to the caller. 
-// table - Returns the instance of the table to the caller. 
+// Functions
 //
-// Returns 0 if successful, otherwise returns -1.
-int open_table(sky_server *server, bstring database_name,
-                     bstring table_name, sky_database **database,
-                     sky_table **table)
-{
-    int rc;
-    
-    // Determine the path to the database.
-    bstring path = bformat("%s/%s", bdata(server->path), bdata(database_name)); 
-    
-    // Create the database.
-    *database = sky_database_create(path);
-    check_mem(*database);
-    
-    // Create the table.
-    *table = sky_table_create(*database, table_name);
-    check_mem(*table);
-    
-    // Open the table.
-    rc = sky_table_open(*table);
-    check(rc == 0, "Unable to open table");
-    
-    return 0;
-
-error:
-    sky_database_free(*database);
-    sky_table_free(*table);
-    *database = NULL;
-    *table = NULL;
-    return -1;
-}
-
-// Closes an table.
-//
-// server - The server that is opening the table.
-// database - The database that the table belongs to.
-// table - The table to close.
-//
-// Returns 0 if successful, otherwise returns -1.
-int close_table(sky_server *server, sky_database *database,
-                      sky_table *table)
-{
-    int rc;
-    
-    // HACK: Suppress unused "server" variable warning for now.
-    server = server;
-    
-    // Close the table.
-    rc = sky_table_close(table);
-    check(rc == 0, "Unable to close table");
-
-    // Free the table.
-    sky_table_free(table);
-    
-    // Free the database file.
-    sky_database_free(database);
-    
-    return 0;
-
-error:
-    sky_table_free(table);
-    sky_database_free(database);
-    return -1;
-}
-
+//==============================================================================
 
 //======================================
 // Lifecycle
@@ -281,6 +216,9 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
                                     void *buffer)
 {
     int rc;
+    check(server != NULL, "Server required");
+    check(socket != 0, "Socket required");
+    check(buffer != NULL, "Buffer required");
     
     // Parse message from buffer.
     sky_eadd_message *message = sky_eadd_message_create();
@@ -293,43 +231,21 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     check(message->object_id != 0, "Object ID is required");
     
     // Open table.
-    sky_database *database;
-    sky_table *table;
-    open_table(server, message->database_name, message->table_name,
-                     &database, &table);
-
-    // Look up action.
-    sky_action_id_t action_id = 0;
-    if(message->action_name != NULL) {
-        sky_action *action = NULL;
-        rc = sky_action_file_find_action_by_name(table->action_file, message->action_name, &action);
-        check(rc == 0 && action != NULL, "Action does not exist: '%s'", bdata(message->action_name));
-        action_id = action->id;
-    }
+    sky_database *database = NULL;
+    sky_table *table = NULL;
+    sky_server_open_table(server, message->database_name, message->table_name, &database, &table);
 
     // Create event.
-    sky_event *event = sky_event_create(message->object_id, message->timestamp, action_id);
-    
-    // Add data to event.
-    int i;
-    for(i=0; i<message->data_count; i++) {
-        // Look up key.
-        //sky_property_id_t property_id;
-        //rc = sky_table_find_or_create_property_id_by_name(table, message->data_keys[i], &property_id);
-        //check(rc == 0, "Unable to find or create property id: %s", bdata(message->data_keys[i]));
-        
-        // Add event data.
-        //sky_event_set_data(event, property_id, message->data_values[i]);
-    }
+    sky_event *event = sky_event_create(message->object_id, message->timestamp, message->action_id);
     
     // Add event to table.
-    //rc = sky_table_add_event(table, event);
-    //check(rc == 0, "Unable to add event to table");
+    rc = sky_table_add_event(table, event);
+    check(rc == 0, "Unable to add event to table");
     
     // TODO: Send respond to socket.
     
     // Close table.
-    close_table(server, database, table);
+    sky_server_close_table(server, database, table);
 
     // Clean up.
     sky_event_free(event);
@@ -338,8 +254,100 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
     return 0;
 
 error:
-    //sky_event_free(event);
+    sky_event_free(event);
     sky_eadd_message_free(message);
+    return -1;
+}
+
+
+//======================================
+// Table management
+//======================================
+
+// Opens an table.
+//
+// server - The server that is opening the table.
+// database_name - The name of the database to open.
+// table_name - The name of the table to open.
+// database - Returns the instance of the database to the caller. 
+// table - Returns the instance of the table to the caller. 
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_open_table(sky_server *server, bstring database_name,
+                          bstring table_name, sky_database **database,
+                          sky_table **table)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(database_name != NULL, "Database name required");
+    check(table_name != NULL, "Table name required");
+    
+    // Initialize return values.
+    *database = NULL;
+    *table    = NULL;
+    
+    // Determine the path to the database.
+    bstring database_path = bformat("%s/%s", bdata(server->path), bdata(database_name)); 
+    check_mem(database_path);
+    
+    // Create the database.
+    *database = sky_database_create(); check_mem(*database);
+    rc = sky_database_set_path(*database, database_path);
+    check(rc == 0, "Unable to set database path");
+    
+    // Determine the path to the table.
+    bstring table_path = bformat("%s/%s", bdata(database_path), bdata(table_name));
+    check_mem(table_path);
+
+    // Create the table.
+    *table = sky_table_create(); check_mem(*table);
+    rc = sky_table_set_path(*table, table_path);
+    check(rc == 0, "Unable to set table path");
+    
+    // Open the table.
+    rc = sky_table_open(*table);
+    check(rc == 0, "Unable to open table");
+    
+    return 0;
+
+error:
+    sky_database_free(*database);
+    sky_table_free(*table);
+    *database = NULL;
+    *table    = NULL;
+    return -1;
+}
+
+// Closes an table.
+//
+// server - The server that is opening the table.
+// database - The database that the table belongs to.
+// table - The table to close.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_close_table(sky_server *server, sky_database *database,
+                           sky_table *table)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(database != NULL, "Database required");
+    check(database != NULL, "Table required");
+    
+    // Close the table.
+    rc = sky_table_close(table);
+    check(rc == 0, "Unable to close table");
+
+    // Free the table.
+    sky_table_free(table);
+    
+    // Free the database file.
+    sky_database_free(database);
+    
+    return 0;
+
+error:
+    sky_table_free(table);
+    sky_database_free(database);
     return -1;
 }
 
