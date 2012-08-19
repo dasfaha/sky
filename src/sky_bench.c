@@ -328,7 +328,8 @@ void benchmark_count_with_qip(Options *options)
 
     // Retrieve pointer to function.
     sky_qip_path_map_func process_path = NULL;
-    qip_module_get_main_function(module, (void*)(&process_path));
+    rc = qip_module_get_main_function(module, (void*)(&process_path));
+    check(rc == 0, "Unable to retrieve main function");
 
     // Initialize table.
     sky_table *table = sky_table_create(); check_mem(table);

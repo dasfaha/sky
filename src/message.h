@@ -87,6 +87,13 @@ typedef struct sky_eadd_message {
     sky_action_id_t action_id;
 } sky_eadd_message;
 
+// A message for querying each path in the database.
+typedef struct sky_peach_message {
+    bstring database_name;
+    bstring table_name;
+    bstring query;
+} sky_peach_message;
+
 
 //==============================================================================
 //
@@ -114,6 +121,17 @@ sky_eadd_message *sky_eadd_message_create();
 void sky_eadd_message_free(sky_eadd_message *message);
 
 int sky_eadd_message_parse(void *ptr, sky_eadd_message *message);
+
+
+//======================================
+// PEACH
+//======================================
+
+sky_peach_message *sky_peach_message_create();
+
+void sky_peach_message_free(sky_peach_message *message);
+
+int sky_peach_message_parse(void *ptr, sky_peach_message *message);
 
 
 #endif

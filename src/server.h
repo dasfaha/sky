@@ -92,6 +92,9 @@ int sky_server_accept(sky_server *server);
 //======================================
 
 int sky_server_process_eadd_message(sky_server *server, int socket,
-                                    void *buffer);
+    void *buffer);
+
+int sky_server_process_peach_message(sky_server *server, int socket,
+    void *buffer);
 
 #endif

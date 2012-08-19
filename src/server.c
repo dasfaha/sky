@@ -6,7 +6,18 @@
 #include "bstring.h"
 #include "server.h"
 #include "message.h"
+#include "qip/qip.h"
+#include "qip_path.h"
 #include "dbg.h"
+
+
+//==============================================================================
+//
+// Definitions
+//
+//==============================================================================
+
+typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
 
 
 //==============================================================================
@@ -176,7 +187,6 @@ int sky_server_accept(sky_server *server)
 
     // Read the message body.
     rc = read(socket, buffer+SKY_MESSAGE_HEADER_LENGTH, header->length);
-    fprintf(stderr, "%d = %d\n", rc, header->length);
     check((uint32_t)rc == header->length, "Unable to read message body");
 
     // Parse appropriate message type.
@@ -184,6 +194,12 @@ int sky_server_accept(sky_server *server)
         case SKY_MESSAGE_EADD: {
             rc = sky_server_process_eadd_message(server, socket, buffer);
             check(rc == 0, "Unable to process EADD message");
+            break;
+        }
+        
+        case SKY_MESSAGE_PEACH: {
+            rc = sky_server_process_peach_message(server, socket, buffer);
+            check(rc == 0, "Unable to process PEACH message");
             break;
         }
         
@@ -207,7 +223,7 @@ error:
 
 
 //======================================
-// Message Processing
+// EADD
 //======================================
 
 // Processes an "Event Add" message.
@@ -261,6 +277,128 @@ int sky_server_process_eadd_message(sky_server *server, int socket,
 error:
     sky_event_free(event);
     sky_eadd_message_free(message);
+    return -1;
+}
+
+
+//======================================
+// PEACH
+//======================================
+
+// Processes a "Each Path" message.
+//
+// server - The server.
+// socket - The socket that sent the message.
+// buffer - The buffer that contains the full message.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_peach_message(sky_server *server, int socket,
+                                     void *buffer)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(socket != 0, "Socket required");
+    check(buffer != NULL, "Buffer required");
+    
+    // Parse message from buffer.
+    sky_peach_message *message = sky_peach_message_create();
+    rc = sky_peach_message_parse(buffer, message);
+    
+    // Validate message.
+    check(message->database_name != NULL, "Database name is required");
+    check(message->table_name != NULL, "Table name is required");
+    check(message->query != NULL, "Query text is required");
+    
+    // Open table.
+    sky_database *database = NULL;
+    sky_table *table = NULL;
+    sky_server_open_table(server, message->database_name, message->table_name, &database, &table);
+
+    // Compile query and execute.
+    qip_ast_node *type_ref, *var_decl;
+    qip_ast_node *args[2];
+    
+    // Path argument.
+    struct tagbstring path_str = bsStatic("path");
+    type_ref = qip_ast_type_ref_create_cstr("Path");
+    var_decl = qip_ast_var_decl_create(type_ref, &path_str, NULL);
+    args[0] = qip_ast_farg_create(var_decl);
+    
+    // Data argument.
+    struct tagbstring data_str = bsStatic("data");
+    type_ref = qip_ast_type_ref_create_cstr("Map");
+    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Int"));
+    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Result"));
+    var_decl = qip_ast_var_decl_create(type_ref, &data_str, NULL);
+    args[1] = qip_ast_farg_create(var_decl);
+
+    // Compile.
+    qip_module *module = NULL;
+    struct tagbstring module_name = bsStatic("sky");
+    struct tagbstring core_class_path = bsStatic("lib/core");
+    struct tagbstring sky_class_path = bsStatic("lib/sky");
+    qip_compiler *compiler = qip_compiler_create();
+    qip_compiler_add_class_path(compiler, &core_class_path);
+    qip_compiler_add_class_path(compiler, &sky_class_path);
+    rc = qip_compiler_compile(compiler, &module_name, message->query, args, 2, &module);
+    check(rc == 0, "Unable to compile");
+    if(module->error_count > 0) {
+        debug("Parse error [line %d] %s", module->errors[0]->line_no, bdata(module->errors[0]->message));
+    }
+    check(module->error_count == 0, "Parse errors found");
+    qip_compiler_free(compiler);
+
+    // Retrieve main function.
+    sky_qip_path_map_func process_path = NULL;
+    rc = qip_module_get_main_function(module, (void*)(&process_path));
+    check(rc == 0, "Unable to retrieve main function");
+ 
+    // Initialize the path iterator.
+    sky_path_iterator iterator;
+    sky_path_iterator_init(&iterator);
+    rc = sky_path_iterator_set_data_file(&iterator, table->data_file);
+    check(rc == 0, "Unable to initialze path iterator");
+
+    // Initialize QIP args.
+    sky_qip_path *path = sky_qip_path_create();
+    qip_map *map = qip_map_create();
+    
+    // Iterate over each path.
+    uint32_t path_count = 0;
+    while(!iterator.eof) {
+        // Retrieve the path pointer.
+        rc = sky_path_iterator_get_ptr(&iterator, &path->path_ptr);
+        check(rc == 0, "Unable to retrieve the path iterator pointer");
+    
+        // Execute query.
+        process_path(path, map);
+
+        // Move to next path.
+        rc = sky_path_iterator_next(&iterator);
+        check(rc == 0, "Unable to find next path");
+        
+        path_count++;
+    }
+
+    debug("Paths processed: %d", path_count);
+
+    // TODO: Create serializer.
+    // TODO: Send response to socket.
+    
+    // Close table.
+    sky_server_close_table(server, database, table);
+
+    // Clean up.
+    qip_map_free(map);
+    qip_module_free(module);
+    sky_peach_message_free(message);
+
+    return 0;
+
+error:
+    qip_map_free(map);
+    qip_module_free(module);
+    sky_peach_message_free(message);
     return -1;
 }
 

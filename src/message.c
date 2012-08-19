@@ -111,8 +111,6 @@ int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
     check(sky_message_header_parse(ptr, header) == 0, "Unable to parse header");
     ptr += SKY_MESSAGE_HEADER_LENGTH;
 
-    memdump(ptr, header->length);
-
     // Determine end of message.
     //void *maxptr = ptr + header->length;
     
@@ -139,6 +137,71 @@ int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
     // Parse action id.
     memread(ptr, &message->action_id, sizeof(message->action_id), "message action id");
     message->action_id = ntohs(message->action_id);
+    
+    free(header);
+    
+    return 0;
+
+error:
+    if(header) free(header);
+    return -1;
+}
+
+
+//======================================
+// PEACH
+//======================================
+
+// Creates an PEACH message object.
+sky_peach_message *sky_peach_message_create()
+{
+    sky_peach_message *message = NULL;
+    message = calloc(1, sizeof(sky_peach_message)); check_mem(message);
+    return message;
+
+error:
+    sky_peach_message_free(message);
+    return NULL;
+}
+
+// Frees an PEACH message object from memory.
+//
+// message - The message object to be freed.
+void sky_peach_message_free(sky_peach_message *message)
+{
+    if(message) {
+        free(message);
+    }
+}
+
+
+// Parses an PEACH message.
+//
+// ptr     - A pointer to the start of the message.
+// message - A reference to where the message will be stored.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_peach_message_parse(void *ptr, sky_peach_message *message)
+{
+    // Parse header.
+    sky_message_header *header = sky_message_header_create();
+    check(sky_message_header_parse(ptr, header) == 0, "Unable to parse header");
+    ptr += SKY_MESSAGE_HEADER_LENGTH;
+
+    // Parse database name.
+    uint8_t database_name_length;
+    memread(ptr, &database_name_length, sizeof(database_name_length), "message database name length");
+    memread_bstr(ptr, message->database_name, database_name_length, "message database name");
+
+    // Parse table name.
+    uint8_t table_name_length;
+    memread(ptr, &table_name_length, sizeof(table_name_length), "message table name length");
+    memread_bstr(ptr, message->table_name, table_name_length, "message table name");
+
+    // Parse query string.
+    uint32_t query_length = 0;
+    memread(ptr, &query_length, sizeof(query_length), "message query length");
+    memread_bstr(ptr, message->query, ntohl(query_length), "message query text");
     
     free(header);
     

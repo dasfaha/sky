@@ -30,7 +30,9 @@ bin/libsky.a: bin ${LIB_OBJECTS}
 	ranlib $@
 
 bin/skyd: bin ${OBJECTS} bin/libsky.a
-	$(CC) $(CFLAGS) src/skyd.o -o $@ bin/libsky.a
+	$(CC) $(CFLAGS) -Isrc -c -o $@.o src/skyd.c
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $@.o bin/libsky.a
+	rm $@.o
 	chmod 700 $@
 
 bin/sky-gen: bin ${OBJECTS} bin/libsky.a
