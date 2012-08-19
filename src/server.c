@@ -18,6 +18,7 @@
 //==============================================================================
 
 typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
+typedef void (*qip_result_serialize_func)(void *result, qip_serializer *serializer);
 
 
 //==============================================================================
@@ -382,8 +383,24 @@ int sky_server_process_peach_message(sky_server *server, int socket,
 
     debug("Paths processed: %d", path_count);
 
-    // TODO: Create serializer.
-    // TODO: Send response to socket.
+    // Retrieve Result serialization function.
+    struct tagbstring result_str = bsStatic("Result");
+    struct tagbstring serialize_str = bsStatic("serialize");
+    qip_result_serialize_func result_serialize = NULL;
+    qip_module_get_class_method(module, &result_str, &serialize_str, (void*)(&result_serialize));
+    check(result_serialize != NULL, "Unable to find serialize() method on class 'Result'");
+
+    // Serialize.
+    qip_serializer *serializer = qip_serializer_create();
+    qip_serializer_pack_map(serializer, map->count);
+    int64_t i;
+    for(i=0; i<map->count; i++) {
+        result_serialize(map->elements[i], serializer);
+    }
+
+    // Send response to socket.
+    rc = write(socket, serializer->data, serializer->length);
+    check((int64_t)rc == serializer->length, "Unable to write serialized data to socket");
     
     // Close table.
     sky_server_close_table(server, database, table);

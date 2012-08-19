@@ -3,6 +3,7 @@
 
 #include <server.h>
 #include <mem.h>
+#include <dbg.h>
 
 #include "minunit.h"
 
