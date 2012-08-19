@@ -19,7 +19,7 @@ struct tagbstring OBJECT_TYPE = bsStatic("users");
 char EADD_MESSAGE[] = 
     "\x00\x01"                          // Version
     "\x00\x01\x00\x01"                  // Type
-    "\x00\x00\x00\x3C"                  // Length (70 bytes)
+    "\x00\x00\x00\x25"                  // Length
     "\x02" "db"                         // Database Name
     "\x05" "users"                      // Table Name
     "\x00\x00\x00\x14"                  // Object ID

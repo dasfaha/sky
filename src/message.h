@@ -52,14 +52,14 @@
 
 
 //--------------------------------------
-// Event Commands
+// Event Message Types
 //--------------------------------------
 
 #define SKY_MESSAGE_EADD (SKY_MESSAGE_TYPE_EVENT + SKY_MESSAGE_TYPE_ADD)
 
 
 //--------------------------------------
-// Path Commands
+// Path Message Types
 //--------------------------------------
 
 #define SKY_MESSAGE_PEACH (SKY_MESSAGE_TYPE_PATH + SKY_MESSAGE_TYPE_EACH)

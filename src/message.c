@@ -111,6 +111,8 @@ int sky_eadd_message_parse(void *ptr, sky_eadd_message *message)
     check(sky_message_header_parse(ptr, header) == 0, "Unable to parse header");
     ptr += SKY_MESSAGE_HEADER_LENGTH;
 
+    memdump(ptr, header->length);
+
     // Determine end of message.
     //void *maxptr = ptr + header->length;
     

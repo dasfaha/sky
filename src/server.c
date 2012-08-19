@@ -173,7 +173,12 @@ int sky_server_accept(sky_server *server)
     uint32_t buffer_length = SKY_MESSAGE_HEADER_LENGTH + header->length;
     buffer = realloc(buffer, buffer_length);
     check_mem(buffer);
-    
+
+    // Read the message body.
+    rc = read(socket, buffer+SKY_MESSAGE_HEADER_LENGTH, header->length);
+    fprintf(stderr, "%d = %d\n", rc, header->length);
+    check((uint32_t)rc == header->length, "Unable to read message body");
+
     // Parse appropriate message type.
     switch(header->type) {
         case SKY_MESSAGE_EADD: {

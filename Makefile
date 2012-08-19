@@ -29,15 +29,15 @@ bin/libsky.a: bin ${LIB_OBJECTS}
 	ar rcs $@ ${LIB_OBJECTS}
 	ranlib $@
 
-bin/skyd: bin ${OBJECTS}
+bin/skyd: bin ${OBJECTS} bin/libsky.a
 	$(CC) $(CFLAGS) src/skyd.o -o $@ bin/libsky.a
 	chmod 700 $@
 
-bin/sky-gen: bin ${OBJECTS}
+bin/sky-gen: bin ${OBJECTS} bin/libsky.a
 	$(CC) $(CFLAGS) src/sky_gen.o -o $@ bin/libsky.a
 	chmod 700 $@
 
-bin/sky-bench: bin ${OBJECTS}
+bin/sky-bench: bin ${OBJECTS} bin/libsky.a
 	$(CC) $(CFLAGS) -Isrc -c -o $@.o src/sky_bench.c
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $@.o bin/libsky.a
 	rm $@.o
