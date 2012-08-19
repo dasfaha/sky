@@ -136,6 +136,8 @@ int qip_ast_class_generate_constructor(qip_ast_node *node);
 
 int qip_ast_class_generate_type_ref(qip_ast_node *node, qip_ast_node **ret);
 
+int qip_ast_class_generate_serializer(qip_ast_node *node);
+
 //--------------------------------------
 // Debugging
 //--------------------------------------

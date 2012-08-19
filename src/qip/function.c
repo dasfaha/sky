@@ -704,7 +704,7 @@ int qip_ast_function_get_var_decl(qip_ast_node *node, bstring name,
     // Search argument list for variable declaration.
     *var_decl = NULL;
     for(i=0; i<node->function.arg_count; i++) {
-        if(biseq(node->function.args[i]->farg.var_decl->var_decl.name, name)) {
+        if(biseq(node->function.args[i]->farg.var_decl->var_decl.name, name) == 1) {
             *var_decl = node->function.args[i]->farg.var_decl;
             break;
         }

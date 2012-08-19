@@ -5,5 +5,6 @@
 #include "compiler.h"
 #include "parser.h"
 #include "map.h"
+#include "serializer.h"
 
 #endif

@@ -3,6 +3,7 @@
 #include "dbg.h"
 
 #include "node.h"
+#include "util.h"
 
 //==============================================================================
 //
@@ -12,6 +13,9 @@
 
 int qip_ast_class_generate_empty_method(qip_ast_node *node, bstring name,
     bool use_existing, qip_ast_node **ret);
+
+int qip_ast_class_preprocess_serializable(qip_ast_node *node,
+    qip_module *module);
 
 int qip_ast_class_preprocess_hashable(qip_ast_node *node, qip_module *module);
 
@@ -789,6 +793,10 @@ int qip_ast_class_preprocess(qip_ast_node *node, qip_module *module)
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
     
+    // Preprocess serializable metatag.
+    rc = qip_ast_class_preprocess_serializable(node, module);
+    check(rc == 0, "Unable to preprocess serializable meta for class");
+    
     // Preprocess hashable metatag.
     rc = qip_ast_class_preprocess_hashable(node, module);
     check(rc == 0, "Unable to preprocess hashable meta for class");
@@ -810,6 +818,121 @@ int qip_ast_class_preprocess(qip_ast_node *node, qip_module *module)
         rc = qip_ast_node_preprocess(node->class.metadatas[i], module);
         check(rc == 0, "Unable to preprocess class metadata");
     }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Generates a serialization method on a class if one does not exist and
+// the class is marked as "Serializable".
+//
+// node   - The class node.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_class_preprocess_serializable(qip_ast_node *node,
+                                          qip_module *module)
+{
+    int rc;
+    unsigned int i;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    
+    struct tagbstring function_name = bsStatic("serialize");
+    struct tagbstring serializer_str = bsStatic("serializer");
+    struct tagbstring this_str = bsStatic("this");
+
+    // Find Serializable metatag.
+    struct tagbstring metadata_name_str = bsStatic("Serializable");
+    qip_ast_node *metadata = NULL;
+    rc = qip_ast_class_get_metadata_node(node, &metadata_name_str, &metadata);
+    check(rc == 0, "Unable to retrieve Serializable metadata node for class");
+    
+    // Find existing method.
+    qip_ast_node *method = NULL;
+    rc = qip_ast_class_get_method(node, &function_name, &method);
+    check(rc == 0, "Unable to retrieve serialize method");
+    
+    // If metatag doesn't exist or the method already exists then exit.
+    if(metadata == NULL || method != NULL) {
+        return 0;
+    }
+    
+    // Generate empty method.
+    rc = qip_ast_class_generate_empty_method(node, &function_name, true, &method);
+    check(rc == 0, "Unable to generate constructor method");
+    qip_ast_node *function = method->method.function;
+    qip_ast_node *block = function->function.body;
+    qip_ast_block_free_exprs(block);
+
+    // Add serializer argument.
+    qip_ast_node *serializer_type_ref = qip_ast_type_ref_create_cstr("Serializer");
+    qip_ast_node *serializer_var_decl = qip_ast_var_decl_create(serializer_type_ref, &serializer_str, NULL);
+    qip_ast_node *serializer_farg = qip_ast_farg_create(serializer_var_decl);
+    rc = qip_ast_function_add_arg(function, serializer_farg);
+    check(rc == 0, "Unable to add serializer argument to the serialize method");
+
+    // Calculate number of serializable fields.
+    uint32_t key_count = 0;
+    for(i=0; i<node->class.property_count; i++) {
+        if(qip_is_serializable_type(node->class.properties[i]->property.var_decl->var_decl.type)) {
+            key_count++;
+        }
+    }
+
+    // Add pack map call.
+    struct tagbstring pack_map_name = bsStatic("packMap");
+    qip_ast_node *pack_args[2];
+    pack_args[0] = qip_ast_int_literal_create(key_count);
+    qip_ast_node *serializer_var_ref = qip_ast_var_ref_create(&serializer_str);
+    qip_ast_node *serializer_staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_METHOD, serializer_var_ref, &pack_map_name, pack_args, 1);
+    rc = qip_ast_block_add_expr(block, serializer_staccess);
+
+    // Add pack calls for each serializable property.
+    struct tagbstring pack_int_name = bsStatic("packInt");
+    struct tagbstring pack_float_name = bsStatic("packFloat");
+    struct tagbstring pack_raw_name = bsStatic("packRaw");
+    
+    for(i=0; i<node->class.property_count; i++) {
+        qip_ast_node *property = node->class.properties[i];
+        qip_ast_node *var_decl = property->property.var_decl;
+
+        if(qip_is_serializable_type(var_decl->var_decl.type)) {
+            // Determine pack method to use for property.
+            bstring pack_method_name = NULL;
+            if(biseqcstr(var_decl->var_decl.type->type_ref.name, "Int") == 1) {
+                pack_method_name = &pack_int_name;
+            }
+            else if(biseqcstr(var_decl->var_decl.type->type_ref.name, "Float") == 1) {
+                pack_method_name = &pack_float_name;
+            }
+            else {
+                sentinel("Unsupported serialization type");
+            }
+            
+            // Pack key.
+            qip_ast_node *serializer_var_ref = NULL, *serializer_staccess = NULL;
+            pack_args[0] = qip_ast_string_literal_create(var_decl->var_decl.name);
+            pack_args[1] = qip_ast_int_literal_create(blength(var_decl->var_decl.name));
+            serializer_var_ref = qip_ast_var_ref_create(&serializer_str);
+            serializer_staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_METHOD, serializer_var_ref, &pack_raw_name, pack_args, 2);
+            rc = qip_ast_block_add_expr(block, serializer_staccess);
+            check(rc == 0, "Unable to add key serialization expression");
+
+            // Pack value.
+            pack_args[0] = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, qip_ast_var_ref_create(&this_str), var_decl->var_decl.name, NULL, 0);
+            serializer_var_ref = qip_ast_var_ref_create(&serializer_str);
+            serializer_staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_METHOD, serializer_var_ref, pack_method_name, pack_args, 1);
+            rc = qip_ast_block_add_expr(block, serializer_staccess);
+            check(rc == 0, "Unable to add value serialization expression");
+        }
+    }
+    
+    // Add void return.
+    qip_ast_node *freturn = qip_ast_freturn_create(NULL);
+    rc = qip_ast_block_add_expr(block, freturn);
+    check(rc == 0, "Unable to add serialize return");
     
     return 0;
 

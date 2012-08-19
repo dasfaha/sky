@@ -906,6 +906,44 @@ error:
 
 
 //--------------------------------------
+// Execution
+//--------------------------------------
+
+// Retrieves the function pointer for the method of a given class.
+//
+// module      - The module.
+// class_name  - The name of the class.
+// method_name - The method name.
+// ret         - A pointer to where the function pointer should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_get_class_method(qip_module *module, bstring class_name,
+                                bstring method_name, void **ret)
+{
+    check(module != NULL, "Module required");
+    check(class_name != NULL, "Class name required");
+    check(method_name != NULL, "Method name required");
+    check(ret != NULL, "Return pointer required");
+
+    // Generate the function name.
+    bstring function_name = bformat("%s.%s", bdata(class_name), bdata(method_name));
+    check_mem(function_name);
+
+    // Find a reference to the function.
+    LLVMValueRef func_value = LLVMGetNamedFunction(module->llvm_module, bdata(function_name));
+    check(func_value != NULL, "Function not found in module: %s", bdata(function_name));
+    
+    // Generate a pointer to the function.
+    *ret = LLVMGetPointerToGlobal(module->llvm_engine, func_value);
+    return 0;
+    
+error:
+    *ret = NULL;
+    return -1;
+}
+
+
+//--------------------------------------
 // Error Management
 //--------------------------------------
 

@@ -392,10 +392,12 @@ int qip_ast_var_decl_validate(qip_ast_node *node, qip_module *module)
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
     
-    // Validate that the type is not a Ref unless this is a property.
     qip_ast_node *property = (node->parent != NULL && node->parent->type == QIP_AST_TYPE_PROPERTY ? node->parent : NULL);
-    if(property == NULL && biseqcstr(node->var_decl.type->type_ref.name, "Ref")) {
-        msg = bformat("Ref type is only allowed on properties");
+    qip_ast_node *farg = (node->parent != NULL && node->parent->type == QIP_AST_TYPE_FARG ? node->parent : NULL);
+
+    // Validate that the type is not a Ref unless this is a property or function argument.
+    if(property == NULL && farg == NULL && biseqcstr(node->var_decl.type->type_ref.name, "Ref")) {
+        msg = bformat("Ref type is only allowed on properties and function arguments");
     }
     
     // If we have an error message then add it.

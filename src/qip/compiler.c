@@ -117,7 +117,10 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
     bstring current_module_name = name;
     bstring current_module_source = source;
     do {
-        // Parse the text into an module AST.
+        // Throw error if no source can be found.
+        check(current_module_source != NULL, "Source not found for '%s'", bdata(current_module_name));
+        
+        // Parse the text into a module AST.
         qip_ast_node *ast_module = NULL;
         parser = qip_parser_create(); check_mem(parser);
         rc = qip_parser_parse(parser, current_module_name, current_module_source, &ast_module);
@@ -148,14 +151,18 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
             }
         }
 
-        // Retrieve dependencies in module.
-        rc = qip_ast_node_get_dependencies(ast_module, &dependencies, &dependency_count);
-        check(rc == 0, "Unable to calculate dependencies for module: %s", bdata(current_module_name));
-
         // Append AST to list of AST modules.
         rc = qip_module_add_ast_module(module, ast_module);
         check(rc == 0, "Unable to add AST module to compilation module");
         
+        // Perform any preprocessing that needs to be done on the AST.
+        rc = qip_ast_node_preprocess(ast_module, module);
+        check(rc == 0, "Unable to preprocess module");
+
+        // Retrieve dependencies in module.
+        rc = qip_ast_node_get_dependencies(ast_module, &dependencies, &dependency_count);
+        check(rc == 0, "Unable to calculate dependencies for module: %s", bdata(current_module_name));
+
         // Clear out current module while we search for the next one.
         current_module_name   = NULL;
         current_module_source = NULL;
@@ -190,14 +197,6 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
         check(rc == 0, "Unable to process dynamic classes for module");
     }
 
-    // Perform any preprocessing that needs to be done on the AST.
-    if(module->error_count == 0) {
-        for(i=0; i<module->ast_module_count; i++) {
-            rc = qip_ast_node_preprocess(module->ast_modules[i], module);
-            check(rc == 0, "Unable to preprocess module");
-        }
-    }
-    
     // Process templates.
     if(module->error_count == 0) {
         rc = qip_module_process_templates(module);

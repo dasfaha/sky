@@ -45,6 +45,23 @@ bool qip_is_builtin_type_name(bstring name)
         || biseqcstr(name, "void");
 }
 
+// Retrieves a flag stating if the type is serializable.
+//
+// type_ref - The type reference.
+//
+// Returns true if the the type is serializable, otherwise returns false.
+bool qip_is_serializable_type(qip_ast_node *node)
+{
+    // If this is a built-in and the type is Int or Float.
+    if(qip_is_builtin_type(node)) {
+        bstring name = node->type_ref.name;
+        if(biseqcstr(name, "Int") || biseqcstr(name, "Float")) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 //======================================
 // Types

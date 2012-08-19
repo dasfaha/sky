@@ -273,6 +273,13 @@ int qip_ast_staccess_codegen_method(qip_ast_node *node, qip_module *module,
         rc = qip_ast_node_codegen(node->staccess.args[i], module, &args[i+1]);
         check(rc == 0, "Unable to codegen argument: %d", i);
     }
+    
+    /*
+    LLVMDumpValue(func);
+    LLVMDumpValue(args[0]);
+    if(arg_count > 0) LLVMDumpValue(args[1]);
+    if(arg_count > 1) LLVMDumpValue(args[2]);
+    */
 
     // Create call instruction.
     *value = LLVMBuildCall(builder, func, args, arg_count+1, "");

@@ -1,0 +1,67 @@
+/**
+ *  The serializer packs QIP data types into MessagePack format.
+ */
+class Serializer {
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  A pointer to the current point in memory where serialization will
+     *  occur.
+     */
+    private Ref ptr;
+
+    /**
+     *  A pointer to the entire memory buffer being used.
+     */
+    private Ref data;
+
+    /**
+     *  The number of bytes used by the buffer.
+     */
+    private Int length;
+
+    /**
+     *  The number of bytes available in the buffer.
+     */
+    private Int blength;
+
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    /**
+     *  Serializes an integer to the buffer.
+     *
+     *  @param value  The integer to serialize.
+     */
+    [External(name="qip_serializer_pack_int")]
+    public void packInt(Int value);
+
+    /**
+     *  Serializes a floating point number to the buffer.
+     *
+     *  @param value  The floating point number to serialize.
+     */
+    [External(name="qip_serializer_pack_float")]
+    public void packFloat(Float value);
+
+    /**
+     *  Serializes raw data to the buffer.
+     *
+     *  @param value   The raw data to serialize.
+     *  @param length  The number of bytes of raw data.
+     */
+    [External(name="qip_serializer_pack_raw")]
+    public void packRaw(Ref value, Int length);
+
+    /**
+     *  Serializes a map header.
+     *
+     *  @param count  The number of elements in the map.
+     */
+    [External(name="qip_serializer_pack_map")]
+    public void packMap(Int count);
+}

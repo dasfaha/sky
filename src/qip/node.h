@@ -17,6 +17,7 @@ typedef struct qip_ast_node qip_ast_node;
 #include "int_literal.h"
 #include "float_literal.h"
 #include "boolean_literal.h"
+#include "string_literal.h"
 #include "null_literal.h"
 #include "binary_expr.h"
 #include "var_ref.h"
@@ -46,6 +47,7 @@ enum qip_ast_node_type_e {
     QIP_AST_TYPE_INT_LITERAL,
     QIP_AST_TYPE_FLOAT_LITERAL,
     QIP_AST_TYPE_BOOLEAN_LITERAL,
+    QIP_AST_TYPE_STRING_LITERAL,
     QIP_AST_TYPE_NULL_LITERAL,
     QIP_AST_TYPE_BINARY_EXPR,
     QIP_AST_TYPE_VAR_REF,
@@ -80,6 +82,7 @@ struct qip_ast_node {
         qip_ast_int_literal int_literal;
         qip_ast_float_literal float_literal;
         qip_ast_boolean_literal boolean_literal;
+        qip_ast_string_literal string_literal;
         qip_ast_null_literal null_literal;
         qip_ast_binary_expr binary_expr;
         qip_ast_var_ref var_ref;

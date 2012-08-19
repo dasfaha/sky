@@ -136,6 +136,14 @@ int qip_module_execute_boolean(qip_module *module, bool *ret);
 
 
 //--------------------------------------
+// LLVM Function Management
+//--------------------------------------
+
+int qip_module_get_class_method(qip_module *module, bstring class_name,
+    bstring method_name, void **ret);
+
+
+//--------------------------------------
 // Error Management
 //--------------------------------------
 

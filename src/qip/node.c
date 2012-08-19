@@ -25,6 +25,7 @@ void qip_ast_node_free(qip_ast_node *node)
         case QIP_AST_TYPE_INT_LITERAL: qip_ast_int_literal_free(node); break;
         case QIP_AST_TYPE_FLOAT_LITERAL: qip_ast_float_literal_free(node); break;
         case QIP_AST_TYPE_BOOLEAN_LITERAL: qip_ast_boolean_literal_free(node); break;
+        case QIP_AST_TYPE_STRING_LITERAL: qip_ast_string_literal_free(node); break;
         case QIP_AST_TYPE_NULL_LITERAL: qip_ast_null_literal_free(node); break;
         case QIP_AST_TYPE_BINARY_EXPR: qip_ast_binary_expr_free(node); break;
         case QIP_AST_TYPE_VAR_REF: qip_ast_var_ref_free(node); break;
@@ -108,6 +109,7 @@ int qip_ast_node_copy(qip_ast_node *node, qip_ast_node **ret)
         case QIP_AST_TYPE_INT_LITERAL: rc = qip_ast_int_literal_copy(node, ret); break;
         case QIP_AST_TYPE_FLOAT_LITERAL: rc = qip_ast_float_literal_copy(node, ret); break;
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_copy(node, ret); break;
+        case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_copy(node, ret); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_copy(node, ret); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_copy(node, ret); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_copy(node, ret); break;
@@ -170,6 +172,7 @@ int qip_ast_node_codegen(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_INT_LITERAL: rc = qip_ast_int_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_FLOAT_LITERAL: rc = qip_ast_float_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_codegen(node, module, &ret_value); break;
+        case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_codegen(node, module, &ret_value); break;
@@ -348,6 +351,7 @@ int qip_ast_node_get_type(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_INT_LITERAL: rc = qip_ast_int_literal_get_type(node, type); break;
         case QIP_AST_TYPE_FLOAT_LITERAL: rc = qip_ast_float_literal_get_type(node, type); break;
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_get_type(node, type); break;
+        case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_get_type(node, type); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_get_type(node, type); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_type(node, module, type); break;
         case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_get_type(node, type); break;
@@ -760,6 +764,7 @@ int qip_ast_node_dump(qip_ast_node *node, bstring ret)
         case QIP_AST_TYPE_INT_LITERAL: rc = qip_ast_int_literal_dump(node, ret); break;
         case QIP_AST_TYPE_FLOAT_LITERAL: rc = qip_ast_float_literal_dump(node, ret); break;
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_dump(node, ret); break;
+        case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_dump(node, ret); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_dump(node, ret); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_dump(node, ret); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_dump(node, ret); break;
