@@ -234,9 +234,11 @@ error:
 //
 // node   - The node to validate.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_module_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_module_preprocess(qip_ast_node *node, qip_module *module,
+                              qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -245,13 +247,13 @@ int qip_ast_module_preprocess(qip_ast_node *node, qip_module *module)
     // Preprocess class.
     uint32_t i;
     for(i=0; i<node->module.class_count; i++) {
-        rc = qip_ast_node_preprocess(node->module.classes[i], module);
+        rc = qip_ast_node_preprocess(node->module.classes[i], module, stage);
         check(rc == 0, "Unable to preprocess module class");
     }
 
     // Preprocess main function.
     if(node->module.main_function != NULL) {
-        rc = qip_ast_node_preprocess(node->module.main_function, module);
+        rc = qip_ast_node_preprocess(node->module.main_function, module, stage);
         check(rc == 0, "Unable to preprocess main function");
     }
 
@@ -374,7 +376,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type refs within this node.
@@ -410,6 +412,38 @@ int qip_ast_module_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_module_get_var_refs(qip_ast_node *node, bstring name,
+                                qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    uint32_t i;
+    for(i=0; i<node->module.class_count; i++) {
+        rc = qip_ast_node_get_var_refs(node->module.classes[i], name, array);
+        check(rc == 0, "Unable to add module class var refs");
+    }
+
+    if(node->module.main_function != NULL) {
+        rc = qip_ast_node_get_var_refs(node->module.main_function, name, array);
+        check(rc == 0, "Unable to add main function var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

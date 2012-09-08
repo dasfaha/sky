@@ -49,6 +49,14 @@ class Serializer {
     public void packFloat(Float value);
 
     /**
+     *  Serializes a string to the buffer.
+     *
+     *  @param string   The string to serialize.
+     */
+    [External(name="qip_serializer_pack_string")]
+    public void packString(String value);
+
+    /**
      *  Serializes raw data to the buffer.
      *
      *  @param value   The raw data to serialize.

@@ -21,6 +21,10 @@ bool qip_is_builtin_type(qip_ast_node *node);
 
 bool qip_is_builtin_type_name(bstring name);
 
+bool qip_is_function_type(qip_ast_node *node);
+
+bool qip_is_function_type_name(bstring name);
+
 bool qip_is_serializable_type(qip_ast_node *node);
 
 

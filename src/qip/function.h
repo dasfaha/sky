@@ -11,6 +11,7 @@
 
 // Represents a function in the AST.
 typedef struct {
+    bool bound;
     bstring name;
     qip_ast_node *return_type;
     qip_ast_node **return_subtypes;
@@ -63,7 +64,8 @@ int qip_ast_function_codegen_forward_decl(qip_ast_node *node, qip_module *module
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_function_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_function_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
 // Misc
@@ -86,11 +88,14 @@ int qip_ast_function_get_external_metadata_node(qip_ast_node *node,
     qip_ast_node **external_metadata_node);
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 int qip_ast_function_get_type_refs(qip_ast_node *node,
     qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_function_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Dependencies

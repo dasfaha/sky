@@ -27,12 +27,12 @@ void qip_ast_node_free(qip_ast_node *node)
         case QIP_AST_TYPE_BOOLEAN_LITERAL: qip_ast_boolean_literal_free(node); break;
         case QIP_AST_TYPE_STRING_LITERAL: qip_ast_string_literal_free(node); break;
         case QIP_AST_TYPE_NULL_LITERAL: qip_ast_null_literal_free(node); break;
+        case QIP_AST_TYPE_ARRAY_LITERAL: qip_ast_array_literal_free(node); break;
         case QIP_AST_TYPE_BINARY_EXPR: qip_ast_binary_expr_free(node); break;
         case QIP_AST_TYPE_VAR_REF: qip_ast_var_ref_free(node); break;
         case QIP_AST_TYPE_VAR_DECL: qip_ast_var_decl_free(node); break;
         case QIP_AST_TYPE_TYPE_REF: qip_ast_type_ref_free(node); break;
         case QIP_AST_TYPE_VAR_ASSIGN: qip_ast_var_assign_free(node); break;
-        case QIP_AST_TYPE_STACCESS: qip_ast_staccess_free(node); break;
         case QIP_AST_TYPE_FARG: qip_ast_farg_free(node); break;
         case QIP_AST_TYPE_FRETURN: qip_ast_freturn_free(node); break;
         case QIP_AST_TYPE_FUNCTION: qip_ast_function_free(node); break;
@@ -47,6 +47,7 @@ void qip_ast_node_free(qip_ast_node *node)
         case QIP_AST_TYPE_METADATA: qip_ast_metadata_free(node); break;
         case QIP_AST_TYPE_METADATA_ITEM: qip_ast_metadata_item_free(node); break;
         case QIP_AST_TYPE_SIZEOF: qip_ast_sizeof_free(node); break;
+        case QIP_AST_TYPE_ALLOCA: qip_ast_alloca_free(node); break;
     }
     node->parent = NULL;
     
@@ -85,6 +86,36 @@ error:
     return -1;
 }
 
+// Replaces a node with a different node.
+//
+// node - The node to swap out.
+// new_node - The new node to replace the original with.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_node_replace(qip_ast_node *node, qip_ast_node *new_node)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(new_node != NULL, "New node required");
+    
+    // Exit if there is no parent node.
+    if(node->parent == NULL) {
+        return 0;
+    }
+    
+    // Delegate copy to child nodes.
+    switch(node->parent->type) {
+        case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_replace(node->parent, node, new_node); break;
+        default: rc = 0;
+    }
+    check(rc == 0, "Unable to replace node");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
 // Copies a node and its children.
 //
 // node - The node to copy.
@@ -111,12 +142,12 @@ int qip_ast_node_copy(qip_ast_node *node, qip_ast_node **ret)
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_copy(node, ret); break;
         case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_copy(node, ret); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_copy(node, ret); break;
+        case QIP_AST_TYPE_ARRAY_LITERAL: rc = qip_ast_array_literal_copy(node, ret); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_copy(node, ret); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_copy(node, ret); break;
         case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_copy(node, ret); break;
         case QIP_AST_TYPE_TYPE_REF: rc = qip_ast_type_ref_copy(node, ret); break;
         case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_copy(node, ret); break;
-        case QIP_AST_TYPE_STACCESS: rc = qip_ast_staccess_copy(node, ret); break;
         case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_copy(node, ret); break;
         case QIP_AST_TYPE_FARG: rc = qip_ast_farg_copy(node, ret); break;
         case QIP_AST_TYPE_MODULE: rc = qip_ast_module_copy(node, ret); break;
@@ -131,8 +162,9 @@ int qip_ast_node_copy(qip_ast_node *node, qip_ast_node **ret)
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_copy(node, ret); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_copy(node, ret); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_copy(node, ret); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_copy(node, ret); break;
     }
-    check(rc == 0, "Unable to codegen node");
+    check(rc == 0, "Unable to copy node");
     
     return 0;
 
@@ -174,11 +206,11 @@ int qip_ast_node_codegen(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_codegen(node, module, &ret_value); break;
+        case QIP_AST_TYPE_ARRAY_LITERAL: rc = qip_ast_array_literal_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_codegen(node, module, &ret_value); break;
-        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_codegen(node, module, &ret_value); break;
+        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_codegen(node, module, false, &ret_value); break;
         case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_codegen(node, module, &ret_value); break;
-        case QIP_AST_TYPE_STACCESS: rc = qip_ast_staccess_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_FARG: rc = qip_ast_farg_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_codegen(node, module, &ret_value); break;
@@ -188,6 +220,7 @@ int qip_ast_node_codegen(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_CLASS: rc = qip_ast_class_codegen(node, module); break;
         case QIP_AST_TYPE_METHOD: rc = qip_ast_method_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_codegen(node, module, &ret_value); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_codegen(node, module, &ret_value); break;
         default: rc = 0;
     }
     check(rc == 0, "Unable to codegen node");
@@ -226,13 +259,8 @@ int qip_ast_node_get_var_pointer(qip_ast_node *node, qip_module *module,
     // Delegate codegen to AST nodes.
     switch(node->type) {
         case QIP_AST_TYPE_VAR_REF: {
-            rc = qip_ast_var_ref_get_pointer(node, module, value);
+            rc = qip_ast_var_ref_get_pointer(node, module, NULL, value);
             check(rc == 0, "Unable to retrieve pointer to variable reference");
-            break;
-        }
-        case QIP_AST_TYPE_STACCESS: {
-            rc = qip_ast_staccess_get_pointer(node, module, value);
-            check(rc == 0, "Unable to retrieve pointer to struct member access");
             break;
         }
         default:
@@ -288,36 +316,38 @@ error:
 //
 // node    - The node to preprocess.
 // module  - The compilation unit this node is a part of.
+// stage   - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_node_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_node_preprocess(qip_ast_node *node, qip_module *module,
+                            qip_ast_processing_stage_e stage)
 {
     int rc = 0;
-    
     check(node != NULL, "Node is required");
     check(module != NULL, "Module is required");
 
     // Delegate validation to AST node types.
     switch(node->type) {
+        case QIP_AST_TYPE_ARRAY_LITERAL: rc = qip_ast_array_literal_preprocess(node, module, stage); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_preprocess(node, module); break;
-        case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_preprocess(node, module); break;
-        case QIP_AST_TYPE_BLOCK: rc = qip_ast_block_preprocess(node, module); break;
-        case QIP_AST_TYPE_MODULE: rc = qip_ast_module_preprocess(node, module); break;
-        case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_preprocess(node, module); break;
-        case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_preprocess(node, module); break;
+        case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_BLOCK: rc = qip_ast_block_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_MODULE: rc = qip_ast_module_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_preprocess(node, module, stage); break;
         case QIP_AST_TYPE_TYPE_REF: rc = qip_ast_type_ref_preprocess(node, module); break;
-        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_preprocess(node, module); break;
-        case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_preprocess(node, module); break;
-        case QIP_AST_TYPE_STACCESS: rc = qip_ast_staccess_preprocess(node, module); break;
-        case QIP_AST_TYPE_FARG: rc = qip_ast_farg_preprocess(node, module); break;
-        case QIP_AST_TYPE_IF_STMT: rc = qip_ast_if_stmt_preprocess(node, module); break;
-        case QIP_AST_TYPE_FOR_EACH_STMT: rc = qip_ast_for_each_stmt_preprocess(node, module); break;
-        case QIP_AST_TYPE_CLASS: rc = qip_ast_class_preprocess(node, module); break;
-        case QIP_AST_TYPE_METHOD: rc = qip_ast_method_preprocess(node, module); break;
-        case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_preprocess(node, module); break;
-        case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_preprocess(node, module); break;
+        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_FARG: rc = qip_ast_farg_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_IF_STMT: rc = qip_ast_if_stmt_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_FOR_EACH_STMT: rc = qip_ast_for_each_stmt_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_CLASS: rc = qip_ast_class_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_METHOD: rc = qip_ast_method_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_preprocess(node, module, stage); break;
+        case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_preprocess(node, module, stage); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_preprocess(node, module); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_preprocess(node, module); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_preprocess(node, module); break;
         default: rc = 0;
     }
     check(rc == 0, "Unable to preprocess node");
@@ -353,10 +383,11 @@ int qip_ast_node_get_type(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_get_type(node, type); break;
         case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_get_type(node, type); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_get_type(node, type); break;
+        case QIP_AST_TYPE_ARRAY_LITERAL: rc = qip_ast_array_literal_get_type(node, type); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_type(node, module, type); break;
-        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_get_type(node, type); break;
-        case QIP_AST_TYPE_STACCESS: rc = qip_ast_staccess_get_type(node, module, type); break;
+        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_get_type(node, module, type); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_get_type(node, type); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_sizeof_get_type(node, type); break;
         default: {
             sentinel("AST node does not have a type");
             break;
@@ -489,6 +520,7 @@ int qip_ast_node_get_type_refs(qip_ast_node *node, qip_ast_node ***type_refs,
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_type_refs(node, type_refs, count); break;
         case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_get_type_refs(node, type_refs, count); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_get_type_refs(node, type_refs, count); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_get_type_refs(node, type_refs, count); break;
         default: rc = 0; break;
     }
     check(rc == 0, "Unable to retrieve type refs");
@@ -547,6 +579,105 @@ int qip_ast_node_type_refs_free(qip_ast_node ***type_refs, uint32_t *count)
     
 
 //--------------------------------------
+// Var Refs
+//--------------------------------------
+
+// Retrieves an array of variable references within 
+//
+// node  - The node.
+// name  - The name of the variable.
+// array - The array to add variable references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_node_get_var_refs(qip_ast_node *node, bstring name,
+                              qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    // Recursively retrieve var refs from children.
+    switch(node->type) {
+        case QIP_AST_TYPE_MODULE: rc = qip_ast_module_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_CLASS: rc = qip_ast_class_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_METHOD: rc = qip_ast_method_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_FARG: rc = qip_ast_farg_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_BLOCK: rc = qip_ast_block_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_IF_STMT: rc = qip_ast_if_stmt_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_FOR_EACH_STMT: rc = qip_ast_for_each_stmt_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_get_var_refs(node, name, array); break;
+        default: rc = 0; break;
+    }
+    check(rc == 0, "Unable to retrieve var refs");
+
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
+// Blocks
+//--------------------------------------
+
+// Retrieves the block and expression index of a given node. This node may
+// not be directly attached to the block so the expression index represents
+// the index of the ancestor of the node that is directly attached to the
+// block.
+//
+// node           - The node.
+// ret_block      - A pointer to where the block should be returned.
+// ret_expr_index - A pointer to where the expression index should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_node_get_block_expr_index(qip_ast_node *node,
+                                      qip_ast_node **ret_block,
+                                      int32_t *ret_expr_index)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(node != NULL, "Return block pointer required");
+    check(node != NULL, "Return expression index pointer required");
+    
+    // Initialize return values.
+    *ret_block = NULL;
+    *ret_expr_index = -1;
+    
+    // Loop up the hierarchy until we reach a parent that is a block.
+    qip_ast_node *current = node;
+    while(current != NULL) {
+        if(current->parent->type == QIP_AST_TYPE_BLOCK) {
+            int32_t expr_index;
+            rc = qip_ast_block_get_expr_index(current->parent, current, &expr_index);
+            check(rc == 0, "Unable to retrieve expression index");
+            
+            if(expr_index >= 0) {
+                *ret_block = current->parent;
+                *ret_expr_index = expr_index;
+            }
+            break;
+        }
+        
+        current = current->parent;
+    }
+    
+    return 0;
+
+error:
+    *ret_block = NULL;
+    *ret_expr_index = -1;
+    return -1;
+}
+
+
+//--------------------------------------
 // Dependencies
 //--------------------------------------
 
@@ -579,6 +710,7 @@ int qip_ast_node_get_dependencies(qip_ast_node *node, bstring **dependencies,
         case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_get_dependencies(node, dependencies, count); break;
         case QIP_AST_TYPE_MODULE: rc = qip_ast_module_get_dependencies(node, dependencies, count); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_get_dependencies(node, dependencies, count); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_sizeof_get_dependencies(node, dependencies, count); break;
         default: rc = 0; break;
     }
     check(rc == 0, "Unable to retrieve dependencies");
@@ -706,7 +838,6 @@ int qip_ast_node_validate(qip_ast_node *node, qip_module *module)
         case QIP_AST_TYPE_TYPE_REF: rc = qip_ast_type_ref_validate(node, module); break;
         case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_validate(node, module); break;
         case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_validate(node, module); break;
-        case QIP_AST_TYPE_STACCESS: rc = qip_ast_staccess_validate(node, module); break;
         case QIP_AST_TYPE_FARG: rc = qip_ast_farg_validate(node, module); break;
         case QIP_AST_TYPE_IF_STMT: rc = qip_ast_if_stmt_validate(node, module); break;
         case QIP_AST_TYPE_FOR_EACH_STMT: rc = qip_ast_for_each_stmt_validate(node, module); break;
@@ -716,6 +847,7 @@ int qip_ast_node_validate(qip_ast_node *node, qip_module *module)
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_validate(node, module); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_validate(node, module); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_validate(node, module); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_validate(node, module); break;
         default: rc = 0;
     }
     check(rc == 0, "Unable to validate node");
@@ -766,12 +898,12 @@ int qip_ast_node_dump(qip_ast_node *node, bstring ret)
         case QIP_AST_TYPE_BOOLEAN_LITERAL: rc = qip_ast_boolean_literal_dump(node, ret); break;
         case QIP_AST_TYPE_STRING_LITERAL: rc = qip_ast_string_literal_dump(node, ret); break;
         case QIP_AST_TYPE_NULL_LITERAL: rc = qip_ast_null_literal_dump(node, ret); break;
+        case QIP_AST_TYPE_ARRAY_LITERAL: rc = qip_ast_array_literal_dump(node, ret); break;
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_dump(node, ret); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_dump(node, ret); break;
         case QIP_AST_TYPE_TYPE_REF: rc = qip_ast_type_ref_dump(node, ret); break;
         case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_dump(node, ret); break;
         case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_dump(node, ret); break;
-        case QIP_AST_TYPE_STACCESS: rc = qip_ast_staccess_dump(node, ret); break;
         case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_dump(node, ret); break;
         case QIP_AST_TYPE_FARG: rc = qip_ast_farg_dump(node, ret); break;
         case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_dump(node, ret); break;
@@ -786,6 +918,7 @@ int qip_ast_node_dump(qip_ast_node *node, bstring ret)
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_dump(node, ret); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_dump(node, ret); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_dump(node, ret); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_dump(node, ret); break;
         default: {
             sentinel("Unable to dump AST node");
             break;

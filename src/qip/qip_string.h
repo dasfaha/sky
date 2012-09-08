@@ -1,19 +1,20 @@
-#ifndef _qip_array_h
-#define _qip_array_h
+#ifndef _qip_string_h
+#define _qip_string_h
 
 #include <inttypes.h>
-
+#include <stdbool.h>
 
 //==============================================================================
 //
-// Typedefs
+// Definitions
 //
 //==============================================================================
 
+// The qip string stores information about a fixed length string.
 typedef struct {
     int64_t length;
-    void **elements;
-} qip_array;
+    char *data;
+} qip_string;
 
 
 //==============================================================================
@@ -26,24 +27,20 @@ typedef struct {
 // Lifecycle
 //======================================
 
-qip_array *qip_array_create();
+qip_string *qip_string_create(int64_t length, char *data);
 
-void qip_array_free(qip_array *array);
+qip_string *qip_string_alloc();
 
-//======================================
-// Element Management
-//======================================
+void qip_string_init(qip_string *string, int64_t length,
+    char *data);
 
-int qip_array_push(qip_array *array, void *item);
+void qip_string_free(qip_string *string);
 
-int qip_array_pop(qip_array *array, void **item);
 
 //======================================
-// Qip Interface
+// Equality
 //======================================
 
-void *qipx_array_get_item_at(qip_array *array, int64_t index);
-
-void qipx_array_set_item_at(qip_array *array, void *item, int64_t index);
+bool qip_string_equals(qip_string *a, qip_string *b);
 
 #endif

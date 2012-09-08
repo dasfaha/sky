@@ -115,6 +115,40 @@ error:
 // Expression Management
 //--------------------------------------
 
+// Retrieves the index of the expression on the block.
+//
+// node - The node.
+// expr - The expression.
+// ret  - A pointer to where the index should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_block_get_expr_index(qip_ast_node *node, qip_ast_node *expr,
+                                 int32_t *ret)
+{
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+    check(expr != NULL, "Expression required");
+    check(ret != NULL, "Return pointer required");
+
+    // Initialize return value.
+    *ret = -1;
+
+    // Search for expression and remove.
+    unsigned int i;
+    for(i=0; i<node->block.expr_count; i++) {
+        if(node->block.exprs[i] == expr) {
+            *ret = i;
+            break;
+        }
+    }
+
+    return 0;
+
+error:
+    *ret = -1;
+    return -1;
+}
+
 // Appends an expression to the end of the block.
 //
 // block - The block to append the expression to.
@@ -136,6 +170,41 @@ int qip_ast_block_add_expr(struct qip_ast_node *block, struct qip_ast_node *expr
     
     // Assign parent reference to expression.
     expr->parent = block;
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Inserts an expression at the given index.
+//
+// block - The block.
+// expr  - The expression.
+// index - The index to insert at.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_block_insert_expr(qip_ast_node *node, qip_ast_node *expr,
+                              unsigned int index)
+{
+    check(node != NULL, "Block required");
+    check(node->type == QIP_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+    check(expr != NULL, "Expression required");
+    
+    // Resize array.
+    node->block.expr_count++;
+    node->block.exprs = realloc(node->block.exprs, sizeof(*node->block.exprs) * node->block.expr_count);
+    check_mem(node->block.exprs);
+
+    // Shift everything down.
+    unsigned int i;
+    for(i=node->block.expr_count-1; i>index; i--) {
+        node->block.exprs[i] = node->block.exprs[i-1];
+    }
+
+    // Assign parent reference to expression.
+    node->block.exprs[index] = expr;
+    expr->parent = node;
     
     return 0;
 
@@ -170,6 +239,40 @@ int qip_ast_block_prepend_expr(struct qip_ast_node *block, struct qip_ast_node *
     // Assign parent reference to expression.
     block->block.exprs[0] = expr;
     expr->parent = block;
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Removes an expression from the block.
+//
+// node - The node.
+// expr - The expression to remove.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_block_remove_expr(qip_ast_node *node, qip_ast_node *expr)
+{
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_BLOCK, "Node type expected to be 'block'");
+    check(expr != NULL, "Expression required");
+
+    // Clear expression parent if it matches block.
+    if(expr->parent == node) {
+        expr->parent = NULL; 
+    }
+
+    // Search for expression and remove.
+    unsigned int i, j;
+    for(i=0; i<node->block.expr_count; i++) {
+        if(node->block.exprs[i] == expr) {
+            node->block.expr_count--;
+            for(j=i; j<node->block.expr_count; j++) {
+                node->block.exprs[j] = node->block.exprs[j+1];
+            }
+        }
+    }
     
     return 0;
 
@@ -219,16 +322,21 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int qip_ast_block_codegen_block(qip_ast_node *node, qip_module *module, 
-                          LLVMBasicBlockRef *block)
+                                LLVMBasicBlockRef *block)
 {
+    int rc;
     check(node != NULL, "Node required");
     check(node->type == QIP_AST_TYPE_BLOCK, "Node type expected to be 'block'");
     check(node->parent != NULL, "Node parent required");
     check(module != NULL, "Module required");
-    check(module->llvm_function != NULL, "Unable to create block without a function");
+    
+    // Retrieve current function scope.
+    qip_scope *scope = NULL;
+    rc = qip_module_get_current_function_scope(module, &scope);
+    check(rc == 0 && scope != NULL, "Unable to retrieve current function scope");
 
     // Create LLVM block.
-    *block = LLVMAppendBasicBlock(module->llvm_function, bdatae(node->block.name, ""));
+    *block = LLVMAppendBasicBlock(scope->llvm_function, bdatae(node->block.name, ""));
     
     return 0;
     
@@ -253,7 +361,6 @@ int qip_ast_block_codegen_with_block(qip_ast_node *node, qip_module *module,
     check(node->type == QIP_AST_TYPE_BLOCK, "Node type expected to be 'block'");
     check(node->parent != NULL, "Node parent required");
     check(module != NULL, "Module required");
-    check(module->llvm_function != NULL, "Unable to add a block without a function");
     check(block != NULL, "LLVM block required");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
@@ -262,7 +369,8 @@ int qip_ast_block_codegen_with_block(qip_ast_node *node, qip_module *module,
     LLVMPositionBuilderAtEnd(builder, block);
    
     // Add block scope.
-    rc = qip_module_push_scope(module, node);
+    qip_scope *scope = qip_scope_create_block(); check_mem(scope);
+    rc = qip_module_push_scope(module, scope);
     check(rc == 0, "Unable to add block scope");
 
     // Codegen expressions in block.
@@ -274,7 +382,7 @@ int qip_ast_block_codegen_with_block(qip_ast_node *node, qip_module *module,
     }
 
     // Remove block scope.
-    rc = qip_module_pop_scope(module, node);
+    rc = qip_module_pop_scope(module);
     check(rc == 0, "Unable to remove block scope");
 
     return 0;
@@ -330,7 +438,6 @@ int qip_ast_block_codegen(qip_ast_node *node, qip_module *module,
     check(node->type == QIP_AST_TYPE_BLOCK, "Node type expected to be 'block'");
     check(node->parent != NULL, "Node parent required");
     check(module != NULL, "Module required");
-    check(module->llvm_function != NULL, "Unable to add a block without a function");
 
     // Generate block.
     LLVMBasicBlockRef block = NULL;
@@ -358,9 +465,11 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_block_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_block_preprocess(qip_ast_node *node, qip_module *module,
+                             qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -369,7 +478,7 @@ int qip_ast_block_preprocess(qip_ast_node *node, qip_module *module)
     // Preprocess expressions.
     uint32_t i;
     for(i=0; i<node->block.expr_count; i++) {
-        rc = qip_ast_node_preprocess(node->block.exprs[i], module);
+        rc = qip_ast_node_preprocess(node->block.exprs[i], module, stage);
         check(rc == 0, "Unable to preprocess block expression");
     }
 
@@ -419,7 +528,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by the node.
@@ -449,6 +558,33 @@ int qip_ast_block_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_block_get_var_refs(qip_ast_node *node, bstring name,
+                               qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    uint32_t i;
+    for(i=0; i<node->block.expr_count; i++) {
+        rc = qip_ast_node_get_var_refs(node->block.exprs[i], name, array);
+        check(rc == 0, "Unable to add block expression var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

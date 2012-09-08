@@ -5,6 +5,7 @@
 #include "compiler.h"
 #include "parser.h"
 #include "map.h"
+#include "qip_string.h"
 #include "serializer.h"
 
 #endif

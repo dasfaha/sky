@@ -252,9 +252,11 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_metadata_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_metadata_preprocess(qip_ast_node *node, qip_module *module,
+                                qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -263,7 +265,7 @@ int qip_ast_metadata_preprocess(qip_ast_node *node, qip_module *module)
     // Preprocess arguments.
     uint32_t i;
     for(i=0; i<node->metadata.item_count; i++) {
-        rc = qip_ast_node_preprocess(node->metadata.items[i], module);
+        rc = qip_ast_node_preprocess(node->metadata.items[i], module, stage);
         check(rc == 0, "Unable to preprocess metadata item");
     }
 

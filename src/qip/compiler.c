@@ -113,6 +113,7 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
     // Clear errors.
     qip_module_free_errors(module);
 
+
     // Continuously loop and parse QIP files until there are no more dependencies.
     bstring current_module_name = name;
     bstring current_module_source = source;
@@ -156,8 +157,8 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
         check(rc == 0, "Unable to add AST module to compilation module");
         
         // Perform any preprocessing that needs to be done on the AST.
-        rc = qip_ast_node_preprocess(ast_module, module);
-        check(rc == 0, "Unable to preprocess module");
+        rc = qip_ast_node_preprocess(ast_module, module, QIP_AST_PROCESSING_STAGE_LOADING);
+        check(rc == 0, "Unable to preprocess module (loading)");
 
         // Retrieve dependencies in module.
         rc = qip_ast_node_get_dependencies(ast_module, &dependencies, &dependency_count);
@@ -212,6 +213,11 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
             check(rc == 0, "Unable to generate types for module");
         }
     }
+
+    // Perform any preprocessing that needs to be done once all the modules
+    // are loaded.
+    rc = qip_module_preprocess(module, QIP_AST_PROCESSING_STAGE_INITIALIZED);
+    check(rc == 0, "Unable to preprocess module (initialized)");
 
     // Validate all AST nodes if we don't have any syntax errors.
     if(module->error_count == 0) {

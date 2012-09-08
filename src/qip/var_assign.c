@@ -116,7 +116,7 @@ int qip_ast_var_assign_codegen(qip_ast_node *node,
 
     // Find the variable declaration.
     LLVMValueRef ptr = NULL;
-    rc = qip_ast_node_get_var_pointer(node->var_assign.var_ref, module, &ptr);
+    rc = qip_ast_var_ref_codegen(node->var_assign.var_ref, module, true, &ptr);
     check(rc == 0 && ptr != NULL, "Unable to retrieve variable reference pointer");
 
     // Generate expression.
@@ -152,20 +152,22 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_var_assign_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_var_assign_preprocess(qip_ast_node *node, qip_module *module,
+                                  qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
     
     // Preprocess variable reference.
-    rc = qip_ast_node_preprocess(node->var_assign.var_ref, module);
+    rc = qip_ast_node_preprocess(node->var_assign.var_ref, module, stage);
     check(rc == 0, "Unable to preprocess variable assignment reference");
     
     // Preprocess expression.
-    rc = qip_ast_node_preprocess(node->var_assign.expr, module);
+    rc = qip_ast_node_preprocess(node->var_assign.expr, module, stage);
     check(rc == 0, "Unable to preprocess variable assignment expression");
     
     return 0;
@@ -193,10 +195,14 @@ int qip_ast_var_assign_validate(qip_ast_node *node, qip_module *module)
     check(module != NULL, "Module required");
     
     // Do not allow assignment to a method invocation.
-    if(node->var_assign.var_ref->type == QIP_AST_TYPE_STACCESS && 
-       node->var_assign.var_ref->staccess.type == QIP_AST_STACCESS_TYPE_METHOD)
-    {
-        msg = bformat("Illegal assignment to a method invocation");
+    qip_ast_node *lhs_target_node = NULL;
+    rc = qip_ast_var_ref_get_last_member(node->var_assign.var_ref, &lhs_target_node);
+    check(rc == 0, "Unable to retrieve last member of assignment variable");
+    
+    // If the last member of the reference chain is a method invocation then
+    // return an error.
+    if(lhs_target_node->var_ref.type == QIP_AST_VAR_REF_TYPE_INVOKE) {
+        msg = bfromcstr("Illegal assignment to a method invocation");
     }
     
     // Validate variable reference.
@@ -223,7 +229,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by a node.
@@ -242,8 +248,15 @@ int qip_ast_var_assign_get_type_refs(qip_ast_node *node,
     check(type_refs != NULL, "Type refs return pointer required");
     check(count != NULL, "Type ref count return pointer required");
 
-    rc = qip_ast_node_get_type_refs(node->var_assign.expr, type_refs, count);
-    check(rc == 0, "Unable to add var assign expr");
+    if(node->var_assign.var_ref) {
+        rc = qip_ast_node_get_type_refs(node->var_assign.var_ref, type_refs, count);
+        check(rc == 0, "Unable to add var assign var ref");
+    }
+
+    if(node->var_assign.expr) {
+        rc = qip_ast_node_get_type_refs(node->var_assign.expr, type_refs, count);
+        check(rc == 0, "Unable to add var assign expr");
+    }
 
     return 0;
     
@@ -251,6 +264,38 @@ error:
     qip_ast_node_type_refs_free(type_refs, count);
     return -1;
 }
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_var_assign_get_var_refs(qip_ast_node *node, bstring name,
+                                    qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->var_assign.var_ref) {
+        rc = qip_ast_node_get_var_refs(node->var_assign.var_ref, name, array);
+        check(rc == 0, "Unable to add var assign var ref");
+    }
+
+    if(node->var_assign.expr) {
+        rc = qip_ast_node_get_var_refs(node->var_assign.expr, name, array);
+        check(rc == 0, "Unable to add var assign expr var ref");
+    }
+
+    return 0;
+    
+error:
+    return -1;
+}
+
 
 //--------------------------------------
 // Debugging

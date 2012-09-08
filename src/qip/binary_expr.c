@@ -297,11 +297,24 @@ int qip_ast_binary_expr_codegen(qip_ast_node *node,
     rc = qip_ast_node_codegen(node->binary_expr.rhs, module, &rhs);
     check(rc == 0 && rhs != NULL, "Unable to codegen rhs");
 
+    // Retrieve the last variable reference in a chain to determine the type.
+    qip_ast_node *lhs_target_node = node->binary_expr.lhs;
+    if(lhs_target_node->type == QIP_AST_TYPE_VAR_REF) {
+        rc = qip_ast_var_ref_get_last_member(lhs_target_node, &lhs_target_node);
+        check(rc == 0, "Unable to retrieve LHS last member");
+    }
+
+    qip_ast_node *rhs_target_node = node->binary_expr.rhs;
+    if(rhs_target_node->type == QIP_AST_TYPE_VAR_REF) {
+        rc = qip_ast_var_ref_get_last_member(rhs_target_node, &rhs_target_node);
+        check(rc == 0, "Unable to retrieve RHS last member");
+    }
+
     // Retrieve types.
     bstring lhs_type_name = NULL, rhs_type_name = NULL;
-    rc = qip_ast_node_get_type_name(node->binary_expr.lhs, module, &lhs_type_name);
+    rc = qip_ast_node_get_type_name(lhs_target_node, module, &lhs_type_name);
     check(rc == 0, "Unable to retrieve LHS type");
-    rc = qip_ast_node_get_type_name(node->binary_expr.rhs, module, &rhs_type_name);
+    rc = qip_ast_node_get_type_name(rhs_target_node, module, &rhs_type_name);
     check(rc == 0, "Unable to retrieve RHS type");
 
     // Cast RHS into the LHS type.
@@ -342,7 +355,7 @@ error:
 
 // Preprocesses the node.
 //
-// node - The node.
+// node   - The node.
 // module - The module that the node is a part of.
 //
 // Returns 0 if successful, otherwise returns -1.
@@ -372,10 +385,18 @@ error:
 int qip_ast_binary_expr_get_type(qip_ast_node *node, qip_module *module,
                                  qip_ast_node **type_ref)
 {
+    int rc;
     check(node != NULL, "Node required");
     check(node->type == QIP_AST_TYPE_BINARY_EXPR, "Node type must be 'binary expr'");
     check(node->binary_expr.lhs != NULL, "Binary expression LHS is required");
     
+    // Retrieve the last variable reference in a chain to determine the type.
+    qip_ast_node *lhs_target_node = node->binary_expr.lhs;
+    if(lhs_target_node->type == QIP_AST_TYPE_VAR_REF) {
+        rc = qip_ast_var_ref_get_last_member(lhs_target_node, &lhs_target_node);
+        check(rc == 0, "Unable to retrieve LHS last member");
+    }
+
     switch(node->binary_expr.operator) {
         // If this is an arithmetic operator then use the LHS type.
         case QIP_BINOP_PLUS:
@@ -383,7 +404,7 @@ int qip_ast_binary_expr_get_type(qip_ast_node *node, qip_module *module,
         case QIP_BINOP_MUL:
         case QIP_BINOP_DIV:
         {
-            int rc = qip_ast_node_get_type(node->binary_expr.lhs, module, type_ref);
+            int rc = qip_ast_node_get_type(lhs_target_node, module, type_ref);
             check(rc == 0, "Unable to determine the binary expression type");
             break;
         }
@@ -421,11 +442,24 @@ int qip_ast_binary_expr_validate(qip_ast_node *node, qip_module *module)
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
     
+    // Retrieve the last variable reference in a chain to determine the type.
+    qip_ast_node *lhs_target_node = node->binary_expr.lhs;
+    if(lhs_target_node->type == QIP_AST_TYPE_VAR_REF) {
+        rc = qip_ast_var_ref_get_last_member(lhs_target_node, &lhs_target_node);
+        check(rc == 0, "Unable to retrieve LHS last member");
+    }
+
+    qip_ast_node *rhs_target_node = node->binary_expr.rhs;
+    if(rhs_target_node->type == QIP_AST_TYPE_VAR_REF) {
+        rc = qip_ast_var_ref_get_last_member(rhs_target_node, &rhs_target_node);
+        check(rc == 0, "Unable to retrieve RHS last member");
+    }
+    
     // Determine types.
     bstring lhs_type, rhs_type;
-    rc = qip_ast_node_get_type_name(node->binary_expr.lhs, module, &lhs_type);
+    rc = qip_ast_node_get_type_name(lhs_target_node, module, &lhs_type);
     check(rc == 0, "Unable to determine the binary expression LHS type");
-    rc = qip_ast_node_get_type_name(node->binary_expr.rhs, module, &rhs_type);
+    rc = qip_ast_node_get_type_name(rhs_target_node, module, &rhs_type);
     check(rc == 0, "Unable to determine the binary expression RHS type");
 
     // Validate lhs=numeric, rhs=non-numeric.
@@ -453,7 +487,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by a node.
@@ -472,16 +506,51 @@ int qip_ast_binary_expr_get_type_refs(qip_ast_node *node,
     check(type_refs != NULL, "Type refs return pointer required");
     check(count != NULL, "Type ref count return pointer required");
 
-    rc = qip_ast_node_get_type_refs(node->binary_expr.lhs, type_refs, count);
-    check(rc == 0, "Unable to add binary expr lhs");
+    if(node->binary_expr.lhs) {
+        rc = qip_ast_node_get_type_refs(node->binary_expr.lhs, type_refs, count);
+        check(rc == 0, "Unable to add binary expr lhs");
+    }
 
-    rc = qip_ast_node_get_type_refs(node->binary_expr.rhs, type_refs, count);
-    check(rc == 0, "Unable to add binary expr rhs");
+    if(node->binary_expr.rhs) {
+        rc = qip_ast_node_get_type_refs(node->binary_expr.rhs, type_refs, count);
+        check(rc == 0, "Unable to add binary expr rhs");
+    }
 
     return 0;
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_binary_expr_get_var_refs(qip_ast_node *node, bstring name,
+                                     qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->binary_expr.lhs) {
+        rc = qip_ast_node_get_var_refs(node->binary_expr.lhs, name, array);
+        check(rc == 0, "Unable to add binary expr lhs");
+    }
+
+    if(node->binary_expr.rhs) {
+        rc = qip_ast_node_get_var_refs(node->binary_expr.rhs, name, array);
+        check(rc == 0, "Unable to add binary expr rhs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

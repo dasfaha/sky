@@ -109,6 +109,11 @@ void qip_serializer_pack_float(qip_serializer *serializer, double value)
     serializer->ptr = serializer->data + serializer->length;
 }
 
+void qip_serializer_pack_string(qip_serializer *serializer, qip_string *value)
+{
+    qip_serializer_pack_raw(serializer, value->data, value->length-1);
+}
+
 void qip_serializer_pack_raw(qip_serializer *serializer, void *value,
                              uint64_t length)
 {

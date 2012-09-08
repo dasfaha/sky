@@ -13,6 +13,8 @@
 // Represents a type reference.
 typedef struct {
     bstring name;
+    bstring arg_name;
+    qip_ast_node *return_type;
     qip_ast_node **subtypes;
     unsigned int subtype_count;
 } qip_ast_type_ref;
@@ -34,6 +36,8 @@ qip_ast_node *qip_ast_type_ref_create_cstr(char *name);
 
 void qip_ast_type_ref_free(qip_ast_node *node);
 
+void qip_ast_type_ref_free_return_type(qip_ast_node *node);
+
 void qip_ast_type_ref_free_subtypes(qip_ast_node *node);
 
 int qip_ast_type_ref_copy(qip_ast_node *node, qip_ast_node **ret);
@@ -46,6 +50,19 @@ int qip_ast_type_ref_add_subtype(qip_ast_node *node, qip_ast_node *subtype);
 
 int qip_ast_type_ref_add_subtypes(qip_ast_node *node, qip_ast_node **subtypes,
     unsigned int subtype_count);
+
+//--------------------------------------
+// Return Type Management
+//--------------------------------------
+
+int qip_ast_type_ref_set_return_type(qip_ast_node *node,
+    qip_ast_node *return_type);
+
+//--------------------------------------
+// Arg Name
+//--------------------------------------
+
+int qip_ast_type_ref_set_arg_name(qip_ast_node *node, bstring arg_name);
 
 //--------------------------------------
 // Preprocessor

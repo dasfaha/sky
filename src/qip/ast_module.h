@@ -50,7 +50,8 @@ int qip_ast_module_codegen_forward_decl(qip_ast_node *node, qip_module *module);
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_module_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_module_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
 // Class Management
@@ -65,11 +66,14 @@ int qip_ast_module_get_template_class(qip_ast_node *node,
     qip_ast_node *type_ref, qip_ast_node **ret);
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 int qip_ast_module_get_type_refs(qip_ast_node *node,
     qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_module_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Dependencies

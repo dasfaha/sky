@@ -2,6 +2,7 @@
 #include "dbg.h"
 
 #include "node.h"
+#include "util.h"
 
 //==============================================================================
 //
@@ -20,15 +21,10 @@
 // Returns a type ref node.
 qip_ast_node *qip_ast_type_ref_create(bstring name)
 {
-    qip_ast_node *node = malloc(sizeof(qip_ast_node)); check_mem(node);
+    qip_ast_node *node = calloc(1, sizeof(qip_ast_node)); check_mem(node);
     node->type = QIP_AST_TYPE_TYPE_REF;
-    node->parent = NULL;
-    node->line_no = node->char_no = 0;
-    node->generated = false;
     node->type_ref.name = bstrcpy(name);
     if(name != NULL) check_mem(node->type_ref.name);
-    node->type_ref.subtypes = NULL;
-    node->type_ref.subtype_count = 0;
     
     return node;
 
@@ -64,8 +60,21 @@ void qip_ast_type_ref_free(qip_ast_node *node)
     if(node != NULL) {
         if(node->type_ref.name) bdestroy(node->type_ref.name);
         node->type_ref.name = NULL;
+        if(node->type_ref.arg_name) bdestroy(node->type_ref.arg_name);
+        node->type_ref.arg_name = NULL;
 
         qip_ast_type_ref_free_subtypes(node);
+    }
+}
+
+// Frees the return type.
+//
+// node - The node.
+void qip_ast_type_ref_free_return_type(qip_ast_node *node)
+{
+    if(node != NULL) {
+        qip_ast_node_free(node->type_ref.return_type);
+        node->type_ref.return_type = NULL;
     }
 }
 
@@ -101,6 +110,13 @@ int qip_ast_type_ref_copy(qip_ast_node *node, qip_ast_node **ret)
 
     qip_ast_node *clone = qip_ast_type_ref_create(node->type_ref.name);
     check_mem(clone);
+
+    clone->type_ref.arg_name = bstrcpy(node->type_ref.arg_name);
+    if(node->type_ref.arg_name) check_mem(clone->type_ref.arg_name);
+
+    rc = qip_ast_node_copy(node->type_ref.return_type, &clone->type_ref.return_type);
+    check(rc == 0, "Unable to copy return type");
+    if(clone->type_ref.return_type) clone->type_ref.return_type->parent = clone;
 
     // Copy subtypes.
     clone->type_ref.subtype_count = node->type_ref.subtype_count;
@@ -181,6 +197,62 @@ error:
 
 
 //--------------------------------------
+// Return Type Management
+//--------------------------------------
+
+// Sets the return type.
+//
+// node        - The node.
+// return_type - The return type.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_type_ref_set_return_type(qip_ast_node *node, qip_ast_node *return_type)
+{
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_TYPE_REF, "Node type expected to be 'type ref'");
+    check(return_type == NULL || return_type->type == QIP_AST_TYPE_TYPE_REF, "Return type expected to be 'type ref'");
+    
+    // Assign return type.
+    if(node->type_ref.return_type) node->type_ref.return_type->parent = NULL;
+    node->type_ref.return_type = return_type;
+    if(node->type_ref.return_type) node->type_ref.return_type->parent = node;
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
+// Arg Name
+//--------------------------------------
+
+// Sets the argument name. The argument name is used when the type_ref is a
+// subtype of a Function type.
+//
+// node     - The node.
+// arg_name - The argument name.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_type_ref_set_arg_name(qip_ast_node *node, bstring arg_name)
+{
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_TYPE_REF, "Node type expected to be 'type ref'");
+    
+    // Assign argument name.
+    if(node->type_ref.arg_name) bdestroy(arg_name);
+    node->type_ref.arg_name = bstrcpy(arg_name);
+    if(arg_name) check_mem(node->type_ref.arg_name);
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
 // Name Resolution
 //--------------------------------------
 
@@ -210,6 +282,13 @@ int qip_ast_type_ref_get_full_name(qip_ast_node *node, bstring *ret)
             bdestroy(tmp);
         }
         check_mem(subtype_list);
+    }
+    
+    // Append return type to subtype list.
+    if(node->type_ref.return_type) {
+        bstring tmp = subtype_list;
+        subtype_list = bformat("%s:%s", bdatae(subtype_list, ""), bdata(node->type_ref.return_type->type_ref.name));
+        bdestroy(tmp);
     }
     
     // Create full name.
@@ -282,6 +361,12 @@ int qip_ast_type_ref_get_type_refs(qip_ast_node *node,
         check(rc == 0, "Unable to add type ref subtype");
     }
 
+    // Add return type.
+    if(node->type_ref.return_type != NULL) {
+        rc = qip_ast_node_get_type_refs(node->type_ref.return_type, type_refs, count);
+        check(rc == 0, "Unable to add type ref return type");
+    }
+
     // Add node to the list.
     rc = qip_ast_node_add_type_ref(node, type_refs, count);
     check(rc == 0, "Unable to add type ref");
@@ -318,6 +403,12 @@ int qip_ast_type_ref_get_dependencies(qip_ast_node *node,
     // Add type name.
     rc = qip_ast_node_add_dependency(node->type_ref.name, dependencies, count);
     check(rc == 0, "Unable to add type ref dependency");
+
+    // Add return type.
+    if(node->type_ref.return_type != NULL) {
+        rc = qip_ast_node_get_dependencies(node->type_ref.return_type, dependencies, count);
+        check(rc == 0, "Unable to add type ref return type dependency");
+    }
 
     // Add subtypes.
     for(i=0; i<node->type_ref.subtype_count; i++) {
@@ -386,8 +477,9 @@ int qip_ast_type_ref_flatten(qip_ast_node *node)
     check(node->type == QIP_AST_TYPE_TYPE_REF, "Node type expected to be 'type ref'");
     
     // If subtypes are available then clear them and move them into the
-    // base type's name.
-    if(node->type_ref.subtype_count > 0) {
+    // base type's name. Functions are an exception and should not be
+    // flattened.
+    if(!qip_is_function_type(node) && node->type_ref.subtype_count > 0) {
         // Generate full name.
         rc = qip_ast_type_ref_get_full_name(node, &full_name);
         check(rc == 0, "Unable to generate type ref name");
@@ -425,7 +517,7 @@ int qip_ast_type_ref_dump(qip_ast_node *node, bstring ret)
     check(node != NULL, "Node required");
     check(ret != NULL, "String required");
     
-    bstring str = bformat("<type-ref name='%s'>\n", bdatae(node->type_ref.name, ""));
+    bstring str = bformat("<type-ref name='%s' arg-name='%s'>\n", bdatae(node->type_ref.name, ""), bdatae(node->type_ref.arg_name, ""));
     check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 

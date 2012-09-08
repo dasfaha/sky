@@ -151,10 +151,15 @@ int qip_ast_for_each_stmt_codegen(qip_ast_node *node, qip_module *module,
     rc = qip_ast_node_codegen(node->for_each_stmt.var_decl, module, &var_decl_value);
     check(rc == 0, "Unable to codegen for each loop variable declaration");
     
+    // Retrieve current function.
+    qip_scope *scope = NULL;
+    rc = qip_module_get_current_function_scope(module, &scope);
+    check(rc == 0 && scope != NULL, "Unable to retrieve current function scope");
+
     // Create a block for the loop.
-    LLVMBasicBlockRef loop_block  = LLVMAppendBasicBlock(module->llvm_function, "");
-    LLVMBasicBlockRef body_block  = LLVMAppendBasicBlock(module->llvm_function, "");
-    LLVMBasicBlockRef exit_block  = LLVMAppendBasicBlock(module->llvm_function, "");
+    LLVMBasicBlockRef loop_block  = LLVMAppendBasicBlock(scope->llvm_function, "");
+    LLVMBasicBlockRef body_block  = LLVMAppendBasicBlock(scope->llvm_function, "");
+    LLVMBasicBlockRef exit_block  = LLVMAppendBasicBlock(scope->llvm_function, "");
 
     LLVMBuildBr(builder, loop_block);
     LLVMPositionBuilderAtEnd(builder, loop_block);
@@ -227,9 +232,11 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_for_each_stmt_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_for_each_stmt_preprocess(qip_ast_node *node, qip_module *module,
+                                     qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -237,19 +244,19 @@ int qip_ast_for_each_stmt_preprocess(qip_ast_node *node, qip_module *module)
     
     // Preprocess variable declaration.
     if(node->for_each_stmt.var_decl != NULL) {
-        rc = qip_ast_node_preprocess(node->for_each_stmt.var_decl, module);
+        rc = qip_ast_node_preprocess(node->for_each_stmt.var_decl, module, stage);
         check(rc == 0, "Unable to preprocess for each variable declaration");
     }
     
     // Preprocess enumerator.
     if(node->for_each_stmt.enumerator != NULL) {
-        rc = qip_ast_node_preprocess(node->for_each_stmt.enumerator, module);
+        rc = qip_ast_node_preprocess(node->for_each_stmt.enumerator, module, stage);
         check(rc == 0, "Unable to preprocess for each statement enumerator");
     }
     
     // Preprocess block.
     if(node->for_each_stmt.block != NULL) {
-        rc = qip_ast_node_preprocess(node->for_each_stmt.block, module);
+        rc = qip_ast_node_preprocess(node->for_each_stmt.block, module, stage);
         check(rc == 0, "Unable to preprocess for each statement block");
     }
     
@@ -294,7 +301,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by the node.
@@ -314,17 +321,52 @@ int qip_ast_for_each_stmt_get_type_refs(qip_ast_node *node,
     check(count != NULL, "Type ref count return pointer required");
 
     // Variable declaration.
-    rc = qip_ast_node_get_type_refs(node->for_each_stmt.var_decl, type_refs, count);
-    check(rc == 0, "Unable to add variable declaration type refs");
+    if(node->for_each_stmt.var_decl) {
+        rc = qip_ast_node_get_type_refs(node->for_each_stmt.var_decl, type_refs, count);
+        check(rc == 0, "Unable to add variable declaration type refs");
+    }
 
     // Block type refs.
-    rc = qip_ast_node_get_type_refs(node->for_each_stmt.block, type_refs, count);
-    check(rc == 0, "Unable to add block type_refs");
+    if(node->for_each_stmt.block) {
+        rc = qip_ast_node_get_type_refs(node->for_each_stmt.block, type_refs, count);
+        check(rc == 0, "Unable to add block type_refs");
+    }
 
     return 0;
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_for_each_stmt_get_var_refs(qip_ast_node *node, bstring name,
+                                       qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->for_each_stmt.var_decl) {
+        rc = qip_ast_node_get_var_refs(node->for_each_stmt.var_decl, name, array);
+        check(rc == 0, "Unable to add variable declaration var refs");
+    }
+
+    if(node->for_each_stmt.block) {
+        rc = qip_ast_node_get_var_refs(node->for_each_stmt.block, name, array);
+        check(rc == 0, "Unable to add block var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

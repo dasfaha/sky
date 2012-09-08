@@ -29,7 +29,7 @@ qip_ast_node *qip_ast_string_literal_create(bstring value)
     node->generated = false;
     node->string_literal.value = bstrcpy(value);
     if(value != NULL) check_mem(node->string_literal.value);
-    node->string_literal.type_ref = qip_ast_type_ref_create_cstr("Ref");
+    node->string_literal.type_ref = qip_ast_type_ref_create_cstr("String");
     check_mem(node->string_literal.type_ref);
     return node;
 
@@ -89,9 +89,33 @@ int qip_ast_string_literal_codegen(qip_ast_node *node,
                                 qip_module *module,
                                 LLVMValueRef *value)
 {
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    check(value != NULL, "Return pointer required");
+    
     LLVMBuilderRef builder = module->compiler->llvm_builder;
-    *value = LLVMBuildGlobalStringPtr(builder, bdata(node->string_literal.value), "");
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    LLVMValueRef args[2];
+    
+    // Retrieve the string type.
+    LLVMTypeRef llvm_type = NULL;
+    rc = qip_module_get_type_ref(module, node->string_literal.type_ref, NULL, &llvm_type);
+    check(rc == 0 && llvm_type != NULL, "Unable to find LLVM string type");
+    
+    // Build a constant String structure.
+    args[0] = LLVMConstInt(LLVMInt64TypeInContext(context), blength(node->string_literal.value) + 1, true);
+    args[1] = LLVMBuildGlobalStringPtr(builder, bdata(node->string_literal.value), "");
+    LLVMValueRef llvm_struct = LLVMConstNamedStruct(llvm_type, args, 2);
+    
+    // Build a global with the appropriate initializer.
+    *value = LLVMAddGlobal(module->llvm_module, llvm_type, "");
+    LLVMSetInitializer(*value, llvm_struct);
+    
     return 0;
+
+error:
+    return -1;
 }
 
 

@@ -27,9 +27,7 @@ qip_ast_node *qip_ast_freturn_create(struct qip_ast_node *value)
     node->line_no = node->char_no = 0;
     node->generated = false;
     node->freturn.value = value;
-    if(value) {
-        value->parent = node;
-    }
+    if(value) value->parent = node;
 
     return node;
 
@@ -126,9 +124,11 @@ error:
 //
 // node   - The node to validate.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_freturn_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_freturn_preprocess(qip_ast_node *node, qip_module *module,
+                               qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -136,7 +136,7 @@ int qip_ast_freturn_preprocess(qip_ast_node *node, qip_module *module)
 
     // Preprocess value.
     if(node->freturn.value != NULL) {
-        rc = qip_ast_node_preprocess(node->freturn.value, module);
+        rc = qip_ast_node_preprocess(node->freturn.value, module, stage);
         check(rc == 0, "Unable to preprocess return value");
     }
 

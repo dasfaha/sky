@@ -50,11 +50,22 @@ bin:
 
 
 ################################################################################
+# Qip
+################################################################################
+
+src/qip/lexer.o: src/qip/lexer.c
+	$(CC) $(CFLAGS) -Wno-unused-parameter -Wno-unused-function -Isrc -c -o $@ $<
+
+src/qip/parser.o: src/qip/parser.c
+	$(CC) $(CFLAGS) -Wno-unused-parameter -Isrc -c -o $@ $<
+
+
+################################################################################
 # Tests
 ################################################################################
 
 .PHONY: test
-test: $(TEST_OBJECTS)
+test: $(TEST_OBJECTS) tmp
 	@sh ./tests/runtests.sh
 
 $(TEST_OBJECTS): %: %.c bin/libsky.a
@@ -63,8 +74,11 @@ $(TEST_OBJECTS): %: %.c bin/libsky.a
 
 
 ################################################################################
-# Clean up
+# Misc
 ################################################################################
+
+tmp:
+	mkdir -p tmp
 
 clean: 
 	rm -rf bin ${OBJECTS} ${TEST_OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}

@@ -36,6 +36,13 @@ void qip_ast_var_decl_free(qip_ast_node *node);
 int qip_ast_var_decl_copy(qip_ast_node *node, qip_ast_node **ret);
 
 //--------------------------------------
+// Hierarchy
+//--------------------------------------
+
+int qip_ast_var_decl_replace(qip_ast_node *node, qip_ast_node *old_node,
+    qip_ast_node *new_node);
+
+//--------------------------------------
 // Codegen
 //--------------------------------------
 
@@ -49,14 +56,18 @@ int qip_ast_var_decl_codegen_destroy(qip_ast_node *node, qip_module *module,
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_var_decl_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_var_decl_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 int qip_ast_var_decl_get_type_refs(qip_ast_node *node,
     qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_var_decl_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Dependencies

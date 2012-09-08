@@ -42,9 +42,17 @@ int qip_ast_block_copy(qip_ast_node *node, qip_ast_node **ret);
 // Expression Management
 //--------------------------------------
 
+int qip_ast_block_get_expr_index(qip_ast_node *node, qip_ast_node *expr,
+    int32_t *ret);
+
 int qip_ast_block_add_expr(qip_ast_node *block, qip_ast_node *expr);
 
+int qip_ast_block_insert_expr(qip_ast_node *node, qip_ast_node *expr,
+    unsigned int index);
+
 int qip_ast_block_prepend_expr(qip_ast_node *block, qip_ast_node *expr);
+
+int qip_ast_block_remove_expr(qip_ast_node *block, qip_ast_node *expr);
 
 int qip_ast_block_add_exprs(qip_ast_node *block,
     qip_ast_node **exprs, unsigned int expr_count);
@@ -69,22 +77,21 @@ int qip_ast_block_codegen(qip_ast_node *node, qip_module *module,
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_block_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_block_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
-// Types
+// Find
 //--------------------------------------
 
 int qip_ast_block_get_var_decl(qip_ast_node *node, bstring name,
     qip_ast_node **var_decl);
 
-
-//--------------------------------------
-// Type refs
-//--------------------------------------
-
 int qip_ast_block_get_type_refs(qip_ast_node *node,
     qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_block_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Dependencies

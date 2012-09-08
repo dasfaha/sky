@@ -2,8 +2,10 @@
 #include <stdbool.h>
 #include "dbg.h"
 
+#include "array.h"
 #include "llvm.h"
 #include "node.h"
+#include "util.h"
 
 #include <llvm-c/Core.h>
 #include <llvm-c/Analysis.h>
@@ -21,7 +23,18 @@ int qip_ast_function_codegen_prototype(qip_ast_node *node, qip_module *module,
 int qip_ast_function_generate_external_call(qip_ast_node *node,
     qip_module *module, LLVMBasicBlockRef block);
 
+int qip_ast_function_bind(qip_ast_node *node, qip_module *module);
 
+int qip_ast_function_bind_var_decl(qip_ast_node *node, qip_module *module,
+    qip_ast_node *var_decl);
+
+int qip_ast_function_bind_apply(qip_ast_node *node, qip_module *module,
+    qip_ast_node *target_node);
+
+int qip_ast_function_bind_with_type_ref(qip_ast_node *node, qip_module *module,
+    qip_ast_node *type_ref);
+
+    
 //==============================================================================
 //
 // Functions
@@ -42,11 +55,9 @@ qip_ast_node *qip_ast_function_create(bstring name, qip_ast_node *return_type,
                             struct qip_ast_node **args, unsigned int arg_count,
                             struct qip_ast_node *body)
 {
-    qip_ast_node *node = malloc(sizeof(qip_ast_node)); check_mem(node);
+    qip_ast_node *node = calloc(1, sizeof(qip_ast_node)); check_mem(node);
     node->type = QIP_AST_TYPE_FUNCTION;
-    node->parent = NULL;
-    node->line_no = node->char_no = 0;
-    node->generated = false;
+    node->function.bound = true;
     node->function.name = bstrcpy(name);
     if(name) check_mem(node->function.name);
     
@@ -210,9 +221,8 @@ int qip_ast_function_codegen(qip_ast_node *node, qip_module *module,
     check(rc == 0, "Unable to generate function prototype");
     
     // Store the current function on the module.
-    module->llvm_function = func;
-    module->llvm_last_alloca = NULL;
-    rc = qip_module_push_scope(module, node);
+    qip_scope *scope = qip_scope_create_function(func); check_mem(scope);
+    rc = qip_module_push_scope(module, scope);
     check(rc == 0, "Unable to add function scope");
 
     // Grab the External metadata node if there is one.
@@ -221,7 +231,7 @@ int qip_ast_function_codegen(qip_ast_node *node, qip_module *module,
     check(rc == 0, "Unable to retrieve external metadata node");
     
     // Generate basic block for body.
-    LLVMBasicBlockRef block = LLVMAppendBasicBlock(module->llvm_function, "");
+    LLVMBasicBlockRef block = LLVMAppendBasicBlock(scope->llvm_function, "");
 
     // Generate function arguments.
     LLVMPositionBuilderAtEnd(builder, block);
@@ -238,6 +248,16 @@ int qip_ast_function_codegen(qip_ast_node *node, qip_module *module,
     else if(node->function.body != NULL) {
         rc = qip_ast_block_codegen_with_block(node->function.body, module, block);
         check(rc == 0, "Unable to generate function body statements");
+
+        // If this is a void return type and there is no explicit return then
+        // add one before the end.
+        if(qip_ast_type_ref_is_void(node->function.return_type)) {
+            if(node->function.body->block.expr_count > 0 &&
+               node->function.body->block.exprs[node->function.body->block.expr_count-1]->type != QIP_AST_TYPE_FRETURN)
+            {
+                LLVMBuildRetVoid(builder);
+            }
+        }
     }
     // If there's no body or it's not external then we have a problem.
     else {
@@ -245,19 +265,28 @@ int qip_ast_function_codegen(qip_ast_node *node, qip_module *module,
     }
     
     // Dump before verification.
-    // LLVMDumpValue(func);
+    //LLVMDumpValue(func);
     
     // Verify function.
     rc = LLVMVerifyFunction(func, LLVMPrintMessageAction);
     check(rc != 1, "Invalid function");
 
     // Unset the current function.
-    rc = qip_module_pop_scope(module, node);
+    rc = qip_module_pop_scope(module);
     check(rc == 0, "Unable to remove function scope");
-    module->llvm_function = NULL;
-    if(module->llvm_last_alloca != NULL) {
-        LLVMInstructionEraseFromParent(module->llvm_last_alloca);
-        module->llvm_last_alloca = NULL;
+    if(scope->llvm_last_alloca != NULL) {
+        LLVMInstructionEraseFromParent(scope->llvm_last_alloca);
+        scope->llvm_last_alloca = NULL;
+    }
+
+    // Reset the builder position at the end of the new function scope if
+    // one still exists.
+    qip_scope *new_scope = NULL;
+    rc = qip_module_get_current_function_scope(module, &new_scope);
+    check(rc == 0, "Unable to retrieve new function scope");
+    
+    if(new_scope != NULL) {
+        LLVMPositionBuilderAtEnd(builder, LLVMGetLastBasicBlock(new_scope->llvm_function));
     }
 
     // Return function as a value.
@@ -266,8 +295,6 @@ int qip_ast_function_codegen(qip_ast_node *node, qip_module *module,
     return 0;
 
 error:
-    // Unset the current function.
-    module->llvm_function = NULL;
     //if(func) LLVMDeleteFunction(func);
     *value = NULL;
     return -1;
@@ -420,12 +447,9 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
 
         // Create arguments.
         for(i=0; i<arg_count; i++) {
-            arg = node->function.args[i];
-            rc = qip_ast_type_ref_get_full_name(arg->farg.var_decl->var_decl.type, &arg_type_name);
-            check(rc == 0, "Unable to retrieve function arg type name");
-            
+            qip_ast_node *arg = node->function.args[i];
             LLVMTypeRef param = NULL;
-            rc = qip_module_get_type_ref(module, arg_type_name, NULL, &param);
+            rc = qip_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &param);
             check(rc == 0, "Unable to determine function argument type");
         
             // Pass argument as reference if this is a complex type.
@@ -438,13 +462,9 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
             }
         }
 
-        // Retrieve type name.
-        rc = qip_ast_type_ref_get_full_name(node->function.return_type, &return_type_name);
-        check(rc == 0, "Unable to retrieve full return type name");
-        
         // Determine return type.
         LLVMTypeRef return_type;
-        rc = qip_module_get_type_ref(module, return_type_name, NULL, &return_type);
+        rc = qip_module_get_type_ref(module, node->function.return_type, NULL, &return_type);
         check(rc == 0, "Unable to determine function return type");
 
         if(qip_llvm_is_complex_type(return_type)) {
@@ -501,6 +521,11 @@ int qip_ast_function_codegen_args(qip_ast_node *node, qip_module *module)
     LLVMBuilderRef builder = module->compiler->llvm_builder;
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
+    // Retrieve current function scope.
+    qip_scope *scope = NULL;
+    rc = qip_module_get_current_function_scope(module, &scope);
+    check(rc == 0 && scope != NULL, "Unable to retrieve current function scope");
+
     // Codegen allocas.
     LLVMValueRef *values = malloc(sizeof(LLVMValueRef) * node->function.arg_count);
     check_mem(values);
@@ -510,11 +535,11 @@ int qip_ast_function_codegen_args(qip_ast_node *node, qip_module *module)
         check(rc == 0, "Unable to determine function argument type");
     }
     
-    module->llvm_last_alloca = LLVMBuildAlloca(builder, LLVMInt1TypeInContext(context), "nop");
+    scope->llvm_last_alloca = LLVMBuildAlloca(builder, LLVMInt1TypeInContext(context), "nop");
     
     // Codegen store instructions.
     for(i=0; i<node->function.arg_count; i++) {
-        LLVMValueRef param = LLVMGetParam(module->llvm_function, i);
+        LLVMValueRef param = LLVMGetParam(scope->llvm_function, i);
         LLVMValueRef build_value = LLVMBuildStore(builder, param, values[i]);
         check(build_value != NULL, "Unable to create store instruction");
     }
@@ -562,9 +587,11 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_function_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_function_preprocess(qip_ast_node *node, qip_module *module,
+                                qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -573,14 +600,23 @@ int qip_ast_function_preprocess(qip_ast_node *node, qip_module *module)
     // Preprocess argument types.
     uint32_t i;
     for(i=0; i<node->function.arg_count; i++) {
-        rc = qip_ast_node_preprocess(node->function.args[i], module);
+        rc = qip_ast_node_preprocess(node->function.args[i], module, stage);
         check(rc == 0, "Unable to preprocess function argument type");
     }
 
     // Preprocess block.
     if(node->function.body != NULL) {
-        rc = qip_ast_node_preprocess(node->function.body, module);
+        rc = qip_ast_node_preprocess(node->function.body, module, stage);
         check(rc == 0, "Unable to preprocess function body");
+    }
+
+    if(stage == QIP_AST_PROCESSING_STAGE_INITIALIZED) {
+        // If this is a late binding function then apply arg and return types
+        // once all modules have been loaded.
+        if(!node->function.bound) {
+            rc = qip_ast_function_bind(node, module);
+            check(rc == 0, "Unable to bind function");
+        }
     }
 
     return 0;
@@ -670,7 +706,14 @@ int qip_ast_function_generate_return_type(qip_ast_node *node,
         }
         // Otherwise check the last return value to determine its type.
         else {
-            rc = qip_ast_node_get_type(freturn->freturn.value, module, &type);
+            // Retrieve the last variable reference in a chain to determine the type.
+            qip_ast_node *target_node = freturn->freturn.value;
+            if(target_node->type == QIP_AST_TYPE_VAR_REF) {
+                rc = qip_ast_var_ref_get_last_member(target_node, &target_node);
+                check(rc == 0, "Unable to retrieve last member of return var ref");
+            }
+            
+            rc = qip_ast_node_get_type(target_node, module, &type);
             check(rc == 0, "Unable to determine return type");
         }
 
@@ -728,22 +771,31 @@ int qip_ast_function_get_qualified_name(qip_ast_node *node, bstring *name)
     int rc;
     check(node != NULL, "Node required");
     check(name != NULL, "Name return pointer required");
-    
-    // Find the class this function belongs to, if any.
-    qip_ast_node *class_ast = NULL;
-    rc = qip_ast_function_get_class(node, &class_ast);
-    check(rc == 0, "Unable to retrieve parent class for function");
 
-    // Function name should be prepended with the class name if this is a method.
-    bool is_method = (class_ast != NULL);
-    if(is_method) {
-        check(blength(class_ast->class.name) > 0, "Class name required for method");
-        *name = bformat("%s.%s", bdata(class_ast->class.name), bdata(node->function.name));
-        check_mem(*name);
+    // Initialize return value.
+    if(name) *name = NULL;
+    
+    // Only generate a name if this is not an anonymous function.
+    if(node->function.name != NULL) {
+        // Find the class this function belongs to, if any.
+        qip_ast_node *class_ast = NULL;
+        rc = qip_ast_function_get_class(node, &class_ast);
+        check(rc == 0, "Unable to retrieve parent class for function");
+
+        // Function name should be prepended with the class name if this is a method.
+        bool is_method = (class_ast != NULL);
+        if(is_method) {
+            check(blength(class_ast->class.name) > 0, "Class name required for method");
+            *name = bformat("%s.%s", bdata(class_ast->class.name), bdata(node->function.name));
+            check_mem(*name);
+        }
+        else {
+            *name = bstrcpy(node->function.name);
+            check_mem(*name);
+        }
     }
     else {
-        *name = bstrcpy(node->function.name);
-        check_mem(*name);
+        *name = bfromcstr("");
     }
 
     return 0;
@@ -792,7 +844,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type refs used by the node.
@@ -834,6 +886,43 @@ int qip_ast_function_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_function_get_var_refs(qip_ast_node *node, bstring name,
+                                  qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->function.return_type != NULL) {
+        rc = qip_ast_node_get_var_refs(node->function.return_type, name, array);
+        check(rc == 0, "Unable to add function return var refs");
+    }
+
+    uint32_t i;
+    for(i=0; i<node->function.arg_count; i++) {
+        rc = qip_ast_node_get_var_refs(node->function.args[i], name, array);
+        check(rc == 0, "Unable to add function argument var refs");
+    }
+
+    if(node->function.body != NULL) {
+        rc = qip_ast_node_get_var_refs(node->function.body, name, array);
+        check(rc == 0, "Unable to add function body var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 
@@ -940,6 +1029,241 @@ int qip_ast_function_validate(qip_ast_node *node, qip_module *module)
 error:
     bdestroy(msg);
     return -1;   
+}
+
+
+//--------------------------------------
+// Binding
+//--------------------------------------
+
+// Performs binding of an unbound function. This involves applying argument
+// and return types everywhere the function is used.
+//
+// node   - The node.
+// module - The module that the node is a part of.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_function_bind(qip_ast_node *node, qip_module *module)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+
+    // Ignore if the function is already bound.
+    if(node->function.bound) {
+        return 0;
+    }
+    
+    // If function is assigned to a variable then apply binding to all
+    // references to the variable.
+    if(node->parent && node->parent->type == QIP_AST_TYPE_VAR_DECL) {
+        rc = qip_ast_function_bind_var_decl(node, module, node->parent);
+        check(rc == 0, "Unable to bind to variable");
+    }
+    // Otherwise apply the binding in-place.
+    else {
+        rc = qip_ast_function_bind_apply(node, module, node);
+        check(rc == 0, "Unable to apply in-place binding");
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
+// Performs late binding of a function to all references of a variable.
+//
+// node     - The node.
+// module   - The module that the node is a part of.
+// var_decl - The variable declaration that the function is bound to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_function_bind_var_decl(qip_ast_node *node, qip_module *module,
+                                   qip_ast_node *var_decl)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    check(var_decl != NULL, "Variable declaration required");
+    
+    // Retrieve the block the variable declaration is defined in.
+    qip_ast_node *block = var_decl->parent;
+    check(block != NULL, "Variable declaration must have a parent");
+    check(block->type == QIP_AST_TYPE_BLOCK, "Variable declaration must be defined in a block: '%s'", bdata(var_decl->var_decl.name));
+    
+    // Find all references to the variable.
+    qip_array *array = qip_array_create(); check_mem(array);
+    rc = qip_ast_block_get_var_refs(block, var_decl->var_decl.name, array);
+    check(rc == 0, "Unable to find variable references: '%s'", bdata(var_decl->var_decl.name));
+    
+    // Bind all references to the variable.
+    uint32_t i;
+    for(i=0; i<array->length; i++) {
+        qip_ast_node *var_ref = array->elements[i];
+        rc = qip_ast_function_bind_apply(node, module, var_ref);
+        check(rc == 0, "Unable to apply binding to function reference");
+    }
+    
+    // Remove original variable declaration.
+    rc = qip_ast_block_remove_expr(block, var_decl);
+    check(rc == 0, "Unable to remove variable declaration from block");
+    
+    // Clean up.
+    qip_array_free(array);
+    
+    return 0;
+
+error:
+    qip_array_free(array);
+    return -1;
+}
+
+// Binds a function to a target based on the signature of the target. This
+// currently only works when referencing unbound functions in a function call.
+// The function argument acts as a placeholder and will be replaced by a bound
+// version of the function.
+//
+// node        - The unbound function node.
+// module      - The module that the node is a part of.
+// target_node - The node that is referencing the unbound function.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_function_bind_apply(qip_ast_node *node, qip_module *module,
+                                qip_ast_node *target_node)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_FUNCTION, "Node type must be 'function'");
+    check(!node->function.bound, "Cannot apply binding to bound function");
+    check(module != NULL, "Module required");
+    check(target_node != NULL, "Target node required");
+    
+    // Copy the unbound function.
+    qip_ast_node *bound_node = NULL;
+    rc = qip_ast_node_copy(node, &bound_node);
+    check(rc == 0, "Unable to copy unbound function");
+    
+    // It's not bound yet.
+    bound_node->function.bound = false;
+    
+    // Replace the function argument with the bound function.
+    if(target_node->parent->type == QIP_AST_TYPE_VAR_REF && target_node->parent->var_ref.type == QIP_AST_VAR_REF_TYPE_INVOKE) {
+        unsigned int i;
+        int32_t index = -1;
+        for(i=0; i<target_node->parent->var_ref.arg_count; i++) {
+            qip_ast_node *arg = target_node->parent->var_ref.args[i];
+            if(arg == target_node) {
+                index = (int32_t)i;
+                break;
+            }
+        }
+        
+        // Raise error if target node is not part of the function call args.
+        if(index == -1) {
+            sentinel("Target node is not in parent call argument list");
+        }
+        
+        // Retrieve original function AST node that is being invoked.
+        qip_ast_node *function = NULL;
+        rc = qip_ast_var_ref_get_invoke_function(target_node->parent, module, &function);
+        check(rc == 0, "Unable to retrieve calling function");
+        
+        // Offset the index by one if this is a method.
+        uint32_t arg_index = index + (function->parent && function->parent->type == QIP_AST_TYPE_METHOD ? 1 : 0);
+
+        // Apply function argument type.
+        qip_ast_node *arg_type_ref = function->function.args[arg_index]->farg.var_decl->var_decl.type;
+        rc = qip_ast_function_bind_with_type_ref(bound_node, module, arg_type_ref);
+        check(rc == 0, "Unable to bind with type ref");
+        
+        // Swap out argument with bound function.
+        qip_ast_node_free(target_node->parent->var_ref.args[index]);
+        target_node->parent->var_ref.args[index] = bound_node;
+        bound_node->parent = target_node->parent;
+        
+        // Mark as bound.
+        bound_node->function.bound = true;
+    }
+    else {
+        sentinel("Invalid use of an unbound function");
+    }
+    
+    return 0;
+
+error:
+    qip_ast_node_free(bound_node);
+    return -1;
+}
+
+// Generates function arguments and returns type for an unbound function based
+// on a function type ref.
+//
+// node     - The unbound function node.
+// module   - The module.
+// type_ref - The type ref to bind to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_function_bind_with_type_ref(qip_ast_node *node, qip_module *module,
+                                        qip_ast_node *type_ref)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_FUNCTION, "Node type must be 'function'");
+    check(node->function.arg_count == 0, "Function cannot have existing arguments");
+    check(node->function.return_type == NULL, "Function cannot have an existing return type");
+    check(module != NULL, "Module required");
+    check(type_ref != NULL, "Type ref required");
+    check(qip_is_function_type(type_ref), "Type ref must be a 'Function' type");
+    
+    // Generate function arguments.
+    unsigned int i;
+    qip_ast_node *arg_type_ref = NULL;
+    qip_ast_node *farg = NULL;
+    qip_ast_node *var_decl = NULL;
+    for(i=0; i<type_ref->type_ref.subtype_count; i++) {
+        qip_ast_node *subtype = type_ref->type_ref.subtypes[i];
+        check(subtype->type_ref.arg_name != NULL, "Subtype argument name required");
+        
+        // Copy subtype.
+        arg_type_ref = NULL;
+        rc = qip_ast_type_ref_copy(subtype, &arg_type_ref);
+        check(rc == 0, "Unable to copy subtype to argument type");
+        
+        // Clear argument name.
+        bdestroy(arg_type_ref->type_ref.arg_name);
+        arg_type_ref->type_ref.arg_name = NULL;
+        
+        // Create function argument.
+        var_decl = qip_ast_var_decl_create(subtype, subtype->type_ref.arg_name, NULL);
+        check_mem(var_decl);
+        farg = qip_ast_farg_create(var_decl); check_mem(farg);
+        
+        // Add argument.
+        rc = qip_ast_function_add_arg(node, farg);
+        check(rc == 0, "Unable to add function argument");
+    }
+
+    // If we have a return type then apply it.
+    qip_ast_node *return_type = NULL;
+    if(type_ref->type_ref.return_type != NULL) {
+        rc = qip_ast_type_ref_copy(type_ref->type_ref.return_type, &return_type);
+        check(rc == 0, "Unable to copy return type");
+    }
+    // Otherwise set the return type to 'void'.
+    else {
+        return_type = qip_ast_type_ref_create_cstr("void");
+        check_mem(return_type);
+    }
+    node->function.return_type = return_type;
+    return_type->parent = node;
+    
+    return 0;
+
+error:
+    qip_ast_node_free(farg);
+    qip_ast_node_free(return_type);
+    return -1;
 }
 
 

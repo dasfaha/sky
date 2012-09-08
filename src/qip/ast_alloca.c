@@ -13,26 +13,22 @@
 // Lifecycle
 //--------------------------------------
 
-// Creates an AST node for a sizeof invocation.
+// Creates an AST node for a alloca invocation.
 //
 // name - The name of the variable value.
 // ret  - A pointer to where the ast node will be returned.
 //
 // Returns a variable reference node.
-qip_ast_node *qip_ast_sizeof_create(qip_ast_node *type_ref)
+qip_ast_node *qip_ast_alloca_create(qip_ast_node *expr)
 {
-    qip_ast_node *node = malloc(sizeof(qip_ast_node)); check_mem(node);
-    node->type = QIP_AST_TYPE_SIZEOF;
-    node->parent = NULL;
-    node->line_no = node->char_no = 0;
-    node->generated = false;
+    qip_ast_node *node = calloc(1, sizeof(qip_ast_node)); check_mem(node);
+    node->type = QIP_AST_TYPE_ALLOCA;
+    node->alloca.expr = expr;
+    if(expr != NULL) expr->parent = node;
 
-    node->szof.type_ref = type_ref;
-    if(type_ref != NULL) type_ref->parent = node;
-
-    node->szof.return_type_ref = qip_ast_type_ref_create_cstr("Int");
-    check_mem(node->szof.return_type_ref);
-    node->szof.return_type_ref->parent = node;
+    node->alloca.return_type_ref = qip_ast_type_ref_create_cstr("Ref");
+    check_mem(node->alloca.return_type_ref);
+    node->alloca.return_type_ref->parent = node;
 
     return node;
 
@@ -44,14 +40,14 @@ error:
 // Frees a variable reference AST node from memory.
 //
 // node - The AST node to free.
-void qip_ast_sizeof_free(qip_ast_node *node)
+void qip_ast_alloca_free(qip_ast_node *node)
 {
     if(node != NULL) {
-        qip_ast_node_free(node->szof.type_ref);
-        node->szof.type_ref = NULL;
+        qip_ast_node_free(node->alloca.expr);
+        node->alloca.expr = NULL;
         
-        qip_ast_node_free(node->szof.return_type_ref);
-        node->szof.return_type_ref = NULL;
+        qip_ast_node_free(node->alloca.return_type_ref);
+        node->alloca.return_type_ref = NULL;
     }
 }
 
@@ -61,18 +57,18 @@ void qip_ast_sizeof_free(qip_ast_node *node)
 // ret  - A pointer to where the new copy should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_copy(qip_ast_node *node, qip_ast_node **ret)
+int qip_ast_alloca_copy(qip_ast_node *node, qip_ast_node **ret)
 {
     int rc;
     check(node != NULL, "Node required");
     check(ret != NULL, "Return pointer required");
 
-    qip_ast_node *clone = qip_ast_sizeof_create(NULL);
+    qip_ast_node *clone = qip_ast_alloca_create(NULL);
     check_mem(clone);
 
-    rc = qip_ast_node_copy(node->szof.type_ref, &clone->szof.type_ref);
-    check(rc == 0, "Unable to copy type");
-    if(clone->szof.type_ref) clone->szof.type_ref->parent = clone;
+    rc = qip_ast_node_copy(node->alloca.expr, &clone->alloca.expr);
+    check(rc == 0, "Unable to copy expression");
+    if(clone->alloca.expr) clone->alloca.expr->parent = clone;
     
     *ret = clone;
     return 0;
@@ -88,42 +84,32 @@ error:
 // Codegen
 //--------------------------------------
 
-// Recursively generates LLVM code for the variable reference AST node.
+// Recursively generates LLVM code for the AST node.
 //
-// node    - The node to generate an LLVM value for.
-// module  - The compilation unit this node is a part of.
+// node    - The node.
+// module  - The module.
 // value   - A pointer to where the LLVM value should be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_codegen(qip_ast_node *node, qip_module *module,
+int qip_ast_alloca_codegen(qip_ast_node *node, qip_module *module,
                            LLVMValueRef *value)
 {
     int rc;
     check(node != NULL, "Node required");
-    check(node->type == QIP_AST_TYPE_SIZEOF, "Node type expected to be 'sizeof'");
+    check(node->type == QIP_AST_TYPE_ALLOCA, "Node type expected to be 'alloca'");
     check(module != NULL, "Module required");
 
     LLVMBuilderRef builder = module->compiler->llvm_builder;
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
-    // Retrieve LLVM type.
-    LLVMTypeRef type;
-    rc = qip_module_get_type_ref(module, node->szof.type_ref, NULL, &type);
-    check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(node->szof.type_ref->type_ref.name));
-
-    // Create a null pointer.
-    LLVMValueRef null_ptr = LLVMConstPointerNull(LLVMPointerType(type, 0));
-
-    // Create a pointer to element 1 of a null array.
-    LLVMValueRef indices[1];
-    indices[0] = LLVMConstInt(LLVMInt64TypeInContext(context), 1, true);
-    LLVMValueRef ptr = LLVMBuildGEP(builder, null_ptr, indices, 1, "");
-    check(ptr != NULL, "Unable to create null pointer offset");
+    // Generate number of bytes to allocate from expression.
+    LLVMValueRef expr_value = NULL;
+    rc = qip_ast_node_codegen(node->alloca.expr, module, &expr_value);
+    check(rc == 0, "Unable to codegen alloca expression");
     
-    // Cast pointer to an int and return.
-    *value = LLVMBuildPtrToInt(builder, ptr, LLVMInt64TypeInContext(context), "");
-    check((*value) != NULL, "Unable cast pointer to int");
-    
+    // Allocate space for the data.
+    *value = LLVMBuildArrayAlloca(builder, LLVMInt8TypeInContext(context), expr_value, "");
+
     return 0;
 
 error:
@@ -142,7 +128,7 @@ error:
 // module - The module that the node is a part of.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_alloca_preprocess(qip_ast_node *node, qip_module *module)
 {
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
@@ -164,12 +150,12 @@ error:
 // ret  - A pointer to where the type should be returned.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_get_type(qip_ast_node *node, qip_ast_node **ret)
+int qip_ast_alloca_get_type(qip_ast_node *node, qip_ast_node **ret)
 {
     check(node != NULL, "Node required");
-    check(node->type == QIP_AST_TYPE_SIZEOF, "Node type must be 'sizeof'");
+    check(node->type == QIP_AST_TYPE_ALLOCA, "Node type must be 'alloca'");
 
-    *ret = node->szof.return_type_ref;
+    *ret = node->alloca.return_type_ref;
     return 0;
 
 error:
@@ -189,7 +175,7 @@ error:
 // count     - A pointer to where the number of type refs is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_get_type_refs(qip_ast_node *node,
+int qip_ast_alloca_get_type_refs(qip_ast_node *node,
                                  qip_ast_node ***type_refs,
                                  uint32_t *count)
 {
@@ -198,9 +184,9 @@ int qip_ast_sizeof_get_type_refs(qip_ast_node *node,
     check(type_refs != NULL, "Type refs return pointer required");
     check(count != NULL, "Type ref count return pointer required");
 
-    // Add type.
-    rc = qip_ast_node_get_type_refs(node->szof.type_ref, type_refs, count);
-    check(rc == 0, "Unable to add sizeof type ref");
+    // Add expression type.
+    rc = qip_ast_node_get_type_refs(node->alloca.expr, type_refs, count);
+    check(rc == 0, "Unable to add alloca expression types");
 
     return 0;
     
@@ -221,7 +207,7 @@ error:
 // count        - A pointer to where the number of dependencies is stored.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_get_dependencies(qip_ast_node *node,
+int qip_ast_alloca_get_dependencies(qip_ast_node *node,
                                     bstring **dependencies,
                                     uint32_t *count)
 {
@@ -230,9 +216,8 @@ int qip_ast_sizeof_get_dependencies(qip_ast_node *node,
     check(dependencies != NULL, "Dependencies return pointer required");
     check(count != NULL, "Dependency count return pointer required");
 
-    // Type ref.
-    rc = qip_ast_node_get_dependencies(node->szof.type_ref, dependencies, count);
-    check(rc == 0, "Unable to add sizeof dependencies");
+    rc = qip_ast_node_get_dependencies(node->alloca.expr, dependencies, count);
+    check(rc == 0, "Unable to add alloca expr dependencies");
 
     return 0;
     
@@ -252,15 +237,14 @@ error:
 // module - The module that the node is a part of.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_sizeof_validate(qip_ast_node *node, qip_module *module)
+int qip_ast_alloca_validate(qip_ast_node *node, qip_module *module)
 {
     int rc;
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
 
-    // Type ref.
-    rc = qip_ast_node_validate(node->szof.type_ref, module);
-    check(rc == 0, "Unable to validate sizeof type ref");
+    rc = qip_ast_node_validate(node->alloca.expr, module);
+    check(rc == 0, "Unable to validate alloca expr");
     
     return 0;
 
@@ -279,19 +263,19 @@ error:
 // ret  - A pointer to the bstring to concatenate to.
 //
 // Return 0 if successful, otherwise returns -1.s
-int qip_ast_sizeof_dump(qip_ast_node *node, bstring ret)
+int qip_ast_alloca_dump(qip_ast_node *node, bstring ret)
 {
     int rc;
     check(node != NULL, "Node required");
     check(ret != NULL, "String required");
     
-    bstring str = bfromcstr("<sizeof>\n"); check_mem(str);
+    bstring str = bfromcstr("<alloca>\n"); check_mem(str);
     check(bconcat(ret, str) == BSTR_OK, "Unable to append dump");
 
     // Recursively dump children.
-    if(node->szof.type_ref != NULL) {
-        rc = qip_ast_node_dump(node->szof.type_ref, ret);
-        check(rc == 0, "Unable to dump type ref");
+    if(node->alloca.expr != NULL) {
+        rc = qip_ast_node_dump(node->alloca.expr, ret);
+        check(rc == 0, "Unable to dump expr");
     }
 
     return 0;

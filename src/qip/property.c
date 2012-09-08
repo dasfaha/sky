@@ -158,9 +158,11 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_property_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_property_preprocess(qip_ast_node *node, qip_module *module,
+                                qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -169,12 +171,12 @@ int qip_ast_property_preprocess(qip_ast_node *node, qip_module *module)
     // Preprocess metadata.
     unsigned int i;
     for(i=0; i<node->property.metadata_count; i++) {
-        rc = qip_ast_node_preprocess(node->property.metadatas[i], module);
+        rc = qip_ast_node_preprocess(node->property.metadatas[i], module, stage);
         check(rc == 0, "Unable to preprocess property metadata");
     }
 
     // Preprocess variable declaration
-    rc = qip_ast_node_preprocess(node->property.var_decl, module);
+    rc = qip_ast_node_preprocess(node->property.var_decl, module, stage);
     check(rc == 0, "Unable to preprocess property variable declaration");
     
     return 0;
@@ -218,7 +220,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by a node.
@@ -246,6 +248,32 @@ int qip_ast_property_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_property_get_var_refs(qip_ast_node *node, bstring name,
+                                  qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->property.var_decl != NULL) {
+        rc = qip_ast_node_get_var_refs(node->property.var_decl, name, array);
+        check(rc == 0, "Unable to add property variable declaration var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 
@@ -305,12 +333,9 @@ int qip_ast_property_generate_initializer(qip_ast_node *node,
     struct tagbstring this_str = bsStatic("this");
 
     // Generate access to the property.
-    qip_ast_node *var_ref = qip_ast_var_ref_create(&this_str);
-    var_ref->generated = true;
+    qip_ast_node *var_ref = qip_ast_var_ref_create_property_access(&this_str, node->property.var_decl->var_decl.name);
     check_mem(var_ref);
-    qip_ast_node *staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, var_ref, node->property.var_decl->var_decl.name, NULL, 0);
-    staccess->generated = true;
-    check_mem(staccess);
+    var_ref->generated = true;
     
     // Generate value depending on the type.
     qip_ast_node *value = NULL;
@@ -334,7 +359,7 @@ int qip_ast_property_generate_initializer(qip_ast_node *node,
     value->generated = true;
 
     // Generate assignment.
-    qip_ast_node *var_assign = qip_ast_var_assign_create(staccess, value);
+    qip_ast_node *var_assign = qip_ast_var_assign_create(var_ref, value);
     check_mem(var_assign);
     var_assign->generated = true;
     

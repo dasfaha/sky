@@ -690,7 +690,6 @@ int qip_ast_class_codegen_type(qip_module *module, qip_ast_node *node)
 {
     int rc;
     unsigned int i;
-    bstring property_type_name = NULL;
 
     check(module != NULL, "Module required");
     check(node != NULL, "Node required");
@@ -712,21 +711,15 @@ int qip_ast_class_codegen_type(qip_module *module, qip_ast_node *node)
         if(property_count == 0) {
             elements = malloc(sizeof(LLVMTypeRef));
             element_count = 1;
-            property_type_name = bfromcstr("Int");
-            rc = qip_module_get_type_ref(module, property_type_name, NULL, &elements[0]);
-            check(rc == 0, "Unable to retrieve Int type");
-            bdestroy(property_type_name);
+            elements[0] = LLVMInt64TypeInContext(context);
         }
         else {
             element_count = property_count;
             elements = malloc(sizeof(LLVMTypeRef) * property_count);
             for(i=0; i<property_count; i++) {
                 qip_ast_node *property = node->class.properties[i];
-                rc = qip_ast_type_ref_get_full_name(property->property.var_decl->var_decl.type, &property_type_name);
-                check(rc == 0, "Unable to retrieve full name of property type");
-                rc = qip_module_get_type_ref(module, property_type_name, NULL, &elements[i]);
-                check(rc == 0, "Unable to retrieve type: %s", bdata(property_type_name));
-                bdestroy(property_type_name);
+                rc = qip_module_get_type_ref(module, property->property.var_decl->var_decl.type, NULL, &elements[i]);
+                check(rc == 0, "Unable to retrieve type: %s", bdata(property->property.var_decl->var_decl.type->type_ref.name));
             }
         }
 
@@ -741,7 +734,6 @@ int qip_ast_class_codegen_type(qip_module *module, qip_ast_node *node)
     return 0;
     
 error:
-    bdestroy(property_type_name);
     return -1;
 }
 
@@ -784,38 +776,44 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_class_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_class_preprocess(qip_ast_node *node, qip_module *module,
+                             qip_ast_processing_stage_e stage)
 {
     int rc;
     uint32_t i;
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
     
-    // Preprocess serializable metatag.
-    rc = qip_ast_class_preprocess_serializable(node, module);
-    check(rc == 0, "Unable to preprocess serializable meta for class");
+    // Method & property generation must occur immediately after load so that
+    // dependencies can be calculated.
+    if(stage == QIP_AST_PROCESSING_STAGE_LOADING) {
+        // Preprocess serializable metatag.
+        rc = qip_ast_class_preprocess_serializable(node, module);
+        check(rc == 0, "Unable to preprocess serializable meta for class");
     
-    // Preprocess hashable metatag.
-    rc = qip_ast_class_preprocess_hashable(node, module);
-    check(rc == 0, "Unable to preprocess hashable meta for class");
+        // Preprocess hashable metatag.
+        rc = qip_ast_class_preprocess_hashable(node, module);
+        check(rc == 0, "Unable to preprocess hashable meta for class");
+    }
     
     // Preprocess properties.
     for(i=0; i<node->class.property_count; i++) {
-        rc = qip_ast_node_preprocess(node->class.properties[i], module);
+        rc = qip_ast_node_preprocess(node->class.properties[i], module, stage);
         check(rc == 0, "Unable to preprocess class property");
     }
 
     // preprocess methods.
     for(i=0; i<node->class.method_count; i++) {
-        rc = qip_ast_node_preprocess(node->class.methods[i], module);
+        rc = qip_ast_node_preprocess(node->class.methods[i], module, stage);
         check(rc == 0, "Unable to preprocess class method");
     }
     
     // Preprocess metadata.
     for(i=0; i<node->class.metadata_count; i++) {
-        rc = qip_ast_node_preprocess(node->class.metadatas[i], module);
+        rc = qip_ast_node_preprocess(node->class.metadatas[i], module, stage);
         check(rc == 0, "Unable to preprocess class metadata");
     }
     
@@ -885,14 +883,14 @@ int qip_ast_class_preprocess_serializable(qip_ast_node *node,
     struct tagbstring pack_map_name = bsStatic("packMap");
     qip_ast_node *pack_args[2];
     pack_args[0] = qip_ast_int_literal_create(key_count);
-    qip_ast_node *serializer_var_ref = qip_ast_var_ref_create(&serializer_str);
-    qip_ast_node *serializer_staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_METHOD, serializer_var_ref, &pack_map_name, pack_args, 1);
-    rc = qip_ast_block_add_expr(block, serializer_staccess);
+    qip_ast_node *method_invoke = qip_ast_var_ref_create_method_invoke(&serializer_str, &pack_map_name, pack_args, 1);
+    rc = qip_ast_block_add_expr(block, method_invoke);
+    check(rc == 0, "Unable to add expression to block");
 
     // Add pack calls for each serializable property.
     struct tagbstring pack_int_name = bsStatic("packInt");
     struct tagbstring pack_float_name = bsStatic("packFloat");
-    struct tagbstring pack_raw_name = bsStatic("packRaw");
+    struct tagbstring pack_string_name = bsStatic("packString");
     
     for(i=0; i<node->class.property_count; i++) {
         qip_ast_node *property = node->class.properties[i];
@@ -912,19 +910,15 @@ int qip_ast_class_preprocess_serializable(qip_ast_node *node,
             }
             
             // Pack key.
-            qip_ast_node *serializer_var_ref = NULL, *serializer_staccess = NULL;
             pack_args[0] = qip_ast_string_literal_create(var_decl->var_decl.name);
-            pack_args[1] = qip_ast_int_literal_create(blength(var_decl->var_decl.name));
-            serializer_var_ref = qip_ast_var_ref_create(&serializer_str);
-            serializer_staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_METHOD, serializer_var_ref, &pack_raw_name, pack_args, 2);
-            rc = qip_ast_block_add_expr(block, serializer_staccess);
+            method_invoke = qip_ast_var_ref_create_method_invoke(&serializer_str, &pack_string_name, pack_args, 1);
+            rc = qip_ast_block_add_expr(block, method_invoke);
             check(rc == 0, "Unable to add key serialization expression");
 
             // Pack value.
-            pack_args[0] = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, qip_ast_var_ref_create(&this_str), var_decl->var_decl.name, NULL, 0);
-            serializer_var_ref = qip_ast_var_ref_create(&serializer_str);
-            serializer_staccess = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_METHOD, serializer_var_ref, pack_method_name, pack_args, 1);
-            rc = qip_ast_block_add_expr(block, serializer_staccess);
+            pack_args[0] = qip_ast_var_ref_create_property_access(&this_str, var_decl->var_decl.name);
+            method_invoke = qip_ast_var_ref_create_method_invoke(&serializer_str, pack_method_name, pack_args, 1);
+            rc = qip_ast_block_add_expr(block, method_invoke);
             check(rc == 0, "Unable to add value serialization expression");
         }
     }
@@ -1061,7 +1055,7 @@ int qip_ast_class_preprocess_hashable_set_fields_method(qip_ast_node *node,
     struct tagbstring this_str = bsStatic("this");
     struct tagbstring hash_code_str = bsStatic("hashCode");
 
-    qip_ast_node *lhs_var_ref, *lhs, *rhs_var_ref, *rhs, *var_assign;
+    qip_ast_node *lhs, *rhs, *var_assign;
 
     // Generate method skeleton.
     qip_ast_node *method = NULL;
@@ -1082,18 +1076,15 @@ int qip_ast_class_preprocess_hashable_set_fields_method(qip_ast_node *node,
     check(rc == 0, "Unable to add value argument to method");
 
     // Assign value to id property.
-    lhs_var_ref = qip_ast_var_ref_create(&this_str);
-    lhs = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, lhs_var_ref, property_name, NULL, 0);
-    rhs = qip_ast_var_ref_create(&value_str);
+    lhs = qip_ast_var_ref_create_property_access(&this_str, property_name);
+    rhs = qip_ast_var_ref_create_value(&value_str);
     var_assign = qip_ast_var_assign_create(lhs, rhs);
     rc = qip_ast_block_add_expr(block, var_assign);
     check(rc == 0, "Unable to prepend variable assignment to block");
 
     // Assign id property to hashCode.
-    lhs_var_ref = qip_ast_var_ref_create(&this_str);
-    lhs = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, lhs_var_ref, &hash_code_str, NULL, 0);
-    rhs_var_ref = qip_ast_var_ref_create(&this_str);
-    rhs = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, rhs_var_ref, property_name, NULL, 0);
+    lhs = qip_ast_var_ref_create_property_access(&this_str, &hash_code_str);
+    rhs = qip_ast_var_ref_create_property_access(&this_str, property_name);
     var_assign = qip_ast_var_assign_create(lhs, rhs);
     rc = qip_ast_block_add_expr(block, var_assign);
     check(rc == 0, "Unable to prepend variable assignment to block");
@@ -1130,7 +1121,7 @@ int qip_ast_class_preprocess_hashable_equals_method(qip_ast_node *node,
     struct tagbstring value_str = bsStatic("value");
     struct tagbstring this_str = bsStatic("this");
 
-    qip_ast_node *lhs_var_ref, *lhs, *rhs, *binary_expr;
+    qip_ast_node *lhs, *rhs, *binary_expr;
 
     // Generate method skeleton.
     qip_ast_node *method = NULL;
@@ -1147,6 +1138,7 @@ int qip_ast_class_preprocess_hashable_equals_method(qip_ast_node *node,
     struct tagbstring boolean_str = bsStatic("Boolean");
     method->method.function->function.return_type = qip_ast_type_ref_create(&boolean_str);
     check_mem(method->method.function->function.return_type);
+    method->method.function->function.return_type->parent = method->method.function;
 
     // Add an argument for the value.
     qip_ast_node *type_ref = qip_ast_type_ref_create(&value_type_str);
@@ -1156,9 +1148,8 @@ int qip_ast_class_preprocess_hashable_equals_method(qip_ast_node *node,
     check(rc == 0, "Unable to add value argument to method");
 
     // Compare this.[property_name] to value.
-    lhs_var_ref = qip_ast_var_ref_create(&this_str);
-    lhs = qip_ast_staccess_create(QIP_AST_STACCESS_TYPE_PROPERTY, lhs_var_ref, property_name, NULL, 0);
-    rhs = qip_ast_var_ref_create(&value_str);
+    lhs = qip_ast_var_ref_create_property_access(&this_str, property_name);
+    rhs = qip_ast_var_ref_create_value(&value_str);
     binary_expr = qip_ast_binary_expr_create(QIP_BINOP_EQUALS, lhs, rhs);
     qip_ast_node *freturn = qip_ast_freturn_create(binary_expr);
     rc = qip_ast_block_add_expr(block, freturn);
@@ -1172,7 +1163,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type refs used within this node.
@@ -1208,6 +1199,38 @@ int qip_ast_class_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_class_get_var_refs(qip_ast_node *node, bstring name,
+                               qip_array *array)
+{
+    int rc;
+    unsigned int i;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    for(i=0; i<node->class.property_count; i++) {
+        rc = qip_ast_node_get_var_refs(node->class.properties[i], name, array);
+        check(rc == 0, "Unable to add class property var refs");
+    }
+
+    for(i=0; i<node->class.method_count; i++) {
+        rc = qip_ast_node_get_var_refs(node->class.methods[i], name, array);
+        check(rc == 0, "Unable to add class method var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

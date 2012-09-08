@@ -3,6 +3,7 @@
 
 #include <llvm-c/Core.h>
 
+#include "array.h"
 
 //==============================================================================
 //
@@ -11,6 +12,7 @@
 //==============================================================================
 
 typedef enum qip_ast_node_type_e qip_ast_node_type_e;
+typedef enum qip_ast_processing_stage_e qip_ast_processing_stage_e;
 typedef struct qip_ast_node qip_ast_node;
 
 #include "access.h"
@@ -19,12 +21,12 @@ typedef struct qip_ast_node qip_ast_node;
 #include "boolean_literal.h"
 #include "string_literal.h"
 #include "null_literal.h"
+#include "array_literal.h"
 #include "binary_expr.h"
 #include "var_ref.h"
 #include "var_decl.h"
 #include "type_ref.h"
 #include "var_assign.h"
-#include "staccess.h"
 #include "farg.h"
 #include "freturn.h"
 #include "function.h"
@@ -39,36 +41,49 @@ typedef struct qip_ast_node qip_ast_node;
 #include "metadata.h"
 #include "metadata_item.h"
 #include "sizeof.h"
+#include "ast_alloca.h"
 #include "template.h"
 #include "module.h"
 
 // Defines the types of expressions available.
 enum qip_ast_node_type_e {
-    QIP_AST_TYPE_INT_LITERAL,
-    QIP_AST_TYPE_FLOAT_LITERAL,
-    QIP_AST_TYPE_BOOLEAN_LITERAL,
-    QIP_AST_TYPE_STRING_LITERAL,
-    QIP_AST_TYPE_NULL_LITERAL,
-    QIP_AST_TYPE_BINARY_EXPR,
-    QIP_AST_TYPE_VAR_REF,
-    QIP_AST_TYPE_VAR_DECL,
-    QIP_AST_TYPE_TYPE_REF,
-    QIP_AST_TYPE_VAR_ASSIGN,
-    QIP_AST_TYPE_STACCESS,
-    QIP_AST_TYPE_FARG,
-    QIP_AST_TYPE_FRETURN,
-    QIP_AST_TYPE_FUNCTION,
-    QIP_AST_TYPE_BLOCK,
-    QIP_AST_TYPE_IF_STMT,
-    QIP_AST_TYPE_FOR_EACH_STMT,
-    QIP_AST_TYPE_METHOD,
-    QIP_AST_TYPE_PROPERTY,
-    QIP_AST_TYPE_CLASS,
-    QIP_AST_TYPE_TEMPLATE_VAR,
-    QIP_AST_TYPE_MODULE,
-    QIP_AST_TYPE_METADATA,
-    QIP_AST_TYPE_METADATA_ITEM,
-    QIP_AST_TYPE_SIZEOF
+    QIP_AST_TYPE_MODULE           = 1,
+    QIP_AST_TYPE_METADATA         = 2,
+    QIP_AST_TYPE_METADATA_ITEM    = 3,
+    QIP_AST_TYPE_CLASS            = 4,
+    QIP_AST_TYPE_METHOD           = 5,
+    QIP_AST_TYPE_PROPERTY         = 6,
+    QIP_AST_TYPE_TEMPLATE_VAR     = 7,
+    QIP_AST_TYPE_FUNCTION         = 8,
+    QIP_AST_TYPE_BLOCK            = 9,
+    QIP_AST_TYPE_FARG             = 10,
+    QIP_AST_TYPE_FRETURN          = 11,
+    QIP_AST_TYPE_IF_STMT          = 12,
+    QIP_AST_TYPE_FOR_EACH_STMT    = 13,
+    QIP_AST_TYPE_TYPE_REF         = 14,
+    QIP_AST_TYPE_VAR_DECL         = 15,
+    QIP_AST_TYPE_VAR_REF          = 16,
+    QIP_AST_TYPE_VAR_ASSIGN       = 17,
+    QIP_AST_TYPE_BINARY_EXPR      = 18,
+    QIP_AST_TYPE_INT_LITERAL      = 19,
+    QIP_AST_TYPE_FLOAT_LITERAL    = 20,
+    QIP_AST_TYPE_BOOLEAN_LITERAL  = 21,
+    QIP_AST_TYPE_STRING_LITERAL   = 22,
+    QIP_AST_TYPE_NULL_LITERAL     = 23,
+    QIP_AST_TYPE_ARRAY_LITERAL    = 24,
+    QIP_AST_TYPE_SIZEOF           = 25,
+    QIP_AST_TYPE_ALLOCA           = 26
+};
+
+// Defines the stages of processing. This is used when performing different
+// staging of preprocessing so that the preprocessor can know when it should
+// implement different procedures.
+enum qip_ast_processing_stage_e {
+    // Called immediately after AST node's module has been parsed.
+    QIP_AST_PROCESSING_STAGE_LOADING,
+    
+    // Called after all module loading is complete. 
+    QIP_AST_PROCESSING_STAGE_INITIALIZED
 };
 
 // Represents an node in the AST.
@@ -84,12 +99,12 @@ struct qip_ast_node {
         qip_ast_boolean_literal boolean_literal;
         qip_ast_string_literal string_literal;
         qip_ast_null_literal null_literal;
+        qip_ast_array_literal array_literal;
         qip_ast_binary_expr binary_expr;
         qip_ast_var_ref var_ref;
         qip_ast_var_decl var_decl;
         qip_ast_type_ref type_ref;
         qip_ast_var_assign var_assign;
-        qip_ast_staccess staccess;
         qip_ast_farg farg;
         qip_ast_freturn freturn;
         qip_ast_function function;
@@ -104,6 +119,7 @@ struct qip_ast_node {
         qip_ast_metadata metadata;
         qip_ast_metadata_item metadata_item;
         qip_ast_sizeof szof;
+        qip_ast_alloca alloca;
     };
 };
 
@@ -128,6 +144,8 @@ int qip_ast_node_copy(qip_ast_node *node, qip_ast_node **ret);
 
 int qip_ast_node_get_depth(qip_ast_node *node, int32_t *depth);
 
+int qip_ast_node_replace(qip_ast_node *node, qip_ast_node *new_node);
+
 //--------------------------------------
 // Validation
 //--------------------------------------
@@ -150,7 +168,8 @@ int qip_ast_node_codegen_forward_decl(qip_ast_node *node, qip_module *module);
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_node_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_node_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
 // Types
@@ -178,6 +197,19 @@ int qip_ast_node_add_type_ref(qip_ast_node *type_ref, qip_ast_node ***type_refs,
 
 int qip_ast_node_type_refs_free(qip_ast_node ***type_refs, uint32_t *count);
 
+//--------------------------------------
+// Var Refs
+//--------------------------------------
+
+int qip_ast_node_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
+
+//--------------------------------------
+// Blocks
+//--------------------------------------
+
+int qip_ast_node_get_block_expr_index(qip_ast_node *node,
+    qip_ast_node **ret_block, int32_t *ret_expr_index);
 
 //--------------------------------------
 // Dependencies

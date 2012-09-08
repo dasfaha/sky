@@ -1,0 +1,94 @@
+/**
+ *  The Array class is used for stored a fixed number of objects.
+ */
+class Array <T> {
+    //-------------------------------------------------------------------------
+    // Constructor
+    //-------------------------------------------------------------------------
+
+    /**
+     * Initializes the size of the elements in the array.
+     */
+    public void init()
+    {
+        this.elemsz = sizeof(Ref);
+    }
+
+
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  The size, in bytes, of each element in the array.
+     */
+    private Int elemsz;
+
+    /**
+     *  The number of elements stored in the array.
+     */
+    private Int length;
+
+    /**
+     *  A pointer to where the elements are stored.
+     */
+    private Ref elements;
+
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    /**
+     *  Retrieves an element at the given index.
+     *
+     *  @param index  The index of the element.
+     *
+     *  @return       The element at the given index.
+     */
+    [External("qip_fixed_array_get_item_at")]
+    public T getItemAt(Int index);
+
+    /**
+     *  Sets the element at a given index to a new value.
+     *
+     *  @param item   The new value to set.
+     *  @param index  The index of the array.
+     */
+    [External("qip_fixed_array_set_item_at")]
+    public void setItemAt(T item, Int index);
+}
+
+
+//-----------------------------------------------------------------------------
+// Alternate Implementation
+//-----------------------------------------------------------------------------
+
+class "Array<Int>" {
+    //-------------------------------------------------------------------------
+    // Constructor
+    //-------------------------------------------------------------------------
+
+    public void init()
+    {
+        this.elemsz = sizeof(Int);
+    }
+
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    private Int elemsz;
+    private Int length;
+    private Ref elements;
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    [External("qip_fixed_array_get_int_item_at")]
+    public Int getItemAt(Int index);
+
+    [External("qip_fixed_array_set_int_item_at")]
+    public void setItemAt(Int item, Int index);
+}

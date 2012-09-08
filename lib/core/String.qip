@@ -1,0 +1,35 @@
+/**
+ *  The String class stores a fixed-length, constant string and its length,
+ *  in bytes.
+ */
+class String {
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
+
+    /**
+     *  The size, in bytes, of the string data.
+     */
+    private Int length;
+
+    /**
+     *  A pointer to where the string data is stored.
+     */
+    private Ref data;
+
+
+    //-------------------------------------------------------------------------
+    // Methods
+    //-------------------------------------------------------------------------
+
+    /**
+     *  Checks if this string is equal to another string. Two strings are
+     *  equal if the length and contents of the string are both equal.
+     *
+     *  @param string  The string to compare with.
+     *
+     *  @return        True if the strings are equal. Otherwise false.
+     */
+    [External("qip_string_equals")]
+    public Boolean equals(String string);
+}

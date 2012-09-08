@@ -86,7 +86,8 @@
      TEQUALS = 291,
      TDOT = 292,
      TSIZEOF = 293,
-     TNULL = 294
+     TNULL = 294,
+     TFUNCTION = 295
    };
 #endif
 
@@ -119,7 +120,7 @@ typedef union YYSTYPE
 
 
 /* Line 2132 of yacc.c  */
-#line 123 "src/parser.h"
+#line 124 "src/parser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -166,4 +167,4 @@ typedef struct YYLTYPE
 
 
 /* Line 2132 of yacc.c  */
-#line 170 "src/parser.h"
+#line 171 "src/parser.h"

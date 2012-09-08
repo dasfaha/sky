@@ -43,7 +43,8 @@ int qip_ast_var_assign_codegen(struct qip_ast_node *node, qip_module *module,
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_var_assign_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_var_assign_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
 // Validation
@@ -52,11 +53,14 @@ int qip_ast_var_assign_preprocess(qip_ast_node *node, qip_module *module);
 int qip_ast_var_assign_validate(qip_ast_node *node, qip_module *module);
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 int qip_ast_var_assign_get_type_refs(qip_ast_node *node,
     qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_var_assign_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Debugging

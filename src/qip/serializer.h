@@ -4,6 +4,7 @@
 #include <inttypes.h>
 
 #include "minipack.h"
+#include "qip_string.h"
 
 
 //==============================================================================
@@ -43,6 +44,8 @@ void qip_serializer_free(qip_serializer *serializer);
 void qip_serializer_pack_int(qip_serializer *serializer, int64_t value);
 
 void qip_serializer_pack_float(qip_serializer *serializer, double value);
+
+void qip_serializer_pack_string(qip_serializer *serializer, qip_string *value);
 
 void qip_serializer_pack_raw(qip_serializer *serializer, void *value,
     uint64_t length);

@@ -57,26 +57,23 @@ int qip_ast_binary_expr_codegen(qip_ast_node *node, qip_module *module,
 int qip_ast_binary_expr_preprocess(qip_ast_node *node, qip_module *module);
 
 //--------------------------------------
-// Type
+// Find
 //--------------------------------------
 
 int qip_ast_binary_expr_get_type(qip_ast_node *node, qip_module *module,
     qip_ast_node **type_ref);
 
+int qip_ast_binary_expr_get_type_refs(qip_ast_node *node,
+    qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_binary_expr_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Validation
 //--------------------------------------
 
 int qip_ast_binary_expr_validate(qip_ast_node *node, qip_module *module);
-
-
-//--------------------------------------
-// Type refs
-//--------------------------------------
-
-int qip_ast_binary_expr_get_type_refs(qip_ast_node *node,
-    qip_ast_node ***type_refs, uint32_t *count);
 
 //--------------------------------------
 // Debugging

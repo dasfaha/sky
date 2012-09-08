@@ -236,14 +236,19 @@ int codegen_block(qip_ast_node *node, qip_module *module, unsigned int index)
     qip_ast_node *condition = node->if_stmt.conditions[index];
     qip_ast_node *block = node->if_stmt.blocks[index];
 
+    // Retrieve current function scope.
+    qip_scope *scope = NULL;
+    rc = qip_module_get_current_function_scope(module, &scope);
+    check(rc == 0 && scope != NULL, "Unable to retrieve current function scope");
+
     // Generate IR for condition.
     LLVMValueRef condition_value  = NULL;
     rc = qip_ast_node_codegen(condition, module, &condition_value);
 
     // Generate blocks.
     bool has_alt_block = (index+1 < node->if_stmt.block_count || node->if_stmt.else_block != NULL);
-    LLVMBasicBlockRef true_block  = LLVMAppendBasicBlock(module->llvm_function, "");
-    LLVMBasicBlockRef false_block = LLVMAppendBasicBlock(module->llvm_function, "");
+    LLVMBasicBlockRef true_block  = LLVMAppendBasicBlock(scope->llvm_function, "");
+    LLVMBasicBlockRef false_block = LLVMAppendBasicBlock(scope->llvm_function, "");
     
     // Create a conditional branch.
     LLVMBuildCondBr(builder, condition_value, true_block, false_block);
@@ -274,7 +279,7 @@ int codegen_block(qip_ast_node *node, qip_module *module, unsigned int index)
     // Merge blocks together.
     LLVMBasicBlockRef merge_block = NULL;
     if(has_alt_block) {
-        merge_block = LLVMAppendBasicBlock(module->llvm_function, "");
+        merge_block = LLVMAppendBasicBlock(scope->llvm_function, "");
     }
     else {
         merge_block = false_block;
@@ -330,9 +335,11 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_if_stmt_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_if_stmt_preprocess(qip_ast_node *node, qip_module *module,
+                               qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
@@ -341,16 +348,16 @@ int qip_ast_if_stmt_preprocess(qip_ast_node *node, qip_module *module)
     // Preprocess arguments.
     uint32_t i;
     for(i=0; i<node->if_stmt.block_count; i++) {
-        rc = qip_ast_node_preprocess(node->if_stmt.conditions[i], module);
+        rc = qip_ast_node_preprocess(node->if_stmt.conditions[i], module, stage);
         check(rc == 0, "Unable to preprocess if statement condition");
 
-        rc = qip_ast_node_preprocess(node->if_stmt.blocks[i], module);
+        rc = qip_ast_node_preprocess(node->if_stmt.blocks[i], module, stage);
         check(rc == 0, "Unable to preprocess if statement block");
     }
     
     // Preprocess else block.
     if(node->if_stmt.else_block != NULL) {
-        rc = qip_ast_node_preprocess(node->if_stmt.else_block, module);
+        rc = qip_ast_node_preprocess(node->if_stmt.else_block, module, stage);
         check(rc == 0, "Unable to preprocess if statement else block");
     }
     
@@ -362,7 +369,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by a node.
@@ -398,6 +405,38 @@ int qip_ast_if_stmt_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_if_stmt_get_var_refs(qip_ast_node *node, bstring name,
+                                 qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    uint32_t i;
+    for(i=0; i<node->if_stmt.block_count; i++) {
+        rc = qip_ast_node_get_var_refs(node->if_stmt.blocks[i], name, array);
+        check(rc == 0, "Unable to add if block var refs");
+    }
+
+    if(node->if_stmt.else_block != NULL) {
+        rc = qip_ast_node_get_var_refs(node->if_stmt.else_block, name, array);
+        check(rc == 0, "Unable to add else block var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

@@ -115,16 +115,18 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_farg_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_farg_preprocess(qip_ast_node *node, qip_module *module,
+                            qip_ast_processing_stage_e stage)
 {
     int rc;
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
     
     // Preprocess variable declaration.
-    rc = qip_ast_node_preprocess(node->farg.var_decl, module);
+    rc = qip_ast_node_preprocess(node->farg.var_decl, module, stage);
     check(rc == 0, "Unable to preprocess function argument variable declaration");
     
     return 0;
@@ -163,6 +165,32 @@ int qip_ast_farg_get_type_refs(qip_ast_node *node,
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_farg_get_var_refs(qip_ast_node *node, bstring name,
+                              qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->farg.var_decl != NULL) {
+        rc = qip_ast_node_get_var_refs(node->farg.var_decl, name, array);
+        check(rc == 0, "Unable to add function argument var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

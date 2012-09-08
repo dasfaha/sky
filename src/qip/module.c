@@ -3,7 +3,9 @@
 #include <stdbool.h>
 
 #include "array.h"
+#include "llvm.h"
 #include "module.h"
+#include "util.h"
 #include "dbg.h"
 
 
@@ -35,16 +37,19 @@ struct tagbstring QIP_TYPE_NAME_VOID    = bsStatic("void");
 // Creates a module.
 qip_module *qip_module_create(bstring name, qip_compiler *compiler)
 {
-    check(name != NULL, "Module name required");
+    // Default module name to "eql".
+    struct tagbstring eql_str = bsStatic("eql");
+    if(name == NULL) {
+        name = &eql_str;
+    }
     
     qip_module *module = malloc(sizeof(qip_module));
     check_mem(module);
     module->compiler = compiler;
     module->llvm_module = LLVMModuleCreateWithName(bdata(name));
-    module->llvm_function = NULL;
-    module->llvm_last_alloca = NULL;
     module->llvm_engine = NULL;
     module->llvm_pass_manager = NULL;
+    module->sequence = 0;
     module->scopes = NULL;
     module->scope_count = 0;
     module->types = NULL;
@@ -54,6 +59,8 @@ qip_module *qip_module_create(bstring name, qip_compiler *compiler)
     module->error_count = 0;
     module->ast_modules = NULL;
     module->ast_module_count = 0;
+    module->perm_pool = qip_mempool_create(); check_mem(module->perm_pool);
+    module->temp_pool = qip_mempool_create(); check_mem(module->temp_pool);
 
     // Initialize LLVM.
     LLVMInitializeNativeTarget();
@@ -87,9 +94,6 @@ void qip_module_free(qip_module *module)
         if(module->llvm_module) LLVMDisposeModule(module->llvm_module);
         module->llvm_module = NULL;
 
-        module->llvm_function = NULL;
-        module->llvm_last_alloca = NULL;
-
         if(module->scopes != NULL) free(module->scopes);
         module->scopes = NULL;
         module->scope_count = 0;
@@ -100,6 +104,9 @@ void qip_module_free(qip_module *module)
 
         qip_module_free_errors(module);
         qip_module_free_ast_modules(module);
+
+        qip_mempool_free(module->perm_pool);
+        qip_mempool_free(module->temp_pool);
 
         free(module);
     }
@@ -390,12 +397,14 @@ int qip_module_generate_template_type(qip_module *module,
     check(type_ref->type == QIP_AST_TYPE_TYPE_REF, "Node type must be 'type ref'");
     check(class != NULL, "Class return pointer required");
     
-    // Exit if the type ref is not a template reference.
-    if(type_ref->type_ref.subtype_count == 0) {
-        *class = NULL;
+    // Initialize the return value.
+    *class = NULL;
+    
+    // Exit if the type ref is not a template reference or it's a Function.
+    if(qip_is_function_type(type_ref) || type_ref->type_ref.subtype_count == 0) {
         return 0;
     }
-    
+
     // Retrieve generated class name.
     bstring generated_class_name = NULL;
     rc = qip_ast_type_ref_get_full_name(type_ref, &generated_class_name);
@@ -434,6 +443,9 @@ int qip_module_generate_template_type(qip_module *module,
         check(rc == 0, "Unable to add generated class to module");
     
         qip_ast_template_free(template);
+        
+        // Return generated class.
+        *class = generated_class;
     }
 
     bdestroy(generated_class_name);
@@ -445,6 +457,31 @@ error:
     *class = NULL;
     return -1;
 }
+
+// Runs preprocessing on all AST modules within a compilation module.
+//
+// module - The module.
+// stage  - The processing stage.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_preprocess(qip_module *module,
+                          qip_ast_processing_stage_e stage)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    
+    uint32_t i;
+    for(i=0; i<module->ast_module_count; i++) {
+        rc = qip_ast_node_preprocess(module->ast_modules[i], module, stage);
+        check(rc == 0, "Unable to preprocess module");
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
 
 // Clears all AST modules on the compilation module.
 //
@@ -469,56 +506,87 @@ void qip_module_free_ast_modules(qip_module *module)
 //--------------------------------------
 
 // Retrieves an LLVM type definition for a given type name. Optionally returns
-// the associated AST node if the type is user-defined.
+// the associated AST node if the type is user-defined. For templated classes,
+// this only works after the namespace has been flattened.
 //
-// module - The module that contains the type.
-// name   - The name of the type to search for.
-// node   - A pointer to where the AST node should be returned to. This is
+// module   - The module that contains the type.
+// type_ref - The type reference.
+// node     - A pointer to where the AST node should be returned to. This is
 //          optional.
-// type   - A pointer to where the LLVM type should be returned to.
+// type     - A pointer to where the LLVM type should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_module_get_type_ref(qip_module *module, bstring name,
+int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
                             qip_ast_node **node, LLVMTypeRef *type)
 {
-    int i;
+    unsigned int i;
+    int rc;
     
     check(module != NULL, "Module is required");
-    check(name != NULL, "Type name is required");
+    check(type_ref != NULL, "Type ref is required");
     
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
     // Compare to built-in types.
     bool found = false;
-    if(biseqcstr(name, "Int")) {
+    if(biseqcstr(type_ref->type_ref.name, "Int")) {
         if(type != NULL) *type = LLVMInt64TypeInContext(context);
         if(node != NULL) *node = NULL;
         found = true;
     }
-    else if(biseqcstr(name, "Float")) {
+    else if(biseqcstr(type_ref->type_ref.name, "Float")) {
         if(type != NULL) *type = LLVMDoubleTypeInContext(context);
         if(node != NULL) *node = NULL;
         found = true;
     }
-    else if(biseqcstr(name, "Boolean")) {
+    else if(biseqcstr(type_ref->type_ref.name, "Boolean")) {
         if(type != NULL) *type = LLVMInt1TypeInContext(context);
         if(node != NULL) *node = NULL;
         found = true;
     }
-    else if(biseqcstr(name, "Ref")) {
+    else if(biseqcstr(type_ref->type_ref.name, "Ref")) {
         if(type != NULL) *type = LLVMPointerType(LLVMInt8TypeInContext(context), 0);
         if(node != NULL) *node = NULL;
         found = true;
     }
-    else if(biseqcstr(name, "void")) {
+    else if(biseqcstr(type_ref->type_ref.name, "void")) {
         if(type != NULL) *type = LLVMVoidTypeInContext(context);
+        if(node != NULL) *node = NULL;
+        found = true;
+    }
+    // Generate function type.
+    else if(qip_is_function_type(type_ref)) {
+        // Determine LLVM return type.
+        LLVMTypeRef llvm_return_type = NULL;
+        if(type_ref->type_ref.return_type) {
+            rc = qip_module_get_type_ref(module, type_ref->type_ref.return_type, NULL, &llvm_return_type);
+            check(rc == 0, "Unable to determine function return type");
+        }
+        else {
+            llvm_return_type = LLVMVoidTypeInContext(context);
+        }
+        
+        // Determine param types.
+        LLVMTypeRef params[type_ref->type_ref.subtype_count];
+        for(i=0; i<type_ref->type_ref.subtype_count; i++) {
+            rc = qip_module_get_type_ref(module, type_ref->type_ref.subtypes[i], NULL, &params[i]);
+            check(rc == 0, "Unable to determine function param type: %d", i);
+            
+            // If the param is a complex type then wrap it in a pointer.
+            if(qip_llvm_is_complex_type(params[i])) {
+                params[i] = LLVMPointerType(params[i], 0);
+            }
+        }
+        
+        // Generate function type.
+        if(type != NULL) *type = LLVMPointerType(LLVMFunctionType(llvm_return_type, params, type_ref->type_ref.subtype_count, false), 0);
         if(node != NULL) *node = NULL;
         found = true;
     }
     // Find user-defined type.
     else {
-        for(i=0; i<module->type_count; i++) {
-            if(biseq(module->type_nodes[i]->class.name, name)) {
+        for(i=0; i<(unsigned int)module->type_count; i++) {
+            if(biseq(module->type_nodes[i]->class.name, type_ref->type_ref.name)) {
                 if(type != NULL) *type = module->types[i];
                 if(node != NULL) *node = module->type_nodes[i];
                 found = true;
@@ -526,8 +594,8 @@ int qip_module_get_type_ref(qip_module *module, bstring name,
             }
         }
     }
-
-    check(found, "Invalid type in module: %s", bdata(name));
+    
+    check(found, "Invalid type in module: %s", bdata(type_ref->type_ref.name));
 
     return 0;
 
@@ -643,61 +711,43 @@ error:
 // Scope
 //--------------------------------------
 
-// Adds a scope associated with an AST node to the scope stack of the module.
+// Adds a scope to the module stack.
 //
-// module - The module to add the scope to.
-// node   - The AST node to associate the scope with.
+// module - The module.
+// scope  - The scope to add.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_module_push_scope(qip_module *module, qip_ast_node *node)
+int qip_module_push_scope(qip_module *module, qip_scope *scope)
 {
-    check(module != NULL, "Module is required");
-    check(node != NULL, "Node is required");
-    
-    // Create scope.
-    qip_module_scope *scope = malloc(sizeof(qip_module_scope));
-    check_mem(scope);
-    scope->node = node;
-    scope->var_values = NULL;
-    scope->var_decls = NULL;
-    scope->var_count = 0;
+    check(module != NULL, "Module required");
+    check(scope != NULL, "Scope required");
     
     // Resize scope stack and append.
     module->scope_count++;
-    module->scopes = realloc(module->scopes, sizeof(qip_module_scope*) * module->scope_count);
+    module->scopes = realloc(module->scopes, sizeof(*module->scopes) * module->scope_count);
     check_mem(module->scopes);
     module->scopes[module->scope_count-1] = scope;
 
     return 0;
     
 error:
-    if(scope) free(scope);
     return -1;
 }
 
-// Removes the current scope from the stack of the module. If the current
-// scope is not associated with the given AST node then an error is returned.
+// Removes the current scope from the stack of the module.
 //
 // module - The module to remove the scope from.
-// node   - The AST node associated with the scope being removed.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_module_pop_scope(qip_module *module, qip_ast_node *node)
+int qip_module_pop_scope(qip_module *module)
 {
-    check(module != NULL, "Module is required");
+    check(module != NULL, "Module required");
     check(module->scope_count > 0, "Module has no more scopes");
-    check(node != NULL, "Node is required");
-    check(module->scopes[module->scope_count-1]->node == node, "Current scope does not match node");
 
     // Destroy current scope.
-    qip_module_scope *scope = module->scopes[module->scope_count-1];
-    scope->node = NULL;
-    if(scope->var_values) free(scope->var_values);
-    scope->var_values = NULL;
-    if(scope->var_decls) free(scope->var_decls);
-    scope->var_decls = NULL;
-    scope->var_count = 0;
-    free(scope);
+    qip_scope *scope = module->scopes[module->scope_count-1];
+    qip_scope_free(scope);
+    module->scopes[module->scope_count-1] = NULL;
     
     // Resize scope stack.
     module->scope_count--;
@@ -711,43 +761,50 @@ error:
 
 // Searches the module scope stack for variables declared with the given name.
 //
-// module    - The module containing the variable declaration.
-// name      - The name of the variable to search for.
-// var_decl  - A pointer to where the variable declaration should be returned
-//             to.
-// value     - A pointer to where the LLVM value should be returned to.
+// module - The module containing the variable declaration.
+// name   - The name of the variable to search for.
+// node   - A pointer the AST node that created the value.
+// value  - A pointer to where the LLVM value should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
 int qip_module_get_variable(qip_module *module, bstring name,
-    qip_ast_node **var_decl, LLVMValueRef *value)
+                            qip_ast_node **node, LLVMValueRef *value)
 {
-    check(module != NULL, "Module is required");
-    check(module->scope_count > 0, "Module has no scope");
-    check(name != NULL, "Variable name is required");
+    int rc;
+    check(module != NULL, "Module required");
+    check(name != NULL, "Variable name required");
+    check(node != NULL || value != NULL, "Node return pointer or value return pointer required");
 
     // Loop over scopes from the top down.
-    int32_t i, j;
-    for(i=module->scope_count-1; i>=0; i--) {
-        qip_module_scope *scope = module->scopes[i];
-        
-        // Search scope for a variable with the given name.
-        for(j=0; j<scope->var_count; j++) {
-            if(biseq(scope->var_decls[j]->var_decl.name, name)) {
-                if(var_decl) *var_decl = scope->var_decls[j];
-                if(value) *value       = scope->var_values[j];
+    if(module->scope_count > 0) {
+        int32_t i;
+        for(i=module->scope_count-1; i>=0; i--) {
+            // Search scope for a variable with the given name.
+            qip_scope *scope = module->scopes[i];
+            rc = qip_scope_get_variable(scope, name, node, value);
+            check(rc == 0, "Unable to search scope");
+
+            // If we found something then exit.
+            if((node != NULL && *node != NULL) || (value != NULL && *value != NULL)) {
                 return 0;
+            }
+
+            // Stop one we get to the function boundry.
+            if(scope->type == QIP_SCOPE_TYPE_FUNCTION) {
+                break;
             }
         }
     }
 
     // If we reach here then we couldn't find the variable in any scope.
-    if(var_decl) *var_decl = NULL;
-    if(value) *value       = NULL;
+    if(node) *node   = NULL;
+    if(value) *value = NULL;
+
     return 0;
 
 error:
-    if(var_decl) *var_decl = NULL;
-    if(value) *value    = NULL;
+    if(node) *node   = NULL;
+    if(value) *value = NULL;
     return -1;
 }
 
@@ -759,38 +816,56 @@ error:
 //
 // Returns 0 if successful, otherwise returns -1.
 int qip_module_add_variable(qip_module *module, qip_ast_node *var_decl,
-    LLVMValueRef value)
+                            LLVMValueRef value)
 {
+    int rc;
     check(module != NULL, "Module is required");
     check(module->scope_count > 0, "Module has no scope");
     check(var_decl != NULL, "Variable declaration is required");
     check(var_decl->var_decl.name != NULL, "Variable declaration name is required");
     check(value != NULL, "LLVM value is required");
 
-    // Find current scope.
-    qip_module_scope *scope = module->scopes[module->scope_count-1];
-
-    // Search for existing variable in scope.
-    int32_t i;
-    for(i=0; i<scope->var_count; i++) {
-        if(biseq(scope->var_decls[i]->var_decl.name, var_decl->var_decl.name)) {
-            sentinel("Variable already exists in scope: %s", bdata(var_decl->var_decl.name));
-        }
-    }
-
-    // Append variable declaration & LLVM value to scope.
-    scope->var_count++;
-    scope->var_decls = realloc(scope->var_decls, sizeof(qip_ast_node*) * scope->var_count);
-    check_mem(scope->var_decls);
-    scope->var_decls[scope->var_count-1] = var_decl;
-
-    scope->var_values = realloc(scope->var_values, sizeof(LLVMValueRef) * scope->var_count);
-    check_mem(scope->var_values);
-    scope->var_values[scope->var_count-1] = value;
+    // Find current scope and add variable.
+    qip_scope *scope = module->scopes[module->scope_count-1];
+    rc = qip_scope_add_variable(scope, var_decl, value);
+    check(rc == 0, "Unable to add variable to scope");
 
     return 0;
 
 error:
+    return -1;
+}
+
+// Retrieves the current function scope.
+//
+// module - The module.
+// ret    - A pointer to where the function scope should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_get_current_function_scope(qip_module *module, qip_scope **ret)
+{
+    check(module != NULL, "Module is required");
+    check(ret != NULL, "Return pointer required");
+
+    // Initialize return value.
+    *ret = NULL;
+
+    // Loop over scopes from the top down.
+    if(module->scope_count > 0) {
+        int32_t i;
+        for(i=module->scope_count-1; i>=0; i--) {
+            qip_scope *scope = module->scopes[i];
+            if(scope->type == QIP_SCOPE_TYPE_FUNCTION) {
+                *ret = scope;
+                break;
+            }
+        }
+    }
+
+    return 0;
+
+error:
+    *ret = NULL;
     return -1;
 }
 
@@ -823,6 +898,35 @@ error:
     return -1;
 }
 
+// Executes the main function of a QIP module that returns a pointer.
+//
+// module - The module to execute.
+// ret    - A pointer to where the returned pointer should be sent.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_execute(qip_module *module, void **ret)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    check(ret != NULL, "Return pointer required");
+
+    // Reset temporary pool.
+    rc = qip_module_reset_temp_pool(module);
+    check(rc == 0, "Unable to reset temporary pool");
+
+    // Execute main function.
+    sky_qip_function_t main_function;
+    rc = qip_module_get_main_function(module, (void*)(&main_function));
+    check(rc == 0 && main_function != NULL, "Unable to retrieve main function");
+    *ret = main_function();
+
+    return 0;
+    
+error:
+    *ret = 0;
+    return -1;
+}
+
 // Executes the main function of a QIP module that returns an Int.
 //
 // module - The module to execute.
@@ -831,17 +935,19 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int qip_module_execute_int(qip_module *module, int64_t *ret)
 {
+    int rc;
     check(module != NULL, "Module required");
     check(ret != NULL, "Return pointer required");
 
-    // Generate a pointer to the main function.
-    void *fp;
-    int rc = qip_module_get_main_function(module, &fp);
-    check(rc == 0 && fp != NULL, "Unable to retrieve main function");
-    int64_t (*FP)() = (int64_t (*)())(intptr_t)fp;
-    
-    // Execute function and return value.
-    *ret = FP();
+    // Reset temporary pool.
+    rc = qip_module_reset_temp_pool(module);
+    check(rc == 0, "Unable to reset temporary pool");
+
+    // Execute main function.
+    sky_qip_int_function_t main_function;
+    rc = qip_module_get_main_function(module, (void*)(&main_function));
+    check(rc == 0 && main_function != NULL, "Unable to retrieve main function");
+    *ret = main_function();
 
     return 0;
     
@@ -858,17 +964,19 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int qip_module_execute_float(qip_module *module, double *ret)
 {
+    int rc;
     check(module != NULL, "Module required");
     check(ret != NULL, "Return pointer required");
 
-    // Generate a pointer to the main function.
-    void *fp;
-    int rc = qip_module_get_main_function(module, &fp);
-    check(rc == 0 && fp != NULL, "Unable to retrieve main function");
-    double (*FP)() = (double (*)())(intptr_t)fp;
-    
-    // Execute function and return value.
-    *ret = FP();
+    // Reset temporary pool.
+    rc = qip_module_reset_temp_pool(module);
+    check(rc == 0, "Unable to reset temporary pool");
+
+    // Execute main function.
+    sky_qip_float_function_t main_function;
+    rc = qip_module_get_main_function(module, (void*)(&main_function));
+    check(rc == 0 && main_function != NULL, "Unable to retrieve main function");
+    *ret = main_function();
 
     return 0;
     
@@ -885,17 +993,19 @@ error:
 // Returns 0 if successful, otherwise returns -1.
 int qip_module_execute_boolean(qip_module *module, bool *ret)
 {
+    int rc;
     check(module != NULL, "Module required");
     check(ret != NULL, "Return pointer required");
 
-    // Generate a pointer to the main function.
-    void *fp;
-    int rc = qip_module_get_main_function(module, &fp);
-    check(rc == 0 && fp != NULL, "Unable to retrieve main function");
-    bool (*FP)() = (bool (*)())(intptr_t)fp;
-    
-    // Execute function and return value.
-    *ret = FP();
+    // Reset temporary pool.
+    rc = qip_module_reset_temp_pool(module);
+    check(rc == 0, "Unable to reset temporary pool");
+
+    // Execute main function.
+    sky_qip_boolean_function_t main_function;
+    rc = qip_module_get_main_function(module, (void*)(&main_function));
+    check(rc == 0 && main_function != NULL, "Unable to retrieve main function");
+    *ret = main_function();
 
     return 0;
     
@@ -903,6 +1013,7 @@ error:
     *ret = 0;
     return -1;
 }
+
 
 
 //--------------------------------------
@@ -992,6 +1103,85 @@ void qip_module_free_errors(qip_module *module)
         module->errors = NULL;
         module->error_count = 0;
     }
+}
+
+
+//--------------------------------------
+// Memory Allocation
+//--------------------------------------
+
+// Allocates a given number of bytes in the module's permanent memory pool.
+// The permanent memory pool exists for the life of the module and will only 
+// be freed when the module is freed.
+//
+// module - The module.
+// size   - The number of bytes to allocate.
+// ptr    - A pointer to where the allocated pointer should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_perm_malloc(qip_module *module, size_t size, void **ptr)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    
+    // Delegate allocation to the module's permanent pool.
+    rc = qip_mempool_malloc(module->perm_pool, size, ptr);
+    check(rc == 0, "Unable to allocate memory in permanent pool");
+    
+    return 0;
+
+error:
+    *ptr = NULL;
+    return -1;
+}
+
+// Allocates a given number of bytes in the module's temporary memory pool.
+// The temporary memory pool exists for the life of a single module call.
+//
+// module - The module.
+// size   - The number of bytes to allocate.
+// ptr    - A pointer to where the allocated pointer should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_temp_malloc(qip_module *module, size_t size, void **ptr)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    
+    // Delegate allocation to the module's temporary pool.
+    rc = qip_mempool_malloc(module->temp_pool, size, ptr);
+    check(rc == 0, "Unable to allocate memory in temporary pool");
+    
+    return 0;
+
+error:
+    *ptr = NULL;
+    return -1;
+}
+
+// Resets the temporary pool so that the allocation pointer moves to the
+// beginning of the first block. This is called before every execution of the
+// module.
+//
+// Note that the temporary pool is not actually freed. The pool is simply
+// reused. The pool will automatically be freed when the module is freed.
+//
+// module - The module.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_reset_temp_pool(qip_module *module)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    
+    // Delegate reset to the module's temporary pool.
+    rc = qip_mempool_reset(module->temp_pool);
+    check(rc == 0, "Unable to reset temporary memory pool");
+    
+    return 0;
+
+error:
+    return -1;
 }
 
 

@@ -43,7 +43,8 @@ int qip_ast_freturn_codegen(qip_ast_node *node, qip_module *module,
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_freturn_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_freturn_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
 // Validation

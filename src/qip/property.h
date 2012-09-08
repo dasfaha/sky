@@ -53,14 +53,18 @@ int qip_ast_property_add_metadatas(struct qip_ast_node *node,
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_property_preprocess(qip_ast_node *node, qip_module *module);
+int qip_ast_property_preprocess(qip_ast_node *node, qip_module *module,
+    qip_ast_processing_stage_e stage);
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 int qip_ast_property_get_type_refs(qip_ast_node *node,
     qip_ast_node ***type_refs, uint32_t *count);
+
+int qip_ast_property_get_var_refs(qip_ast_node *node, bstring name,
+    qip_array *array);
 
 //--------------------------------------
 // Dependencies

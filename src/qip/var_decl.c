@@ -101,6 +101,37 @@ error:
 
 
 //--------------------------------------
+// Hierarchy
+//--------------------------------------
+
+// Replaces a child node with a new node.
+//
+// node - The parent node.
+// old_node - The node to replace.
+// new_node - The new replacement node.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_var_decl_replace(qip_ast_node *node, qip_ast_node *old_node,
+                             qip_ast_node *new_node)
+{
+    check(node != NULL, "Node required");
+    check(old_node != NULL, "Old node required");
+    check(new_node != NULL, "New node required");
+    
+    if(node->var_decl.initial_value == old_node) {
+        node->var_decl.initial_value = new_node;
+        new_node->parent = node;
+        old_node->parent = NULL;
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
 // Codegen
 //--------------------------------------
 
@@ -119,7 +150,6 @@ int qip_ast_var_decl_codegen(qip_ast_node *node, qip_module *module,
     check(node != NULL, "Node required");
     check(node->type == QIP_AST_TYPE_VAR_DECL, "Node type expected to be 'variable declaration'");
     check(module != NULL, "Module required");
-    check(module->llvm_function != NULL, "Not currently in a function");
     check(node->var_decl.type != NULL, "Variable declaration type required");
     check(node->var_decl.name != NULL, "Variable declaration name required");
     
@@ -132,25 +162,25 @@ int qip_ast_var_decl_codegen(qip_ast_node *node, qip_module *module,
     // Save position;
     LLVMBasicBlockRef originalBlock = LLVMGetInsertBlock(builder);
 
+    // Retrieve current function scope.
+    qip_scope *scope = NULL;
+    rc = qip_module_get_current_function_scope(module, &scope);
+    check(rc == 0 && scope != NULL, "Unable to retrieve current function scope");
+
     // If no allocas exist yet, position builder at the beginning of function.
-    LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(module->llvm_function);
-    if(module->llvm_last_alloca == NULL) {
+    LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(scope->llvm_function);
+    if(scope->llvm_last_alloca == NULL) {
         LLVMPositionBuilder(builder, entryBlock, LLVMGetFirstInstruction(entryBlock));
     }
     // Otherwise position it after the last alloca in the function.
     else {
-        LLVMPositionBuilder(builder, entryBlock, module->llvm_last_alloca);
+        LLVMPositionBuilder(builder, entryBlock, scope->llvm_last_alloca);
     }
-    
-    // Retrieve type name.
-    bstring type_name = NULL;
-    rc = qip_ast_type_ref_get_full_name(node->var_decl.type, &type_name);
-    check(rc == 0, "Unable to retrieve full type name");
     
     // Find LLVM type.
     LLVMTypeRef type;
-    rc = qip_module_get_type_ref(module, type_name, NULL, &type);
-    check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(type_name));
+    rc = qip_module_get_type_ref(module, node->var_decl.type, NULL, &type);
+    check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(node->var_decl.type->type_ref.name));
     bool is_complex_type = qip_llvm_is_complex_type(type);
 
     // Create a function argument allocation.
@@ -191,9 +221,13 @@ int qip_ast_var_decl_codegen(qip_ast_node *node, qip_module *module,
         LLVMBuildStore(builder, value_alloca, *value);
     }
 
-    // Generate call to constructor if this is not a built-in.
-    if(property == NULL && farg == NULL && !qip_is_builtin_type_name(type_name)) {
-        bstring constructor_name = bformat("%s.init", bdata(type_name), bdata(type_name));
+    // Generate call to constructor if this is not a built-in and it is not
+    // being initialized to a value.
+    if(property == NULL && farg == NULL && 
+       !qip_is_builtin_type(node->var_decl.type) &&
+       node->var_decl.initial_value == NULL)
+    {
+        bstring constructor_name = bformat("%s.init", bdata(node->var_decl.type->type_ref.name));
         check_mem(constructor_name);
         
         // Invoke constructor.
@@ -212,14 +246,14 @@ int qip_ast_var_decl_codegen(qip_ast_node *node, qip_module *module,
 
     // Create a store instruction if there is an initial value.
     if(initial_value != NULL) {
+        //LLVMDumpValue(initial_value);
+        //LLVMDumpValue(*value);
         LLVMBuildStore(builder, initial_value, *value);
     }
 
-    bdestroy(type_name);
     return 0;
 
 error:
-    bdestroy(type_name);
     *value = NULL;
     return -1;
 }
@@ -237,7 +271,6 @@ int qip_ast_var_decl_codegen_destroy(qip_ast_node *node, qip_module *module,
                                      LLVMValueRef *value)
 {
     int rc;
-    bstring type_name = NULL;
     check(node != NULL, "Node required");
     check(node->type == QIP_AST_TYPE_VAR_DECL, "Node type expected to be 'variable declaration'");
     check(module != NULL, "Module required");
@@ -251,7 +284,7 @@ int qip_ast_var_decl_codegen_destroy(qip_ast_node *node, qip_module *module,
         qip_ast_node *class = NULL;
         rc = qip_module_get_ast_class(module, node->var_decl.type->type_ref.name, &class);
         check(rc == 0, "Unable to retrieve class");
-        check(class != NULL, "Unable to find class: %s", bdata(type_name));
+        check(class != NULL, "Unable to find class: %s", bdata(node->var_decl.type->type_ref.name));
     
         // Retrieve deconstructor.
         qip_ast_node *method = NULL;
@@ -297,12 +330,20 @@ error:
 //
 // node   - The node.
 // module - The module that the node is a part of.
+// stage  - The processing stage.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_ast_var_decl_preprocess(qip_ast_node *node, qip_module *module)
+int qip_ast_var_decl_preprocess(qip_ast_node *node, qip_module *module,
+                                qip_ast_processing_stage_e stage)
 {
+    int rc;
     check(node != NULL, "Node required");
     check(module != NULL, "Module required");
+    
+    if(node->var_decl.initial_value) {
+        rc = qip_ast_node_preprocess(node->var_decl.initial_value, module, stage);
+        check(rc == 0, "Unable to preprocess initial value");
+    }
     
     return 0;
 
@@ -312,7 +353,7 @@ error:
 
 
 //--------------------------------------
-// Type refs
+// Find
 //--------------------------------------
 
 // Computes a list of type references used by a node.
@@ -331,14 +372,47 @@ int qip_ast_var_decl_get_type_refs(qip_ast_node *node,
     check(type_refs != NULL, "Type refs return pointer required");
     check(count != NULL, "Type ref count return pointer required");
 
-    // Add type.
     rc = qip_ast_node_get_type_refs(node->var_decl.type, type_refs, count);
     check(rc == 0, "Unable to add variable declaration type refs");
+
+    if(node->var_decl.initial_value != NULL) {
+        rc = qip_ast_node_get_type_refs(node->var_decl.initial_value, type_refs, count);
+        check(rc == 0, "Unable to add initial value type refs");
+    }
 
     return 0;
     
 error:
     qip_ast_node_type_refs_free(type_refs, count);
+    return -1;
+}
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_var_decl_get_var_refs(qip_ast_node *node, bstring name,
+                                  qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    rc = qip_ast_node_get_var_refs(node->var_decl.type, name, array);
+    check(rc == 0, "Unable to add variable declaration type var refs");
+
+    if(node->var_decl.initial_value != NULL) {
+        rc = qip_ast_node_get_var_refs(node->var_decl.initial_value, name, array);
+        check(rc == 0, "Unable to add initial value var refs");
+    }
+
+    return 0;
+    
+error:
     return -1;
 }
 

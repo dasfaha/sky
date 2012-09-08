@@ -100,3 +100,50 @@ error:
 }
 
 
+//======================================
+// Qip Interface
+//======================================
+
+// Retrieves an item from the array at a given index.
+//
+// array - The array.
+// index - The index to lookup
+//
+// Returns the item at the given index if found. If the index is out of
+// bounds then null is returned.
+void *qipx_array_get_item_at(qip_array *array, int64_t index)
+{
+    check(array != NULL, "Array required");
+
+    // Check if it is in-bounds.
+    if(index >= 0 && index < array->length) {
+        return array->elements[index];
+    }
+    else {
+        return NULL;
+    }
+
+error:
+    return NULL;
+}
+
+// Sets the element at a given index to a new value.
+//
+// array - The array.
+// index - The index to lookup
+//
+// Returns nothing.
+void qipx_array_set_item_at(qip_array *array, void *item, int64_t index)
+{
+    check(array != NULL, "Array required");
+
+    // Check if it is in-bounds.
+    if(index >= 0 && index < array->length) {
+        array->elements[index] = item;
+    }
+
+    return;
+    
+error:
+    return;
+}

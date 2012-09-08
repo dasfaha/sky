@@ -1,7 +1,10 @@
-#ifndef _qip_ast_metadata_h
-#define _qip_ast_metadata_h
+#ifndef _qip_ast_array_literal_h
+#define _qip_ast_array_literal_h
 
-#include "bstring.h"
+#include <stdbool.h>
+
+#include "module.h"
+
 
 //==============================================================================
 //
@@ -9,15 +12,12 @@
 //
 //==============================================================================
 
-// Forward declaration of node.
-struct qip_ast_node;
-
-// Represents a metadata tag in the AST.
+// Represents a literal array in the AST.
 typedef struct {
-    bstring name;
-    struct qip_ast_node **items;
+    qip_ast_node **items;
     unsigned int item_count;
-} qip_ast_metadata;
+    qip_ast_node *type_ref;
+} qip_ast_array_literal;
 
 
 //==============================================================================
@@ -30,43 +30,48 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-qip_ast_node *qip_ast_metadata_create(bstring name, struct qip_ast_node **items,
-    unsigned int item_count);
+qip_ast_node *qip_ast_array_literal_create();
 
-void qip_ast_metadata_free(struct qip_ast_node *node);
+void qip_ast_array_literal_free(qip_ast_node *node);
 
-int qip_ast_metadata_copy(qip_ast_node *node, qip_ast_node **ret);
+void qip_ast_array_literal_free_items(qip_ast_node *node);
+
+int qip_ast_array_literal_copy(qip_ast_node *node, qip_ast_node **ret);
 
 //--------------------------------------
-// Metadata items
+// Item Management
 //--------------------------------------
 
-int qip_ast_metadata_get_item_value(qip_ast_node *node, bstring key,
-    bstring *value);
+int qip_ast_array_literal_add_item(qip_ast_node *node, qip_ast_node *item);
+
+int qip_ast_array_literal_add_items(qip_ast_node *block,
+    qip_ast_node **exprs, unsigned int expr_count);
 
 //--------------------------------------
 // Codegen
 //--------------------------------------
 
-int qip_ast_metadata_codegen_forward_decl(qip_ast_node *node, qip_module *module);
+int qip_ast_array_literal_codegen(qip_ast_node *node, qip_module *module,
+    LLVMValueRef *value);
 
 //--------------------------------------
 // Preprocessor
 //--------------------------------------
 
-int qip_ast_metadata_preprocess(qip_ast_node *node, qip_module *module,
+int qip_ast_array_literal_preprocess(qip_ast_node *node, qip_module *module,
     qip_ast_processing_stage_e stage);
 
 //--------------------------------------
-// Validation
+// Type
 //--------------------------------------
 
-int qip_ast_metadata_validate(qip_ast_node *node, qip_module *module);
+int qip_ast_array_literal_get_type(qip_ast_node *node,
+    qip_ast_node **type_ref);
 
 //--------------------------------------
 // Debugging
 //--------------------------------------
 
-int qip_ast_metadata_dump(qip_ast_node *node, bstring ret);
+int qip_ast_array_literal_dump(qip_ast_node *node, bstring ret);
 
 #endif
