@@ -5,20 +5,11 @@
 
 #include "bstring.h"
 #include "server.h"
-#include "message.h"
-#include "qip/qip.h"
-#include "qip_path.h"
+#include "message_type.h"
+#include "message_header.h"
+#include "eadd_message.h"
+#include "peach_message.h"
 #include "dbg.h"
-
-
-//==============================================================================
-//
-// Definitions
-//
-//==============================================================================
-
-typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
-typedef void (*qip_result_serialize_func)(void *result, qip_serializer *serializer);
 
 
 //==============================================================================
@@ -40,9 +31,9 @@ int sky_server_close_table(sky_server *server, sky_database *database,
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 // Creates a reference to a server instance.
 //
@@ -76,9 +67,9 @@ void sky_server_free(sky_server *server)
 }
 
 
-//======================================
+//--------------------------------------
 // State
-//======================================
+//--------------------------------------
 
 // Starts a server. Once a server is started, it can accept messages over TCP
 // on the bind address and port number specified by the server object.
@@ -150,9 +141,9 @@ int sky_server_stop(sky_server *server)
 }
 
 
-//======================================
+//--------------------------------------
 // Connection Management
-//======================================
+//--------------------------------------
 
 // Accepts a connection on a running server. Once a connection is accepted then
 // the message is parsed and processed.
@@ -163,274 +154,65 @@ int sky_server_stop(sky_server *server)
 int sky_server_accept(sky_server *server)
 {
     int rc;
-    void *buffer;
+    sky_message_header *header = NULL;
     
     // Accept the next connection.
     int sockaddr_size = sizeof(struct sockaddr_in);
     int socket = accept(server->socket, (struct sockaddr*)server->sockaddr, (socklen_t *)&sockaddr_size);
     check(socket != -1, "Unable to accept connection");
-    
-    // Read message header.
-    buffer = calloc(1, SKY_MESSAGE_HEADER_LENGTH);
-    rc = read(socket, buffer, SKY_MESSAGE_HEADER_LENGTH);
-    check(rc == SKY_MESSAGE_HEADER_LENGTH, "Unable to read message header");
+
+    // Wrap socket in a buffered file reference.
+    FILE *input = fdopen(socket, "r");
+    FILE *output = fdopen(dup(socket), "w");
+    check(input != NULL, "Unable to open buffered socket input");
+    check(output != NULL, "Unable to open buffered socket output");
     
     // Parse message header.
-    sky_message_header *header = sky_message_header_create();
-    check_mem(header);
-    rc = sky_message_header_parse(buffer, header);
-    check(rc == 0, "Unable to parse message header");
-    
-    // Extend buffer for length of message.
-    uint32_t buffer_length = SKY_MESSAGE_HEADER_LENGTH + header->length;
-    buffer = realloc(buffer, buffer_length);
-    check_mem(buffer);
+    header = sky_message_header_create(); check_mem(header);
+    rc = sky_message_header_unpack(header, input);
+    check(rc == 0, "Unable to unpack message header");
 
-    // Read the message body.
-    rc = read(socket, buffer+SKY_MESSAGE_HEADER_LENGTH, header->length);
-    check((uint32_t)rc == header->length, "Unable to read message body");
+    // Open database & table.
+    sky_database *database = NULL;
+    sky_table *table = NULL;
+    rc = sky_server_open_table(server, header->database_name, header->table_name, &database, &table);
+    check(rc == 0, "Unable to open table");
 
     // Parse appropriate message type.
     switch(header->type) {
-        case SKY_MESSAGE_EADD: {
-            rc = sky_server_process_eadd_message(server, socket, buffer);
-            check(rc == 0, "Unable to process EADD message");
-            break;
-        }
-        
-        case SKY_MESSAGE_PEACH: {
-            rc = sky_server_process_peach_message(server, socket, buffer);
-            check(rc == 0, "Unable to process PEACH message");
-            break;
-        }
-        
-        default: {
-            sentinel("Invalid message type");
-            break;
-        }
+        case SKY_MESSAGE_EADD:  rc = sky_server_process_eadd_message(server, table, input, output); break;
+        case SKY_MESSAGE_PEACH: rc = sky_server_process_peach_message(server, table, input, output); break;
+        default: sentinel("Invalid message type"); break;
     }
     
     // Clean up.
-    if(header) sky_message_header_free(header);
-    close(socket);
+    sky_message_header_free(header);
+    fclose(input);
+    fclose(output);
 
     return 0;
 
 error:
-    if(header) sky_message_header_free(header);
-    if(socket > 0) close(socket);
+    sky_message_header_free(header);
+    fclose(input);
+    fclose(output);
     return -1;
 }
 
 
-//======================================
-// EADD
-//======================================
-
-// Processes an "Event Add" message.
-//
-// server - The server that received the message.
-// socket - The socket that sent the message.
-// buffer - The buffer that contains the full message.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_server_process_eadd_message(sky_server *server, int socket,
-                                    void *buffer)
-{
-    int rc;
-    check(server != NULL, "Server required");
-    check(socket != 0, "Socket required");
-    check(buffer != NULL, "Buffer required");
-    
-    // Parse message from buffer.
-    sky_eadd_message *message = sky_eadd_message_create();
-    rc = sky_eadd_message_parse(buffer, message);
-    
-    // Validate message.
-    check(server->path != NULL, "Server path is required");
-    check(message->database_name != NULL, "Database name is required");
-    check(message->table_name != NULL, "Table name is required");
-    check(message->object_id != 0, "Object ID is required");
-    
-    // Open table.
-    sky_database *database = NULL;
-    sky_table *table = NULL;
-    sky_server_open_table(server, message->database_name, message->table_name, &database, &table);
-
-    // Create event.
-    sky_event *event = sky_event_create(message->object_id, message->timestamp, message->action_id);
-    
-    // Add event to table.
-    rc = sky_table_add_event(table, event);
-    check(rc == 0, "Unable to add event to table");
-    
-    // TODO: Send respond to socket.
-    
-    // Close table.
-    sky_server_close_table(server, database, table);
-
-    // Clean up.
-    sky_event_free(event);
-    sky_eadd_message_free(message);
-
-    return 0;
-
-error:
-    sky_event_free(event);
-    sky_eadd_message_free(message);
-    return -1;
-}
 
 
-//======================================
-// PEACH
-//======================================
-
-// Processes a "Each Path" message.
-//
-// server - The server.
-// socket - The socket that sent the message.
-// buffer - The buffer that contains the full message.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_server_process_peach_message(sky_server *server, int socket,
-                                     void *buffer)
-{
-    int rc;
-    check(server != NULL, "Server required");
-    check(socket != 0, "Socket required");
-    check(buffer != NULL, "Buffer required");
-    
-    // Parse message from buffer.
-    sky_peach_message *message = sky_peach_message_create();
-    rc = sky_peach_message_parse(buffer, message);
-    
-    // Validate message.
-    check(message->database_name != NULL, "Database name is required");
-    check(message->table_name != NULL, "Table name is required");
-    check(message->query != NULL, "Query text is required");
-    
-    // Open table.
-    sky_database *database = NULL;
-    sky_table *table = NULL;
-    sky_server_open_table(server, message->database_name, message->table_name, &database, &table);
-
-    // Compile query and execute.
-    qip_ast_node *type_ref, *var_decl;
-    qip_ast_node *args[2];
-    
-    // Path argument.
-    struct tagbstring path_str = bsStatic("path");
-    type_ref = qip_ast_type_ref_create_cstr("Path");
-    var_decl = qip_ast_var_decl_create(type_ref, &path_str, NULL);
-    args[0] = qip_ast_farg_create(var_decl);
-    
-    // Data argument.
-    struct tagbstring data_str = bsStatic("data");
-    type_ref = qip_ast_type_ref_create_cstr("Map");
-    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Int"));
-    qip_ast_type_ref_add_subtype(type_ref, qip_ast_type_ref_create_cstr("Result"));
-    var_decl = qip_ast_var_decl_create(type_ref, &data_str, NULL);
-    args[1] = qip_ast_farg_create(var_decl);
-
-    // Compile.
-    qip_module *module = NULL;
-    struct tagbstring module_name = bsStatic("sky");
-    struct tagbstring core_class_path = bsStatic("lib/core");
-    struct tagbstring sky_class_path = bsStatic("lib/sky");
-    qip_compiler *compiler = qip_compiler_create();
-    qip_compiler_add_class_path(compiler, &core_class_path);
-    qip_compiler_add_class_path(compiler, &sky_class_path);
-    rc = qip_compiler_compile(compiler, &module_name, message->query, args, 2, &module);
-    check(rc == 0, "Unable to compile");
-    if(module->error_count > 0) {
-        debug("Parse error [line %d] %s", module->errors[0]->line_no, bdata(module->errors[0]->message));
-    }
-    check(module->error_count == 0, "Parse errors found");
-    qip_compiler_free(compiler);
-
-    // Retrieve main function.
-    sky_qip_path_map_func process_path = NULL;
-    rc = qip_module_get_main_function(module, (void*)(&process_path));
-    check(rc == 0, "Unable to retrieve main function");
- 
-    // Initialize the path iterator.
-    sky_path_iterator iterator;
-    sky_path_iterator_init(&iterator);
-    rc = sky_path_iterator_set_data_file(&iterator, table->data_file);
-    check(rc == 0, "Unable to initialze path iterator");
-
-    // Initialize QIP args.
-    sky_qip_path *path = sky_qip_path_create();
-    qip_map *map = qip_map_create();
-    
-    // Iterate over each path.
-    uint32_t path_count = 0;
-    while(!iterator.eof) {
-        // Retrieve the path pointer.
-        rc = sky_path_iterator_get_ptr(&iterator, &path->path_ptr);
-        check(rc == 0, "Unable to retrieve the path iterator pointer");
-    
-        // Execute query.
-        process_path(path, map);
-
-        // Move to next path.
-        rc = sky_path_iterator_next(&iterator);
-        check(rc == 0, "Unable to find next path");
-        
-        path_count++;
-    }
-
-    debug("Paths processed: %d", path_count);
-
-    // Retrieve Result serialization function.
-    struct tagbstring result_str = bsStatic("Result");
-    struct tagbstring serialize_str = bsStatic("serialize");
-    qip_result_serialize_func result_serialize = NULL;
-    qip_module_get_class_method(module, &result_str, &serialize_str, (void*)(&result_serialize));
-    check(result_serialize != NULL, "Unable to find serialize() method on class 'Result'");
-
-    // Serialize.
-    qip_serializer *serializer = qip_serializer_create();
-    qip_serializer_pack_map(serializer, map->count);
-    int64_t i;
-    for(i=0; i<map->count; i++) {
-        result_serialize(map->elements[i], serializer);
-    }
-
-    // Send response to socket.
-    rc = write(socket, serializer->data, serializer->length);
-    check((int64_t)rc == serializer->length, "Unable to write serialized data to socket");
-    
-    // Close table.
-    sky_server_close_table(server, database, table);
-
-    // Clean up.
-    qip_map_free(map);
-    qip_module_free(module);
-    sky_peach_message_free(message);
-
-    return 0;
-
-error:
-    qip_map_free(map);
-    qip_module_free(module);
-    sky_peach_message_free(message);
-    return -1;
-}
-
-
-//======================================
+//--------------------------------------
 // Table management
-//======================================
+//--------------------------------------
 
 // Opens an table.
 //
-// server - The server that is opening the table.
+// server        - The server that is opening the table.
 // database_name - The name of the database to open.
-// table_name - The name of the table to open.
-// database - Returns the instance of the database to the caller. 
-// table - Returns the instance of the table to the caller. 
+// table_name    - The name of the table to open.
+// database      - Returns the instance of the database to the caller. 
+// table         - Returns the instance of the table to the caller. 
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_server_open_table(sky_server *server, bstring database_name,
@@ -468,9 +250,13 @@ int sky_server_open_table(sky_server *server, bstring database_name,
     rc = sky_table_open(*table);
     check(rc == 0, "Unable to open table");
     
+    bdestroy(table_path);
+    bdestroy(database_path);
     return 0;
 
 error:
+    bdestroy(table_path);
+    bdestroy(database_path);
     sky_database_free(*database);
     sky_table_free(*table);
     *database = NULL;
@@ -508,6 +294,75 @@ int sky_server_close_table(sky_server *server, sky_database *database,
 error:
     sky_table_free(table);
     sky_database_free(database);
+    return -1;
+}
+
+
+//--------------------------------------
+// Message processing
+//--------------------------------------
+
+// Parses and process an Event Add (EADD) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_eadd_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_eadd_message *message = sky_eadd_message_create(); check_mem(message);
+    rc = sky_eadd_message_unpack(message, input);
+    check(rc == 0, "Unable to parse EADD message");
+    
+    // Process message.
+    rc = sky_eadd_message_process(message, table);
+    check(rc == 0, "Unable to process EADD message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Parses and process a Path-Each (PEACH) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_peach_message(sky_server *server, sky_table *table,
+                                     FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_peach_message *message = sky_peach_message_create(); check_mem(message);
+    rc = sky_peach_message_unpack(message, input);
+    check(rc == 0, "Unable to parse PEACH message");
+    
+    // Process message.
+    rc = sky_peach_message_process(message, table);
+    check(rc == 0, "Unable to process PEACH message");
+    
+    return 0;
+
+error:
     return -1;
 }
 

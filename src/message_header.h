@@ -1,7 +1,12 @@
-#ifndef _qip_array_h
-#define _qip_array_h
+#ifndef _sky_message_header_h
+#define _sky_message_header_h
 
+#include <stdio.h>
 #include <inttypes.h>
+
+#include "message_type.h"
+#include "bstring.h"
+#include "types.h"
 
 
 //==============================================================================
@@ -10,10 +15,14 @@
 //
 //==============================================================================
 
+// The header info for a message.
 typedef struct {
-    int64_t length;
-    void **elements;
-} qip_array;
+    uint64_t version;
+    uint64_t type;
+    uint64_t length;
+    bstring database_name;
+    bstring table_name;
+} sky_message_header;
 
 
 //==============================================================================
@@ -26,24 +35,16 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-qip_array *qip_array_create();
+sky_message_header *sky_message_header_create();
 
-void qip_array_free(qip_array *array);
-
-//--------------------------------------
-// Element Management
-//--------------------------------------
-
-int qip_array_push(qip_array *array, void *item);
-
-int qip_array_pop(qip_array *array, void **item);
+void sky_message_header_free(sky_message_header *header);
 
 //--------------------------------------
-// Qip Interface
+// Serialization
 //--------------------------------------
 
-void *qipx_array_get_item_at(qip_array *array, int64_t index);
+int sky_message_header_pack(sky_message_header *header, FILE *file);
 
-void qipx_array_set_item_at(qip_array *array, void *item, int64_t index);
+int sky_message_header_unpack(sky_message_header *header, FILE *file);
 
 #endif

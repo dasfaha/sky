@@ -36,9 +36,9 @@ int sky_block_span_with_event(sky_block *block, sky_event *new_event,
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 // Creates a block object.
 //
@@ -68,9 +68,9 @@ void sky_block_free(sky_block *block)
 }
 
 
-//======================================
+//--------------------------------------
 // Persistence
-//======================================
+//--------------------------------------
 
 // Syncs the in-memory block back to disk.
 //
@@ -114,9 +114,9 @@ error:
 }
 
 
-//======================================
+//--------------------------------------
 // Serialization
-//======================================
+//--------------------------------------
 
 // Packs a block object into memory at a given pointer.
 //
@@ -192,9 +192,9 @@ error:
 }
 
 
-//======================================
+//--------------------------------------
 // Header Management
-//======================================
+//--------------------------------------
 
 // Updates the block object id and timestamp ranges and saves the changes to
 // the header file as required.
@@ -402,9 +402,9 @@ error:
     return -1;
 }
 
-//======================================
+//--------------------------------------
 // Block Position
-//======================================
+//--------------------------------------
 
 // Calculates the byte offset for the beginning on the block in the
 // data file based on the data file block size and the block index.
@@ -456,9 +456,9 @@ error:
 }
 
 
-//======================================
+//--------------------------------------
 // Spanning
-//======================================
+//--------------------------------------
 
 // Determines the number of blocks that this block's object spans. This
 // function only works on the starting block of a span of blocks.
@@ -655,9 +655,9 @@ error:
 }
 
 
-//======================================
+//--------------------------------------
 // Path Stats
-//======================================
+//--------------------------------------
 
 // Generates an index of stats on all the paths in the block. If an event is
 // passed in then it also generates stats on the path the event would be
@@ -759,9 +759,9 @@ error:
 
 
 
-//======================================
+//--------------------------------------
 // Event Management
-//======================================
+//--------------------------------------
 
 // Adds an event to the block. If the size of the block exceeds the block size
 // then a new empty block is allocated and half the paths in the block are
@@ -1131,9 +1131,9 @@ error:
 }
 
 
-//======================================
+//--------------------------------------
 // Debugging
-//======================================
+//--------------------------------------
 
 // Dumps the contents of a block out to STDERR.
 //

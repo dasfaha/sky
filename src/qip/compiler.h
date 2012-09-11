@@ -44,26 +44,26 @@ struct qip_compiler {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 qip_compiler *qip_compiler_create();
 
 void qip_compiler_free(qip_compiler *compiler);
 
 
-//======================================
+//--------------------------------------
 // Compile
-//======================================
+//--------------------------------------
 
 int qip_compiler_compile(qip_compiler *compiler, bstring name, bstring text,
     qip_ast_node **args, uint32_t arg_count, qip_module **ret);
 
 
-//======================================
+//--------------------------------------
 // Module Management
-//======================================
+//--------------------------------------
 
 int qip_compiler_add_class_path(qip_compiler *compiler, bstring path);
 
@@ -71,9 +71,9 @@ int qip_compiler_load_module_source(qip_compiler *compiler, bstring name,
     bstring *source);
 
 
-//======================================
+//--------------------------------------
 // Dynamic Class Management
-//======================================
+//--------------------------------------
 
 int qip_compiler_process_dynamic_class(qip_compiler *compiler, qip_ast_node *class);
 

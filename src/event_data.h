@@ -37,9 +37,9 @@ typedef struct sky_event_data {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 sky_event_data *sky_event_data_create(sky_property_id_t key, bstring value);
 
@@ -48,9 +48,9 @@ void sky_event_data_free(sky_event_data *event);
 int sky_event_data_copy(sky_event_data *source, sky_event_data **target);
 
 
-//======================================
+//--------------------------------------
 // Serialization
-//======================================
+//--------------------------------------
 
 size_t sky_event_data_sizeof(sky_event_data *data);
 

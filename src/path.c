@@ -13,9 +13,9 @@
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Event Sorting
-//======================================
+//--------------------------------------
 
 // Compares two events and sorts them by timestamp and then orders data events
 // before action events.
@@ -57,9 +57,9 @@ void sort_events(sky_path *path)
 }
 
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 // Creates a reference to a path.
 //
@@ -99,9 +99,9 @@ void sky_path_free(sky_path *path)
 }
 
 
-//======================================
+//--------------------------------------
 // Serialization
-//======================================
+//--------------------------------------
 
 // Calculates the total number of bytes needed to store just the events section
 // of the path.
@@ -282,9 +282,9 @@ error:
     return -1;
 }
 
-//======================================
+//--------------------------------------
 // Stats
-//======================================
+//--------------------------------------
 
 // Generates an index of stats on all the events in a raw path. If an event is
 // passed in then it also generates stats and includes the event where it
@@ -377,9 +377,9 @@ error:
 }
 
 
-//======================================
+//--------------------------------------
 // Event Management
-//======================================
+//--------------------------------------
 
 // Adds an event to a path. An event can only be added if the event's object id
 // matches the path's object id.

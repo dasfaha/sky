@@ -1,6 +1,7 @@
 #ifndef _server_h
 #define _server_h
 
+#include <stdio.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <netinet/in.h>
@@ -62,39 +63,39 @@ typedef struct sky_server {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 sky_server *sky_server_create(bstring path);
 
 void sky_server_free(sky_server *server);
 
 
-//======================================
+//--------------------------------------
 // State
-//======================================
+//--------------------------------------
 
 int sky_server_start(sky_server *server);
 
 int sky_server_stop(sky_server *server);
 
 
-//======================================
+//--------------------------------------
 // Connection Management
-//======================================
+//--------------------------------------
 
 int sky_server_accept(sky_server *server);
 
 
-//======================================
+//--------------------------------------
 // Message Processing
-//======================================
+//--------------------------------------
 
-int sky_server_process_eadd_message(sky_server *server, int socket,
-    void *buffer);
+int sky_server_process_eadd_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
 
-int sky_server_process_peach_message(sky_server *server, int socket,
-    void *buffer);
+int sky_server_process_peach_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
 
 #endif

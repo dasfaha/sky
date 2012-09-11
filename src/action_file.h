@@ -42,27 +42,27 @@ struct sky_action_file {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 sky_action_file *sky_action_file_create();
 
 void sky_action_file_free(sky_action_file *action_file);
 
 
-//======================================
+//--------------------------------------
 // Path
-//======================================
+//--------------------------------------
 
 int sky_action_file_set_path(sky_action_file *action_file, bstring path);
 
 int sky_action_file_get_path(sky_action_file *action_file, bstring *path);
 
 
-//======================================
+//--------------------------------------
 // Persistence
-//======================================
+//--------------------------------------
 
 int sky_action_file_load(sky_action_file *action_file);
 
@@ -71,9 +71,9 @@ int sky_action_file_unload(sky_action_file *action_file);
 int sky_action_file_save(sky_action_file *action_file);
 
 
-//======================================
+//--------------------------------------
 // Action Management
-//======================================
+//--------------------------------------
 
 int sky_action_file_find_action_by_name(sky_action_file *action_file,
     bstring name, sky_action **ret);

@@ -8,9 +8,9 @@
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Bstring
-//======================================
+//--------------------------------------
 
 // Reads a MessagePack serialized raw byte stream in as a bstring.
 //
@@ -21,9 +21,6 @@
 int sky_minipack_fread_bstring(FILE *file, bstring *ret)
 {
     size_t sz;
-    
-    // Checkpoint stream.
-    long pos = ftell(file);
     
     // Read string length.
     uint32_t length = minipack_fread_raw(file, &sz);
@@ -47,7 +44,6 @@ int sky_minipack_fread_bstring(FILE *file, bstring *ret)
     return 0;
     
 error:
-    fseek(file, pos, SEEK_SET);
     if(str) bdestroy(str);
     str = NULL;
     *ret = NULL;

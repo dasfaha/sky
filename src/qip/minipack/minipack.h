@@ -15,9 +15,9 @@
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Positive Fixnum
-//======================================
+//--------------------------------------
 
 bool minipack_is_pos_fixnum(void *ptr);
 
@@ -26,9 +26,9 @@ uint8_t minipack_unpack_pos_fixnum(void *ptr, size_t *sz);
 void minipack_pack_pos_fixnum(void *ptr, uint8_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Negative Fixnum
-//======================================
+//--------------------------------------
 
 int8_t minipack_unpack_neg_fixnum(void *ptr, size_t *sz);
 
@@ -42,9 +42,9 @@ void minipack_pack_neg_fixnum(void *ptr, int8_t value, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Unsigned Int
-//======================================
+//--------------------------------------
 
 size_t minipack_sizeof_uint(uint64_t value);
 
@@ -59,9 +59,9 @@ uint64_t minipack_fread_uint(FILE *file, size_t *sz);
 int minipack_fwrite_uint(FILE *file, uint64_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Unsigned Int (8-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_uint8(void *ptr);
 
@@ -70,9 +70,9 @@ uint8_t minipack_unpack_uint8(void *ptr, size_t *sz);
 void minipack_pack_uint8(void *ptr, uint8_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Unsigned Int (16-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_uint16(void *ptr);
 
@@ -81,9 +81,9 @@ uint16_t minipack_unpack_uint16(void *ptr, size_t *sz);
 void minipack_pack_uint16(void *ptr, uint16_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Unsigned Int (32-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_uint32(void *ptr);
 
@@ -92,9 +92,9 @@ uint32_t minipack_unpack_uint32(void *ptr, size_t *sz);
 void minipack_pack_uint32(void *ptr, uint32_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Unsigned Int (64-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_uint64(void *ptr);
 
@@ -110,9 +110,9 @@ void minipack_pack_uint64(void *ptr, uint64_t value, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Signed Int
-//======================================
+//--------------------------------------
 
 size_t minipack_int_sizeof(int64_t value);
 
@@ -127,9 +127,9 @@ int64_t minipack_fread_int(FILE *file, size_t *sz);
 int minipack_fwrite_int(FILE *file, int64_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Signed Int (8-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_int8(void *ptr);
 
@@ -138,9 +138,9 @@ int8_t minipack_unpack_int8(void *ptr, size_t *sz);
 void minipack_pack_int8(void *ptr, int8_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Signed Int (16-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_int16(void *ptr);
 
@@ -149,9 +149,9 @@ int16_t minipack_unpack_int16(void *ptr, size_t *sz);
 void minipack_pack_int16(void *ptr, int16_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Signed Int (32-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_int32(void *ptr);
 
@@ -160,9 +160,9 @@ int32_t minipack_unpack_int32(void *ptr, size_t *sz);
 void minipack_pack_int32(void *ptr, int32_t value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Signed Int (64-bit)
-//======================================
+//--------------------------------------
 
 bool minipack_is_int64(void *ptr);
 
@@ -177,9 +177,9 @@ void minipack_pack_int64(void *ptr, int64_t value, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Nil
-//======================================
+//--------------------------------------
 
 bool minipack_is_nil(void *ptr);
 
@@ -198,9 +198,9 @@ int minipack_fwrite_nil(FILE *file, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Bool
-//======================================
+//--------------------------------------
 
 bool minipack_is_bool(void *ptr);
 
@@ -223,9 +223,9 @@ int minipack_fwrite_bool(FILE *file, bool value, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Float
-//======================================
+//--------------------------------------
 
 bool minipack_is_float(void *ptr);
 
@@ -238,9 +238,9 @@ float minipack_fread_float(FILE *file, size_t *sz);
 int minipack_fwrite_float(FILE *file, float value, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Double
-//======================================
+//--------------------------------------
 
 bool minipack_is_double(void *ptr);
 
@@ -259,9 +259,9 @@ int minipack_fwrite_double(FILE *file, double value, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // General
-//======================================
+//--------------------------------------
 
 bool minipack_is_raw(void *ptr);
 
@@ -278,9 +278,9 @@ uint32_t minipack_fread_raw(FILE *file, size_t *sz);
 int minipack_fwrite_raw(FILE *file, uint32_t length, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Fix raw
-//======================================
+//--------------------------------------
 
 bool minipack_is_fixraw(void *ptr);
 
@@ -289,9 +289,9 @@ uint8_t minipack_unpack_fixraw(void *ptr, size_t *sz);
 void minipack_pack_fixraw(void *ptr, uint8_t length, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Raw 16
-//======================================
+//--------------------------------------
 
 bool minipack_is_raw16(void *ptr);
 
@@ -300,9 +300,9 @@ uint16_t minipack_unpack_raw16(void *ptr, size_t *sz);
 void minipack_pack_raw16(void *ptr, uint16_t length, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Raw 32
-//======================================
+//--------------------------------------
 
 bool minipack_is_raw32(void *ptr);
 
@@ -318,9 +318,9 @@ void minipack_pack_raw32(void *ptr, uint32_t length, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // General
-//======================================
+//--------------------------------------
 
 bool minipack_is_array(void *ptr);
 
@@ -337,9 +337,9 @@ uint32_t minipack_fread_array(FILE *file, size_t *sz);
 int minipack_fwrite_array(FILE *file, uint32_t length, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Fix array
-//======================================
+//--------------------------------------
 
 bool minipack_is_fixarray(void *ptr);
 
@@ -348,9 +348,9 @@ uint8_t minipack_unpack_fixarray(void *ptr, size_t *sz);
 void minipack_pack_fixarray(void *ptr, uint8_t count, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Array 16
-//======================================
+//--------------------------------------
 
 bool minipack_is_array16(void *ptr);
 
@@ -359,9 +359,9 @@ uint16_t minipack_unpack_array16(void *ptr, size_t *sz);
 void minipack_pack_array16(void *ptr, uint16_t count, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Array 32
-//======================================
+//--------------------------------------
 
 bool minipack_is_array32(void *ptr);
 
@@ -377,9 +377,9 @@ void minipack_pack_array32(void *ptr, uint32_t count, size_t *sz);
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // General
-//======================================
+//--------------------------------------
 
 bool minipack_is_map(void *ptr);
 
@@ -396,9 +396,9 @@ uint32_t minipack_fread_map(FILE *file, size_t *sz);
 int minipack_fwrite_map(FILE *file, uint32_t length, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Fix map
-//======================================
+//--------------------------------------
 
 bool minipack_is_fixmap(void *ptr);
 
@@ -407,9 +407,9 @@ uint8_t minipack_unpack_fixmap(void *ptr, size_t *sz);
 void minipack_pack_fixmap(void *ptr, uint8_t count, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Map 16
-//======================================
+//--------------------------------------
 
 bool minipack_is_map16(void *ptr);
 
@@ -418,9 +418,9 @@ uint16_t minipack_unpack_map16(void *ptr, size_t *sz);
 void minipack_pack_map16(void *ptr, uint16_t count, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Map 32
-//======================================
+//--------------------------------------
 
 bool minipack_is_map32(void *ptr);
 

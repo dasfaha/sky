@@ -72,9 +72,9 @@ typedef struct sky_event {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Create/Destroy
-//======================================
+//--------------------------------------
 
 sky_event *sky_event_create(sky_object_id_t object_id,
                             sky_timestamp_t timestamp,
@@ -85,9 +85,9 @@ void sky_event_free(sky_event *event);
 int sky_event_copy(sky_event *source, sky_event **target);
 
 
-//======================================
+//--------------------------------------
 // Serialization
-//======================================
+//--------------------------------------
 
 size_t sky_event_sizeof(sky_event *event);
 
@@ -106,9 +106,9 @@ int sky_event_unpack_hdr(sky_timestamp_t *timestamp, sky_action_id_t *action_id,
     sky_event_data_length_t *data_length, void *ptr, size_t *sz);
 
 
-//======================================
+//--------------------------------------
 // Data Management
-//======================================
+//--------------------------------------
 
 int sky_event_get_data(sky_event *event, sky_property_id_t key,
                        sky_event_data **data);

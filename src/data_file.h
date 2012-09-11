@@ -54,36 +54,36 @@ struct sky_data_file {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 sky_data_file *sky_data_file_create();
 
 void sky_data_file_free(sky_data_file *data_file);
 
 
-//======================================
+//--------------------------------------
 // Paths
-//======================================
+//--------------------------------------
 
 int sky_data_file_set_path(sky_data_file *data_file, bstring path);
 
 int sky_data_file_set_header_path(sky_data_file *data_file, bstring path);
 
 
-//======================================
+//--------------------------------------
 // Persistence
-//======================================
+//--------------------------------------
 
 int sky_data_file_load(sky_data_file *data_file);
 
 int sky_data_file_unload(sky_data_file *data_file);
 
 
-//======================================
+//--------------------------------------
 // Block Management
-//======================================
+//--------------------------------------
 
 int sky_data_file_create_block(sky_data_file *data_file, sky_block **ret);
 
@@ -94,9 +94,9 @@ int sky_data_file_move_to_new_block(sky_data_file *data_file, void **ptr,
     size_t sz, sky_block **new_block);
 
 
-//======================================
+//--------------------------------------
 // Event Management
-//======================================
+//--------------------------------------
 
 int sky_data_file_add_event(sky_data_file *data_file, sky_event *event);
 

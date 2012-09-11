@@ -1,7 +1,12 @@
-#ifndef _qip_array_h
-#define _qip_array_h
+#ifndef _sky_peach_message_h
+#define _sky_peach_message_h
 
+#include <stdio.h>
 #include <inttypes.h>
+
+#include "bstring.h"
+#include "types.h"
+#include "table.h"
 
 
 //==============================================================================
@@ -10,10 +15,10 @@
 //
 //==============================================================================
 
+// A message for querying each path in the database.
 typedef struct {
-    int64_t length;
-    void **elements;
-} qip_array;
+    bstring query;
+} sky_peach_message;
 
 
 //==============================================================================
@@ -26,24 +31,22 @@ typedef struct {
 // Lifecycle
 //--------------------------------------
 
-qip_array *qip_array_create();
+sky_peach_message *sky_peach_message_create();
 
-void qip_array_free(qip_array *array);
-
-//--------------------------------------
-// Element Management
-//--------------------------------------
-
-int qip_array_push(qip_array *array, void *item);
-
-int qip_array_pop(qip_array *array, void **item);
+void sky_peach_message_free(sky_peach_message *message);
 
 //--------------------------------------
-// Qip Interface
+// Serialization
 //--------------------------------------
 
-void *qipx_array_get_item_at(qip_array *array, int64_t index);
+int sky_peach_message_pack(sky_peach_message *message, FILE *file);
 
-void qipx_array_set_item_at(qip_array *array, void *item, int64_t index);
+int sky_peach_message_unpack(sky_peach_message *message, FILE *file);
+
+//--------------------------------------
+// Processing
+//--------------------------------------
+
+int sky_peach_message_process(sky_peach_message *message, sky_table *table);
 
 #endif

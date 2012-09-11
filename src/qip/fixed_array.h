@@ -23,9 +23,9 @@ typedef struct {
 //
 //==============================================================================
 
-//======================================
+//--------------------------------------
 // Lifecycle
-//======================================
+//--------------------------------------
 
 qip_fixed_array *qip_fixed_array_create(int64_t elemsz, int64_t length);
 
@@ -37,18 +37,18 @@ void qip_fixed_array_init(qip_fixed_array *array, int64_t elemsz,
 void qip_fixed_array_free(qip_fixed_array *array);
 
 
-//======================================
+//--------------------------------------
 // Element Retrieval
-//======================================
+//--------------------------------------
 
 void *qip_fixed_array_get_item_at(qip_fixed_array *array, int64_t index);
 
 int64_t qip_fixed_array_get_int_item_at(qip_fixed_array *array, int64_t index);
 
 
-//======================================
+//--------------------------------------
 // Element Assignment
-//======================================
+//--------------------------------------
 
 void qip_fixed_array_set_item_at(qip_fixed_array *array, void *item,
     int64_t index);
