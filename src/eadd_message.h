@@ -50,6 +50,7 @@ int sky_eadd_message_unpack(sky_eadd_message *message, FILE *file);
 // Processing
 //--------------------------------------
 
-int sky_eadd_message_process(sky_eadd_message *message, sky_table *table);
+int sky_eadd_message_process(sky_eadd_message *message, sky_table *table,
+    FILE *output);
 
 #endif

@@ -134,13 +134,20 @@ error:
 //
 // message - The message.
 // table   - The table to apply the message to.
+// output  - The output stream to write to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_eadd_message_process(sky_eadd_message *message, sky_table *table)
+int sky_eadd_message_process(sky_eadd_message *message, sky_table *table,
+                             FILE *output)
 {
     int rc;
+    size_t sz;
     check(message != NULL, "Message required");
     check(table != NULL, "Table required");
+    check(output != NULL, "Output stream required");
+
+    struct tagbstring status_str = bsStatic("status");
+    struct tagbstring ok_str = bsStatic("ok");
 
     // Create event object.
     sky_event *event = sky_event_create(message->object_id, message->timestamp, message->action_id);
@@ -148,6 +155,11 @@ int sky_eadd_message_process(sky_eadd_message *message, sky_table *table)
     // Add event to table.
     rc = sky_table_add_event(table, event);
     check(rc == 0, "Unable to add event to table");
+    
+    // Return {status:"OK"}
+    check(minipack_fwrite_map(output, 1, &sz) == 0, "Unable to write output");
+    check(sky_minipack_fwrite_bstring(output, &status_str) == 0, "Unable to write output");
+    check(sky_minipack_fwrite_bstring(output, &ok_str) == 0, "Unable to write output");
     
     return 0;
 

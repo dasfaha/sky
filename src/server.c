@@ -325,7 +325,7 @@ int sky_server_process_eadd_message(sky_server *server, sky_table *table,
     check(rc == 0, "Unable to parse EADD message");
     
     // Process message.
-    rc = sky_eadd_message_process(message, table);
+    rc = sky_eadd_message_process(message, table, output);
     check(rc == 0, "Unable to process EADD message");
     
     return 0;
@@ -357,7 +357,7 @@ int sky_server_process_peach_message(sky_server *server, sky_table *table,
     check(rc == 0, "Unable to parse PEACH message");
     
     // Process message.
-    rc = sky_peach_message_process(message, table);
+    rc = sky_peach_message_process(message, table, output);
     check(rc == 0, "Unable to process PEACH message");
     
     return 0;

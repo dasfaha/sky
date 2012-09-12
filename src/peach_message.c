@@ -86,7 +86,7 @@ int sky_peach_message_pack(sky_peach_message *message, FILE *file)
 
     // Database name
     rc = sky_minipack_fwrite_bstring(file, message->query);
-    check(rc == 1, "Unable to write query text");
+    check(rc == 0, "Unable to write query text");
 
     return 0;
 
@@ -125,13 +125,16 @@ error:
 //
 // message - The message.
 // table   - The table to run the query against.
+// output  - The output stream to write to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_peach_message_process(sky_peach_message *message, sky_table *table)
+int sky_peach_message_process(sky_peach_message *message, sky_table *table,
+                              FILE *output)
 {
     int rc;
     check(message != NULL, "Message required");
     check(table != NULL, "Table required");
+    check(output != NULL, "Output stream required");
 
     // Compile query and execute.
     qip_ast_node *type_ref, *var_decl;
@@ -215,9 +218,9 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table)
         result_serialize(map->elements[i], serializer);
     }
 
-    // Send response to socket.
-    //rc = write(socket, serializer->data, serializer->length);
-    //check((int64_t)rc == serializer->length, "Unable to write serialized data to socket");
+    // Send response to output stream.
+    rc = fwrite(serializer->data, serializer->length, 1, output);
+    check(rc == 1, "Unable to write serialized data to stream");
     
     qip_map_free(map);
     return 0;

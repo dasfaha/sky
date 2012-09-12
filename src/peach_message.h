@@ -47,6 +47,7 @@ int sky_peach_message_unpack(sky_peach_message *message, FILE *file);
 // Processing
 //--------------------------------------
 
-int sky_peach_message_process(sky_peach_message *message, sky_table *table);
+int sky_peach_message_process(sky_peach_message *message, sky_table *table,
+    FILE *output);
 
 #endif

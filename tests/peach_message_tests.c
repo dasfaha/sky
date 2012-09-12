@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <server.h>
+#include <peach_message.h>
 #include <mem.h>
 #include <dbg.h>
 
@@ -10,45 +10,35 @@
 
 //==============================================================================
 //
-// Fixtures
-//
-//==============================================================================
-
-char PEACH_MESSAGE[] = 
-    "\x00\x01"                          // Version
-    "\x00\x02\x00\x06"                  // Type
-    "\x00\x00\x00\xF7"                  // Length
-    "\x02" "db"                         // Database Name
-    "\x05" "users"                      // Table Name
-    "\x00\x00\x00\xEA"                  // Query Length
-    "[Hashable(\"id\")]\n"              // Query
-    "[Serializable]\n"
-    "class Result {\n"
-    "  public Int id;\n"
-    "  public Int count;\n"
-    "}\n"
-    "Cursor cursor = path.events();\n"
-    "for each (Event event in cursor) {\n"
-    "  Result item = data.get(event.actionId);\n"
-    "  item.count = item.count + 1;\n"
-    "}\n"
-    "return;"
-;
-
-
-//==============================================================================
-//
 // Test Cases
 //
 //==============================================================================
 
-int test_sky_server_process_peach_message() {
-    int socket = 1;
-    struct tagbstring root = bsStatic("tmp");
-    loadtmp("tests/fixtures/server/peach/0");
-    sky_server *server = sky_server_create(&root);
-    mu_assert(sky_server_process_peach_message(server, socket, &PEACH_MESSAGE) == 0, "");
-    sky_server_free(server);
+//--------------------------------------
+// Serialization
+//--------------------------------------
+
+int test_sky_peach_message_pack() {
+    cleantmp();
+    sky_peach_message *message = sky_peach_message_create();
+    message->query = bfromcstr("class Foo{ public Int x; }");
+    
+    FILE *file = fopen("tmp/message", "w");
+    mu_assert_bool(sky_peach_message_pack(message, file) == 0);
+    fclose(file);
+    mu_assert_file("tmp/message", "tests/fixtures/peach_message/0/message");
+    sky_peach_message_free(message);
+    return 0;
+}
+
+int test_sky_peach_message_unpack() {
+    FILE *file = fopen("tests/fixtures/peach_message/0/message", "r");
+    sky_peach_message *message = sky_peach_message_create();
+    mu_assert_bool(sky_peach_message_unpack(message, file) == 0);
+    fclose(file);
+
+    mu_assert_bstring(message->query, "class Foo{ public Int x; }");
+    sky_peach_message_free(message);
     return 0;
 }
 
@@ -60,7 +50,8 @@ int test_sky_server_process_peach_message() {
 //==============================================================================
 
 int all_tests() {
-    mu_run_test(test_sky_server_process_peach_message);
+    mu_run_test(test_sky_peach_message_pack);
+    mu_run_test(test_sky_peach_message_unpack);
     return 0;
 }
 
