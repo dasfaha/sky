@@ -9,6 +9,12 @@
 #include "message_header.h"
 #include "eadd_message.h"
 #include "peach_message.h"
+#include "aadd_message.h"
+#include "aget_message.h"
+#include "aall_message.h"
+#include "padd_message.h"
+#include "pget_message.h"
+#include "pall_message.h"
 #include "dbg.h"
 
 
@@ -182,6 +188,15 @@ int sky_server_accept(sky_server *server)
     switch(header->type) {
         case SKY_MESSAGE_EADD:  rc = sky_server_process_eadd_message(server, table, input, output); break;
         case SKY_MESSAGE_PEACH: rc = sky_server_process_peach_message(server, table, input, output); break;
+
+        case SKY_MESSAGE_AADD: rc = sky_server_process_aadd_message(server, table, input, output); break;
+        case SKY_MESSAGE_AGET: rc = sky_server_process_aget_message(server, table, input, output); break;
+        case SKY_MESSAGE_AALL: rc = sky_server_process_aall_message(server, table, input, output); break;
+
+        case SKY_MESSAGE_PADD: rc = sky_server_process_padd_message(server, table, input, output); break;
+        case SKY_MESSAGE_PGET: rc = sky_server_process_pget_message(server, table, input, output); break;
+        case SKY_MESSAGE_PALL: rc = sky_server_process_pall_message(server, table, input, output); break;
+
         default: sentinel("Invalid message type"); break;
     }
     
@@ -299,7 +314,7 @@ error:
 
 
 //--------------------------------------
-// Message processing
+// Event Messages
 //--------------------------------------
 
 // Parses and process an Event Add (EADD) message.
@@ -334,6 +349,11 @@ error:
     return -1;
 }
 
+
+//--------------------------------------
+// Path Messages
+//--------------------------------------
+
 // Parses and process a Path-Each (PEACH) message.
 //
 // server - The server.
@@ -359,6 +379,208 @@ int sky_server_process_peach_message(sky_server *server, sky_table *table,
     // Process message.
     rc = sky_peach_message_process(message, table, output);
     check(rc == 0, "Unable to process PEACH message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
+// Action Messages
+//--------------------------------------
+
+// Parses and process an Action-Add (AADD) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_aadd_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_aadd_message *message = sky_aadd_message_create(); check_mem(message);
+    rc = sky_aadd_message_unpack(message, input);
+    check(rc == 0, "Unable to parse AADD message");
+    
+    // Process message.
+    rc = sky_aadd_message_process(message, table, output);
+    check(rc == 0, "Unable to process AADD message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Parses and process an Action-Get (AGET) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_aget_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_aget_message *message = sky_aget_message_create(); check_mem(message);
+    rc = sky_aget_message_unpack(message, input);
+    check(rc == 0, "Unable to parse AGET message");
+    
+    // Process message.
+    rc = sky_aget_message_process(message, table, output);
+    check(rc == 0, "Unable to process AGET message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Parses and process an Action-All (AALL) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_aall_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_aall_message *message = sky_aall_message_create(); check_mem(message);
+    rc = sky_aall_message_unpack(message, input);
+    check(rc == 0, "Unable to parse AALL message");
+    
+    // Process message.
+    rc = sky_aall_message_process(message, table, output);
+    check(rc == 0, "Unable to process AALL message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
+// Property Messages
+//--------------------------------------
+
+// Parses and process an Property-Add (AADD) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_padd_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_padd_message *message = sky_padd_message_create(); check_mem(message);
+    rc = sky_padd_message_unpack(message, input);
+    check(rc == 0, "Unable to parse PADD message");
+    
+    // Process message.
+    rc = sky_padd_message_process(message, table, output);
+    check(rc == 0, "Unable to process PADD message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Parses and process an Property-Get (PGET) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_pget_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_pget_message *message = sky_pget_message_create(); check_mem(message);
+    rc = sky_pget_message_unpack(message, input);
+    check(rc == 0, "Unable to parse PGET message");
+    
+    // Process message.
+    rc = sky_pget_message_process(message, table, output);
+    check(rc == 0, "Unable to process PGET message");
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+// Parses and process an Property-All (PALL) message.
+//
+// server - The server.
+// table  - The table to apply the message to.
+// input  - The input file stream.
+// output - The output file stream.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_server_process_pall_message(sky_server *server, sky_table *table,
+                                    FILE *input, FILE *output)
+{
+    int rc;
+    check(server != NULL, "Server required");
+    check(table != NULL, "Table required");
+    check(input != NULL, "Input required");
+    check(output != NULL, "Output stream required");
+    
+    // Parse message.
+    sky_pall_message *message = sky_pall_message_create(); check_mem(message);
+    rc = sky_pall_message_unpack(message, input);
+    check(rc == 0, "Unable to parse PALL message");
+    
+    // Process message.
+    rc = sky_pall_message_process(message, table, output);
+    check(rc == 0, "Unable to process PALL message");
     
     return 0;
 

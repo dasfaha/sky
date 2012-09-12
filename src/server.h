@@ -89,13 +89,43 @@ int sky_server_accept(sky_server *server);
 
 
 //--------------------------------------
-// Message Processing
+// Event Messages
 //--------------------------------------
 
 int sky_server_process_eadd_message(sky_server *server, sky_table *table,
     FILE *input, FILE *output);
 
+//--------------------------------------
+// Path Messages
+//--------------------------------------
+
 int sky_server_process_peach_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
+
+//--------------------------------------
+// Action Messages
+//--------------------------------------
+
+int sky_server_process_aadd_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
+
+int sky_server_process_aget_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
+
+int sky_server_process_aall_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
+
+//--------------------------------------
+// Property Messages
+//--------------------------------------
+
+int sky_server_process_padd_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
+
+int sky_server_process_pget_message(sky_server *server, sky_table *table,
+    FILE *input, FILE *output);
+
+int sky_server_process_pall_message(sky_server *server, sky_table *table,
     FILE *input, FILE *output);
 
 #endif
