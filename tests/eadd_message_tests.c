@@ -9,27 +9,6 @@
 
 //==============================================================================
 //
-// Globals
-//
-//==============================================================================
-
-struct tagbstring SERVER_ROOT = bsStatic("tmp");
-struct tagbstring OBJECT_TYPE = bsStatic("users");
-
-char EADD_MESSAGE[] = 
-    "\x00\x01"                          // Version
-    "\x00\x01\x00\x01"                  // Type
-    "\x00\x00\x00\x25"                  // Length
-    "\x02" "db"                         // Database Name
-    "\x05" "users"                      // Table Name
-    "\x00\x00\x00\x14"                  // Object ID
-    "\x00\x00\x01\x34\x96\x90\xD0\x00"  // Timestamp
-    "\x00\x01"                          // Action ID #1
-;
-
-
-//==============================================================================
-//
 // Test Cases
 //
 //==============================================================================
@@ -76,17 +55,18 @@ int test_sky_eadd_message_process() {
     sky_table *table = sky_table_create();
     table->path = bfromcstr("tmp");
     sky_table_open(table);
-    FILE *output = fopen("tmp/output", "w");
     
     sky_eadd_message *message = sky_eadd_message_create();
     message->object_id = 10;
     message->timestamp = 1000LL;
     message->action_id = 20;
 
+    FILE *output = fopen("tmp/output", "w");
     mu_assert(sky_eadd_message_process(message, table, output) == 0, "");
     fclose(output);
     mu_assert_file("tmp/0/header", "tests/fixtures/eadd_message/1/table/0/header");
     mu_assert_file("tmp/0/data", "tests/fixtures/eadd_message/1/table/0/data");
+    mu_assert_file("tmp/output", "tests/fixtures/eadd_message/1/output");
 
     sky_eadd_message_free(message);
     sky_table_free(table);

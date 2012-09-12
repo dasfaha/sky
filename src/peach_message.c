@@ -201,7 +201,7 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table,
         
         path_count++;
     }
-    debug("Paths processed: %d", path_count);
+    //debug("Paths processed: %d", path_count);
 
     // Retrieve Result serialization function.
     struct tagbstring result_str = bsStatic("Result");

@@ -43,6 +43,43 @@ int test_sky_peach_message_unpack() {
 }
 
 
+//--------------------------------------
+// Processing
+//--------------------------------------
+
+int test_sky_peach_message_process() {
+    loadtmp("tests/fixtures/peach_message/1/table");
+    sky_table *table = sky_table_create();
+    table->path = bfromcstr("tmp");
+    sky_table_open(table);
+    
+    sky_peach_message *message = sky_peach_message_create();
+    message->query = bfromcstr(
+        "[Hashable(\"id\")]\n"
+        "[Serializable]\n"
+        "class Result {\n"
+        "  public Int id;\n"
+        "  public Int count;\n"
+        "}\n"
+        "Cursor cursor = path.events();\n"
+        "for each (Event event in cursor) {\n"
+        "  Result item = data.get(event.actionId);\n"
+        "  item.count = item.count + 1;\n"
+        "}\n"
+        "return;"
+    );
+
+    FILE *output = fopen("tmp/output", "w");
+    mu_assert(sky_peach_message_process(message, table, output) == 0, "");
+    fclose(output);
+    mu_assert_file("tmp/output", "tests/fixtures/peach_message/1/output");
+
+    sky_peach_message_free(message);
+    sky_table_free(table);
+    return 0;
+}
+
+
 //==============================================================================
 //
 // Setup
@@ -52,6 +89,7 @@ int test_sky_peach_message_unpack() {
 int all_tests() {
     mu_run_test(test_sky_peach_message_pack);
     mu_run_test(test_sky_peach_message_unpack);
+    mu_run_test(test_sky_peach_message_process);
     return 0;
 }
 
