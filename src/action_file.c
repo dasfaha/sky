@@ -244,6 +244,38 @@ int sky_action_file_unload(sky_action_file *action_file)
 // Action Management
 //--------------------------------------
 
+// Retrieves an action by id.
+//
+// action_file - The action file to search.
+// action_id   - The id of the action.
+// ret         - A pointer to where the action should be returned to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_action_file_find_action_by_id(sky_action_file *action_file,
+                                      sky_action_id_t action_id,
+                                      sky_action **ret)
+{
+    check(action_file != NULL, "Action file required");
+    
+    // Initialize return values.
+    *ret = NULL;
+    
+    // Loop over actions to find matching name.
+    uint32_t i;
+    for(i=0; i<action_file->action_count; i++) {
+        if(action_file->actions[i]->id == action_id) {
+            *ret = action_file->actions[i];
+            break;
+        }
+    }
+    
+    return 0;
+
+error:
+    *ret = NULL;
+    return -1;
+}
+
 // Retrieves the id for an action with a given name.
 //
 // action_file - The action file to search.

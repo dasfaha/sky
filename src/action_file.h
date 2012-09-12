@@ -75,6 +75,9 @@ int sky_action_file_save(sky_action_file *action_file);
 // Action Management
 //--------------------------------------
 
+int sky_action_file_find_action_by_id(sky_action_file *action_file,
+    sky_action_id_t action_id, sky_action **ret);
+
 int sky_action_file_find_action_by_name(sky_action_file *action_file,
     bstring name, sky_action **ret);
 
