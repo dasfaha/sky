@@ -15,6 +15,7 @@ typedef struct sky_table sky_table;
 #include "types.h"
 #include "data_file.h"
 #include "action_file.h"
+#include "property_file.h"
 
 //==============================================================================
 //
@@ -57,6 +58,7 @@ struct sky_table {
     sky_database *database;
     sky_data_file *data_file;
     sky_action_file *action_file;
+    sky_property_file *property_file;
     bstring name;
     bstring path;
     bool opened;

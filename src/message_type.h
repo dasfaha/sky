@@ -34,23 +34,32 @@
 // Action Message Types
 //--------------------------------------
 
-#define SKY_MESSAGE_AADD (SKY_MESSAGE_TYPE_ACTION + SKY_MESSAGE_TYPE_ADD)
-#define SKY_MESSAGE_AGET (SKY_MESSAGE_TYPE_ACTION + SKY_MESSAGE_TYPE_GET)
-#define SKY_MESSAGE_AALL (SKY_MESSAGE_TYPE_ACTION + SKY_MESSAGE_TYPE_ALL)
+#define SKY_MESSAGE_AADD (SKY_MESSAGE_TYPE_ACTION | SKY_MESSAGE_TYPE_ADD)
+#define SKY_MESSAGE_AGET (SKY_MESSAGE_TYPE_ACTION | SKY_MESSAGE_TYPE_GET)
+#define SKY_MESSAGE_AALL (SKY_MESSAGE_TYPE_ACTION | SKY_MESSAGE_TYPE_ALL)
+
+
+//--------------------------------------
+// Property Message Types
+//--------------------------------------
+
+#define SKY_MESSAGE_PADD (SKY_MESSAGE_TYPE_PROPERTY | SKY_MESSAGE_TYPE_ADD)
+#define SKY_MESSAGE_PGET (SKY_MESSAGE_TYPE_PROPERTY | SKY_MESSAGE_TYPE_GET)
+#define SKY_MESSAGE_PALL (SKY_MESSAGE_TYPE_PROPERTY | SKY_MESSAGE_TYPE_ALL)
 
 
 //--------------------------------------
 // Event Message Types
 //--------------------------------------
 
-#define SKY_MESSAGE_EADD (SKY_MESSAGE_TYPE_EVENT + SKY_MESSAGE_TYPE_ADD)
+#define SKY_MESSAGE_EADD (SKY_MESSAGE_TYPE_EVENT | SKY_MESSAGE_TYPE_ADD)
 
 
 //--------------------------------------
 // Path Message Types
 //--------------------------------------
 
-#define SKY_MESSAGE_PEACH (SKY_MESSAGE_TYPE_PATH + SKY_MESSAGE_TYPE_EACH)
+#define SKY_MESSAGE_PEACH (SKY_MESSAGE_TYPE_PATH | SKY_MESSAGE_TYPE_EACH)
 
 
 #endif

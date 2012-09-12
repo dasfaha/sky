@@ -47,6 +47,14 @@ int sky_table_load_action_file(sky_table *table);
 
 int sky_table_unload_action_file(sky_table *table);
 
+//--------------------------------------
+// Property file
+//--------------------------------------
+
+int sky_table_load_property_file(sky_table *table);
+
+int sky_table_unload_property_file(sky_table *table);
+
 
 //==============================================================================
 //
@@ -84,6 +92,7 @@ void sky_table_free(sky_table *table)
         bdestroy(table->path);
         table->path = NULL;
         sky_table_unload_action_file(table);
+        sky_table_unload_property_file(table);
         free(table);
     }
 }
@@ -238,6 +247,60 @@ error:
 
 
 //--------------------------------------
+// Property file management
+//--------------------------------------
+
+// Initializes and opens the property file on the table.
+//
+// table - The table to initialize the property file for.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_table_load_property_file(sky_table *table)
+{
+    int rc;
+    check(table != NULL, "Table required");
+    check(table->path != NULL, "Table path required");
+    
+    // Unload any existing property file.
+    sky_table_unload_property_file(table);
+    
+    // Initialize property file.
+    table->property_file = sky_property_file_create();
+    check_mem(table->property_file);
+    table->property_file->path = bformat("%s/properties", bdata(table->path));
+    check_mem(table->property_file->path);
+    
+    // Load data
+    rc = sky_property_file_load(table->property_file);
+    check(rc == 0, "Unable to load properties");
+
+    return 0;
+error:
+    sky_table_unload_property_file(table);
+    return -1;
+}
+
+// Initializes and opens the property file on the table.
+//
+// table - The table to initialize the property file for.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_table_unload_property_file(sky_table *table)
+{
+    check(table != NULL, "Table required");
+
+    if(table->property_file) {
+        sky_property_file_free(table->property_file);
+        table->property_file = NULL;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+
+//--------------------------------------
 // State
 //--------------------------------------
 
@@ -271,6 +334,10 @@ int sky_table_open(sky_table *table)
     rc = sky_table_load_action_file(table);
     check(rc == 0, "Unable to load action file");
     
+    // Load property file.
+    rc = sky_table_load_property_file(table);
+    check(rc == 0, "Unable to load property file");
+    
     // Flag the table as open.
     table->opened = true;
 
@@ -298,6 +365,10 @@ int sky_table_close(sky_table *table)
     // Unload action data.
     rc = sky_table_unload_action_file(table);
     check(rc == 0, "Unable to unload action file");
+
+    // Unload property data.
+    rc = sky_table_unload_property_file(table);
+    check(rc == 0, "Unable to unload property file");
 
     // Update state to closed.
     table->opened = false;
