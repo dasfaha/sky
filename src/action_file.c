@@ -140,7 +140,7 @@ int sky_action_file_load(sky_action_file *action_file)
             check_mem(action);
 
             // Read action id.
-            action->id = minipack_fread_int(file, &sz);
+            action->id = (sky_action_id_t)minipack_fread_uint(file, &sz);
             check(sz != 0, "Unable to read action identifier at byte: %ld", ftell(file));
 
             // Read action name.
@@ -195,7 +195,7 @@ int sky_action_file_save(sky_action_file *action_file)
         sky_action *action = action_file->actions[i];
 
         // Write action id.
-        minipack_fwrite_int(file, action->id, &sz);
+        minipack_fwrite_uint(file, action->id, &sz);
         check(sz != 0, "Unable to write action identifier at byte: %ld", ftell(file));
 
         // Write action name.

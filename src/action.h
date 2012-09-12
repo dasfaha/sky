@@ -1,6 +1,7 @@
 #ifndef _action_h
 #define _action_h
 
+#include <stdio.h>
 #include <inttypes.h>
 #include <stdbool.h>
 
@@ -50,5 +51,14 @@ sky_action *sky_action_create();
 
 void sky_action_free(sky_action *action);
 
+//--------------------------------------
+// Serialization
+//--------------------------------------
+
+size_t sky_action_sizeof(sky_action *action);
+
+int sky_action_pack(sky_action *action, FILE *file);
+
+int sky_action_unpack(sky_action *action, FILE *file);
 
 #endif
