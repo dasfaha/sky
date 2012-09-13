@@ -277,6 +277,32 @@ error:
     return -1;
 }
 
+// Retrieves all variable reference of a given type name within this node.
+//
+// node      - The node.
+// module    - The module.
+// type_name - The type name.
+// array     - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_property_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+                                          bstring type_name, qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    check(type_name != NULL, "Type name required");
+    check(array != NULL, "Array required");
+
+    rc = qip_ast_node_get_var_refs_by_type(node->property.var_decl, module, type_name, array);
+    check(rc == 0, "Unable to add property variable declaration var refs");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
 
 //--------------------------------------
 // Validation

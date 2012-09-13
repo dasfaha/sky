@@ -30,9 +30,9 @@ struct tagbstring QIP_TYPE_NAME_VOID    = bsStatic("void");
 //
 //==============================================================================
 
-//--------------------------------------
+//======================================
 // Lifecycle
-//--------------------------------------
+//======================================
 
 // Creates a module.
 qip_module *qip_module_create(bstring name, qip_compiler *compiler)
@@ -585,12 +585,30 @@ int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
     }
     // Find user-defined type.
     else {
+        // If we have generated types already then look at the type list.
         for(i=0; i<(unsigned int)module->type_count; i++) {
             if(biseq(module->type_nodes[i]->class.name, type_ref->type_ref.name)) {
                 if(type != NULL) *type = module->types[i];
                 if(node != NULL) *node = module->type_nodes[i];
                 found = true;
                 break;
+            }
+        }
+        
+        // Otherwise check the AST modules for classes.
+        if(!found) {
+            for(i=0; i<module->ast_module_count; i++) {
+                qip_ast_node *ast_module = module->ast_modules[i];
+                qip_ast_node *class = NULL;
+                rc = qip_ast_module_get_class(ast_module, type_ref->type_ref.name, &class);
+                check(rc == 0, "Unable to search AST module for class");
+                
+                if(class != NULL) {
+                    if(type != NULL) *type = NULL;
+                    if(node != NULL) *node = class;
+                    found = true;
+                    break;
+                }
             }
         }
     }
@@ -1185,9 +1203,9 @@ error:
 }
 
 
-//--------------------------------------
+//======================================
 // Debugging
-//--------------------------------------
+//======================================
 
 int qip_module_dump(qip_module *module)
 {

@@ -19,9 +19,9 @@ int qip_map_elem_cmp(const void *_a, const void *_b);
 //
 //==============================================================================
 
-//--------------------------------------
+//======================================
 // Lifecycle
-//--------------------------------------
+//======================================
 
 // Creates a map.
 qip_map *qip_map_create()
@@ -59,9 +59,9 @@ void qip_map_free(qip_map *map)
 }
 
 
-//--------------------------------------
+//======================================
 // Element Management
-//--------------------------------------
+//======================================
 
 // Allocates memory for a single element in the map.
 //
@@ -119,9 +119,9 @@ void qip_map_refresh(qip_map *map)
 }
 
 
-//--------------------------------------
+//======================================
 // Element Sorting
-//--------------------------------------
+//======================================
 
 // Compares two elements to determine the order in which they are sorted.
 // The first 8-bytes of every element is a hash code that can be compared.

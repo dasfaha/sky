@@ -22,9 +22,9 @@ void qip_compiler_free_class_paths(qip_compiler *compiler);
 //
 //==============================================================================
 
-//--------------------------------------
+//======================================
 // Lifecycle
-//--------------------------------------
+//======================================
 
 // Creates a compiler.
 qip_compiler *qip_compiler_create()
@@ -77,9 +77,9 @@ void qip_compiler_free_class_paths(qip_compiler *compiler)
 
 
 
-//--------------------------------------
+//======================================
 // Compile
-//--------------------------------------
+//======================================
 
 // Compiles QIP program text into a module.
 //
@@ -257,9 +257,9 @@ error:
 }
 
 
-//--------------------------------------
+//======================================
 // Module Management
-//--------------------------------------
+//======================================
 
 // Adds a file path to the list of where the compiler should search for
 // classes.
@@ -344,9 +344,9 @@ error:
 }
 
 
-//--------------------------------------
+//======================================
 // Evaluate Dynamic Class
-//--------------------------------------
+//======================================
 
 // Processes a dynamic class by delegating it to the compiler caller through
 // a callback. The caller can then add additional AST nodes to the class

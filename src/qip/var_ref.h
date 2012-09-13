@@ -97,6 +97,9 @@ int qip_ast_var_ref_get_var_decl(qip_ast_node *node, qip_ast_node **ret);
 int qip_ast_var_ref_get_var_refs(qip_ast_node *node, bstring name,
     qip_array *array);
 
+int qip_ast_var_ref_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+    bstring type_name, qip_array *array);
+
 //--------------------------------------
 // Validation
 //--------------------------------------

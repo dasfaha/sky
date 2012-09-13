@@ -608,27 +608,34 @@ int qip_ast_var_ref_get_type(qip_ast_node *node, qip_module *module,
         // Retrieve the class.
         qip_ast_node *class = NULL;
         rc = qip_ast_var_ref_get_class(node->parent, module, &class);
-        check(rc == 0 && class != NULL, "Unable to find class");
+        check(rc == 0, "Unable to find class");
 
-        // If this is a value access then grab the property type.
-        if(node->var_ref.type == QIP_AST_VAR_REF_TYPE_VALUE) {
-            // Retrieve property.
-            qip_ast_node *property = NULL;
-            rc = qip_ast_class_get_property(class, node->var_ref.name, &property);
-            check(rc == 0 && property != NULL, "Unable to find property '%s' on class '%s'", bdata(node->var_ref.name), bdata(class->class.name));
+        // We may not have a class if this is reference off a dynamic property.
+        if(class != NULL) {
+            // If this is a value access then grab the property type.
+            if(node->var_ref.type == QIP_AST_VAR_REF_TYPE_VALUE) {
+                // Retrieve property.
+                qip_ast_node *property = NULL;
+                rc = qip_ast_class_get_property(class, node->var_ref.name, &property);
+                check(rc == 0, "Unable to find property '%s' on class '%s'", bdata(node->var_ref.name), bdata(class->class.name));
 
-            // Return the property type.
-            *type_ref = property->property.var_decl->var_decl.type;
-        }
-        // If this is a method access then grab the return type of the method.
-        else {
-            // Find the method for the member.
-            qip_ast_node *method = NULL;
-            rc = qip_ast_class_get_method(class, node->var_ref.name, &method);
-            check(rc == 0 || method != NULL, "Unable to find method '%s' on class '%s'", bdata(node->var_ref.name), bdata(class->class.name));
+                // Return the property type.
+                if(property != NULL) {
+                    *type_ref = property->property.var_decl->var_decl.type;
+                }
+            }
+            // If this is a method access then grab the return type of the method.
+            else {
+                // Find the method for the member.
+                qip_ast_node *method = NULL;
+                rc = qip_ast_class_get_method(class, node->var_ref.name, &method);
+                check(rc == 0, "Unable to find method '%s' on class '%s'", bdata(node->var_ref.name), bdata(class->class.name));
 
-            // Return the method return type name.
-            *type_ref = method->method.function->function.return_type;
+                // Return the method return type name.
+                if(method != NULL) {
+                    *type_ref = method->method.function->function.return_type;
+                }
+            }
         }
     }
     // Otherwise it's a local variable so search parents for a declaration.
@@ -820,6 +827,50 @@ int qip_ast_var_ref_get_var_refs(qip_ast_node *node, bstring name,
     for(i=0; i<node->var_ref.arg_count; i++) {
         rc = qip_ast_node_get_var_refs(node->var_ref.args[i], name, array);
         check(rc == 0, "Unable to retrieve invoke arg var refs");
+    }
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+// Retrieves all variable reference of a given type name within this node.
+//
+// node      - The node.
+// module    - The module.
+// type_name - The type name.
+// array     - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_var_ref_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+                                         bstring type_name, qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(type_name != NULL, "Type name required");
+    check(array != NULL, "Array required");
+
+    // Retrieve the variable type.
+    qip_ast_node *type_ref = NULL;
+    rc = qip_ast_var_ref_get_type(node, module, &type_ref);
+    check(rc == 0, "Unable to retrieve type");
+
+    // If the root type matches the name then add it to the array.
+    if(type_ref && biseq(type_ref->type_ref.name, type_name)) {
+        rc = qip_array_push(array, (void*)node);
+        check(rc == 0, "Unable to add variable reference to array");
+    }
+    
+    if(node->var_ref.member) {
+        rc = qip_ast_node_get_var_refs_by_type(node->var_ref.member, module, type_name, array);
+        check(rc == 0, "Unable to retrieve member var refs by type");
+    }
+
+    unsigned int i;
+    for(i=0; i<node->var_ref.arg_count; i++) {
+        rc = qip_ast_node_get_var_refs_by_type(node->var_ref.args[i], module, type_name, array);
+        check(rc == 0, "Unable to retrieve invoke arg var refs by type");
     }
 
     return 0;

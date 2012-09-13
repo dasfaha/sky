@@ -97,6 +97,9 @@ int qip_ast_function_get_type_refs(qip_ast_node *node,
 int qip_ast_function_get_var_refs(qip_ast_node *node, bstring name,
     qip_array *array);
 
+int qip_ast_function_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+    bstring type_name, qip_array *array);
+
 //--------------------------------------
 // Dependencies
 //--------------------------------------

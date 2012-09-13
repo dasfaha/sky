@@ -296,6 +296,35 @@ error:
     return -1;
 }
 
+// Retrieves all variable reference of a given type name within this node.
+//
+// node      - The node.
+// module    - The module.
+// type_name - The type name.
+// array     - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_var_assign_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+                                            bstring type_name, qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    check(type_name != NULL, "Type name required");
+    check(array != NULL, "Array required");
+
+    rc = qip_ast_node_get_var_refs_by_type(node->var_assign.var_ref, module, type_name, array);
+    check(rc == 0, "Unable to add var assign var ref by type");
+
+    rc = qip_ast_node_get_var_refs_by_type(node->var_assign.expr, module, type_name, array);
+    check(rc == 0, "Unable to add var assign expr var ref by type");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
 
 //--------------------------------------
 // Debugging

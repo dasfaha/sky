@@ -370,6 +370,36 @@ error:
     return -1;
 }
 
+// Retrieves all variable reference of a given type name within this node.
+//
+// node      - The node.
+// module    - The module.
+// type_name - The type name.
+// array     - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_for_each_stmt_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+                                               bstring type_name, qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    check(type_name != NULL, "Type name required");
+    check(array != NULL, "Array required");
+
+    rc = qip_ast_node_get_var_refs_by_type(node->for_each_stmt.var_decl, module, type_name, array);
+    check(rc == 0, "Unable to add variable declaration var refs");
+
+    rc = qip_ast_node_get_var_refs_by_type(node->for_each_stmt.block, module, type_name, array);
+    check(rc == 0, "Unable to add block var refs");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+
 
 //--------------------------------------
 // Dependencies

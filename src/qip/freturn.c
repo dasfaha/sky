@@ -117,6 +117,63 @@ error:
 
 
 //--------------------------------------
+// Find
+//--------------------------------------
+
+// Retrieves all variable reference of a given name within this node.
+//
+// node  - The node.
+// name  - The variable name.
+// array - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_freturn_get_var_refs(qip_ast_node *node, bstring name,
+                              qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(name != NULL, "Variable name required");
+    check(array != NULL, "Array required");
+
+    if(node->freturn.value != NULL) {
+        rc = qip_ast_node_get_var_refs(node->freturn.value, name, array);
+        check(rc == 0, "Unable to add function return value");
+    }
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+// Retrieves all variable reference of a given type name within this node.
+//
+// node      - The node.
+// module    - The module.
+// type_name - The type name.
+// array     - The array to add the references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_freturn_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+                                         bstring type_name, qip_array *array)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(module != NULL, "Module required");
+    check(type_name != NULL, "Type name required");
+    check(array != NULL, "Array required");
+
+    rc = qip_ast_node_get_var_refs_by_type(node->freturn.value, module, type_name, array);
+    check(rc == 0, "Unable to add function return value");
+
+    return 0;
+    
+error:
+    return -1;
+}
+
+
+//--------------------------------------
 // Preprocessor
 //--------------------------------------
 

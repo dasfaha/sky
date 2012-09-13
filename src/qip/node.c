@@ -579,7 +579,7 @@ int qip_ast_node_type_refs_free(qip_ast_node ***type_refs, uint32_t *count)
     
 
 //--------------------------------------
-// Var Refs
+// Find
 //--------------------------------------
 
 // Retrieves an array of variable references within 
@@ -604,6 +604,7 @@ int qip_ast_node_get_var_refs(qip_ast_node *node, bstring name,
         case QIP_AST_TYPE_METHOD: rc = qip_ast_method_get_var_refs(node, name, array); break;
         case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_get_var_refs(node, name, array); break;
         case QIP_AST_TYPE_FARG: rc = qip_ast_farg_get_var_refs(node, name, array); break;
+        case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_get_var_refs(node, name, array); break;
         case QIP_AST_TYPE_BLOCK: rc = qip_ast_block_get_var_refs(node, name, array); break;
         case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_get_var_refs(node, name, array); break;
         case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_get_var_refs(node, name, array); break;
@@ -615,6 +616,49 @@ int qip_ast_node_get_var_refs(qip_ast_node *node, bstring name,
         default: rc = 0; break;
     }
     check(rc == 0, "Unable to retrieve var refs");
+
+    return 0;
+
+error:
+    return -1;
+}
+
+// Retrieves an array of variable references by type name.
+//
+// node       - The node.
+// module     - The module.
+// type_name  - The name of the variable.
+// array      - The array to add variable references to.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_node_get_var_refs_by_type(qip_ast_node *node, qip_module *module,
+                                      bstring type_name, qip_array *array)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    check(type_name != NULL, "Type name required");
+    check(array != NULL, "Array required");
+
+    if(node != NULL) {
+        switch(node->type) {
+            case QIP_AST_TYPE_MODULE: rc = qip_ast_module_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_CLASS: rc = qip_ast_class_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_METHOD: rc = qip_ast_method_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_FUNCTION: rc = qip_ast_function_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_FARG: rc = qip_ast_farg_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_FRETURN: rc = qip_ast_freturn_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_BLOCK: rc = qip_ast_block_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_VAR_DECL: rc = qip_ast_var_decl_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_IF_STMT: rc = qip_ast_if_stmt_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_FOR_EACH_STMT: rc = qip_ast_for_each_stmt_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_get_var_refs_by_type(node, module, type_name, array); break;
+            case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_get_var_refs_by_type(node, module, type_name, array); break;
+            default: rc = 0; break;
+        }
+        check(rc == 0, "Unable to retrieve var refs by type");
+    }
 
     return 0;
 
