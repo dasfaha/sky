@@ -259,9 +259,10 @@ error:
 // Processes all dynamic classes through the module's compiler's delegate.
 //
 // module - The compilation module.
+// data   - A pointer to data passed to the callback for reference.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_module_process_dynamic_classes(qip_module *module)
+int qip_module_process_dynamic_classes(qip_module *module, void *data)
 {
     int rc;
     check(module != NULL, "Module required");
@@ -285,7 +286,7 @@ int qip_module_process_dynamic_classes(qip_module *module)
             
             // If dynamic metatag exists then process it.
             if(dynamic_metadata != NULL) {
-                rc = qip_compiler_process_dynamic_class(module->compiler, class);
+                rc = qip_compiler_process_dynamic_class(module->compiler, module, class, data);
                 check(rc == 0, "Unable to process dynamic class");
             }
         }
@@ -525,6 +526,10 @@ int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
     check(module != NULL, "Module is required");
     check(type_ref != NULL, "Type ref is required");
     
+    // Initialize return values.
+    if(type != NULL) *type = NULL;
+    if(node != NULL) *node = NULL;
+
     LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
 
     // Compare to built-in types.
@@ -612,8 +617,6 @@ int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
             }
         }
     }
-    
-    check(found, "Invalid type in module: %s", bdata(type_ref->type_ref.name));
 
     return 0;
 

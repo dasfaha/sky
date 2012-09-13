@@ -86,7 +86,7 @@ int qip_module_get_ast_template_class(qip_module *module,
 
 int qip_module_get_ast_main_function(qip_module *module, qip_ast_node **ret);
 
-int qip_module_process_dynamic_classes(qip_module *module);
+int qip_module_process_dynamic_classes(qip_module *module, void *data);
 
 int qip_module_process_templates(qip_module *module);
 

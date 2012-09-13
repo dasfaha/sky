@@ -15,6 +15,8 @@
 
 void qip_compiler_free_class_paths(qip_compiler *compiler);
 
+void qip_compiler_free_dependencies(qip_compiler *compiler);
+
 
 //==============================================================================
 //
@@ -29,13 +31,9 @@ void qip_compiler_free_class_paths(qip_compiler *compiler);
 // Creates a compiler.
 qip_compiler *qip_compiler_create()
 {
-    qip_compiler *compiler = malloc(sizeof(qip_compiler));
+    qip_compiler *compiler = calloc(1, sizeof(qip_compiler));
     check_mem(compiler);
     compiler->llvm_builder = LLVMCreateBuilder();
-    compiler->class_paths = NULL;
-    compiler->class_path_count = 0;
-    compiler->load_module_source = NULL;
-    compiler->process_dynamic_class = NULL;
     
     return compiler;
     
@@ -54,7 +52,8 @@ void qip_compiler_free(qip_compiler *compiler)
         compiler->llvm_builder = NULL;
 
         qip_compiler_free_class_paths(compiler);
-
+        qip_compiler_free_dependencies(compiler);
+        
         free(compiler);
     }
 }
@@ -75,6 +74,22 @@ void qip_compiler_free_class_paths(qip_compiler *compiler)
     }
 }
 
+// Frees the dependencies on the compiler.
+//
+// compiler - The compiler.
+void qip_compiler_free_dependencies(qip_compiler *compiler)
+{
+    if(compiler) {
+        uint32_t i;
+        for(i=0; i<compiler->dependency_count; i++) {
+            bdestroy(compiler->dependencies[i]);
+            compiler->dependencies[i] = NULL;
+        }
+        free(compiler->dependencies);
+        compiler->dependency_count = 0;
+    }
+}
+
 
 
 //======================================
@@ -88,12 +103,13 @@ void qip_compiler_free_class_paths(qip_compiler *compiler)
 // source    - The QIP program source code.
 // args      - A list of arguments to be passed into the main function.
 // arg_count - The number of arguments.
+// data      - A pointer to data passed to callbacks for reference.
 // ret       - A pointer to where the compiled QIP module will return to.
 //
 // Returns 0 if successful, otherwise returns -1.
 int qip_compiler_compile(qip_compiler *compiler, bstring name,
                          bstring source, qip_ast_node **args, 
-                         uint32_t arg_count, qip_module **ret)
+                         uint32_t arg_count, void *data, qip_module **ret)
 {
     int rc;
     uint32_t i;
@@ -110,9 +126,14 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
     bstring *dependencies = NULL;
     uint32_t dependency_count = 0;
 
+    // Add standard dependencies.
+    for(i=0; i<compiler->dependency_count; i++) {
+        rc = qip_ast_node_add_dependency(compiler->dependencies[i], &dependencies, &dependency_count);
+        check(rc == 0, "Unable to copy compiler dependency");
+    }
+
     // Clear errors.
     qip_module_free_errors(module);
-
 
     // Continuously loop and parse QIP files until there are no more dependencies.
     bstring current_module_name = name;
@@ -194,7 +215,7 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
     
     // Process dynamic classes before proceeding to code generation.
     if(module->error_count == 0) {
-        rc = qip_module_process_dynamic_classes(module);
+        rc = qip_module_process_dynamic_classes(module, data);
         check(rc == 0, "Unable to process dynamic classes for module");
     }
 
@@ -352,20 +373,24 @@ error:
 // a callback. The caller can then add additional AST nodes to the class
 // before the module is processed.
 //
-// compiler - The compiler that is loading the source.
-// class    - The 
-// source   - A pointer to where the module's source text will be loaded to.
+// compiler - The compiler.
+// module   - The module.
+// class    - The class AST node.
+// data     - A pointer to an object that was passed into the compiler for
+//            context.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_compiler_process_dynamic_class(qip_compiler *compiler, qip_ast_node *class)
+int qip_compiler_process_dynamic_class(qip_compiler *compiler, qip_module *module,
+                                       qip_ast_node *class, void *data)
 {
     int rc;
     check(compiler != NULL, "Compiler required");
+    check(module != NULL, "Module required");
     check(class != NULL, "Class AST required");
     check(compiler->process_dynamic_class != NULL, "Process dynamic class function pointer must be set");
     
     // Delegate to external interface.
-    rc = compiler->process_dynamic_class(compiler, class);
+    rc = compiler->process_dynamic_class(module, class, data);
     check(rc == 0, "Unable to process dynamic class");
     
     return 0;

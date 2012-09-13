@@ -53,6 +53,7 @@ int test_sky_peach_message_process() {
     table->path = bfromcstr("tmp");
     sky_table_open(table);
     
+    // NOTE: The table contains two properties: foo (String) and this_is_a_really...(Int)
     sky_peach_message *message = sky_peach_message_create();
     message->query = bfromcstr(
         "[Hashable(\"id\")]\n"
@@ -63,6 +64,8 @@ int test_sky_peach_message_process() {
         "}\n"
         "Cursor cursor = path.events();\n"
         "for each (Event event in cursor) {\n"
+        "  Int dynamic_prop1 = event.foo;\n"
+        "  String dynamic_prop2 = event.this_is_a_really_long_property_name_woohoo;\n"
         "  Result item = data.get(event.actionId);\n"
         "  item.count = item.count + 1;\n"
         "}\n"

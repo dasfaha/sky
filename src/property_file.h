@@ -64,10 +64,10 @@ int sky_property_file_save(sky_property_file *property_file);
 // Property Management
 //--------------------------------------
 
-int sky_property_file_find_property_by_id(sky_property_file *property_file,
+int sky_property_file_find_by_id(sky_property_file *property_file,
     sky_property_id_t property_id, sky_property **ret);
 
-int sky_property_file_find_property_by_name(sky_property_file *property_file,
+int sky_property_file_find_by_name(sky_property_file *property_file,
     bstring name, sky_property **ret);
 
 int sky_property_file_add_property(sky_property_file *property_file, sky_property *ret);

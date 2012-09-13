@@ -121,6 +121,80 @@ error:
 // Processing
 //--------------------------------------
 
+// Preprocesses dynamic classes to add database properties.
+//
+// compiler - The compiler.
+// class    - The class AST node.
+// data     - A pointer to the table.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_peach_message_process_dynamic_class_callback(qip_module *module, qip_ast_node *class, void *data)
+{
+    int rc;
+    qip_array *array = NULL;
+    check(module != NULL, "Module required");
+    check(class != NULL, "Class required");
+    check(data != NULL, "Table required");
+    
+    struct tagbstring event_str = bsStatic("Event");
+
+    // Convert data reference to a table.
+    sky_table *table = (sky_table*)data;
+    
+    // Dynamically add properties from database to Event class if they are
+    // referenced.
+    if(biseqcstr(class->class.name, "Event")) {
+        array = qip_array_create(); check_mem(array);
+        
+        // Loop over each module to find Event variable references.
+        uint32_t i;
+        for(i=0; i<module->ast_module_count; i++) {
+            qip_ast_node *ast_module = module->ast_modules[i];
+            rc = qip_ast_node_get_var_refs_by_type(ast_module, module, &event_str, array);
+            check(rc == 0, "Unable to search for Event variable references");
+        }
+
+        // Loop over references and add properties as needed.
+        for(i=0; i<array->length; i++) {
+            qip_ast_node *var_ref = (qip_ast_node*)array->elements[i];
+            
+            // Add property if member is a property reference.
+            if(var_ref->var_ref.member && var_ref->var_ref.member->var_ref.type == QIP_AST_VAR_REF_TYPE_VALUE) {
+                bstring property_name = var_ref->var_ref.member->var_ref.name;
+                
+                // Check if it exists on the Event class.
+                qip_ast_node *property = NULL;
+                rc = qip_ast_class_get_property(class, property_name, &property);
+                check(rc == 0, "Unable to retrieve property from Event class");
+                
+                // Only add one if it doesn't exist.
+                if(property == NULL) {
+                    // Lookup property in the database.
+                    sky_property *db_property = NULL;
+                    rc = sky_property_file_find_by_name(table->property_file, property_name, &db_property);
+                    check(rc == 0, "Unable to find property '%s' in table: %s", bdata(property_name), bdata(table->path));
+                    
+                    // Generate the property.
+                    qip_ast_node *type_ref = qip_ast_type_ref_create(db_property->data_type);
+                    qip_ast_node *var_decl = qip_ast_var_decl_create(type_ref, property_name, NULL);
+                    property = qip_ast_property_create(QIP_ACCESS_PUBLIC, var_decl);
+
+                    // Add it to the class.
+                    rc = qip_ast_class_add_property(class, property);
+                    check(rc == 0, "Unable to add property to class");
+                }
+            }
+        }
+    }
+    
+    qip_array_free(array);
+    return 0;
+
+error:
+    qip_array_free(array);
+    return -1;
+}
+
 // Runs a PEACH query against a table.
 //
 // message - The message.
@@ -160,9 +234,13 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table,
     struct tagbstring core_class_path = bsStatic("lib/core");
     struct tagbstring sky_class_path = bsStatic("lib/sky");
     qip_compiler *compiler = qip_compiler_create();
+    compiler->process_dynamic_class = sky_peach_message_process_dynamic_class_callback;
+    compiler->dependency_count = 1;
+    compiler->dependencies = calloc(compiler->dependency_count, sizeof(*compiler->dependencies));
+    compiler->dependencies[0] = bfromcstr("String");
     qip_compiler_add_class_path(compiler, &core_class_path);
     qip_compiler_add_class_path(compiler, &sky_class_path);
-    rc = qip_compiler_compile(compiler, &module_name, message->query, args, 2, &module);
+    rc = qip_compiler_compile(compiler, &module_name, message->query, args, 2, (void*)table, &module);
     check(rc == 0, "Unable to compile");
     if(module->error_count > 0) {
         debug("Parse error [line %d] %s", module->errors[0]->line_no, bdata(module->errors[0]->message));

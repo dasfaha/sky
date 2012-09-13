@@ -4,6 +4,7 @@
 
 #include "node.h"
 #include "util.h"
+#include "llvm.h"
 
 //==============================================================================
 //
@@ -720,6 +721,12 @@ int qip_ast_class_codegen_type(qip_module *module, qip_ast_node *node)
                 qip_ast_node *property = node->class.properties[i];
                 rc = qip_module_get_type_ref(module, property->property.var_decl->var_decl.type, NULL, &elements[i]);
                 check(rc == 0, "Unable to retrieve type: %s", bdata(property->property.var_decl->var_decl.type->type_ref.name));
+                check(elements[i] != NULL, "Unable to find class: %s", bdata(property->property.var_decl->var_decl.type->type_ref.name));
+
+                // Wrap complex types as pointers.
+                if(qip_llvm_is_complex_type(elements[i])) {
+                    elements[i] = LLVMPointerType(elements[i], 0);
+                }
             }
         }
 
