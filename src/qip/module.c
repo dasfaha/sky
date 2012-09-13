@@ -617,7 +617,7 @@ int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
             }
         }
     }
-
+    
     return 0;
 
 error:
