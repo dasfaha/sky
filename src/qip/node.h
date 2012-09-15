@@ -41,6 +41,7 @@ typedef struct qip_ast_node qip_ast_node;
 #include "metadata.h"
 #include "metadata_item.h"
 #include "sizeof.h"
+#include "offsetof.h"
 #include "ast_alloca.h"
 #include "template.h"
 #include "module.h"
@@ -72,7 +73,8 @@ enum qip_ast_node_type_e {
     QIP_AST_TYPE_NULL_LITERAL     = 23,
     QIP_AST_TYPE_ARRAY_LITERAL    = 24,
     QIP_AST_TYPE_SIZEOF           = 25,
-    QIP_AST_TYPE_ALLOCA           = 26
+    QIP_AST_TYPE_OFFSETOF         = 26,
+    QIP_AST_TYPE_ALLOCA           = 27
 };
 
 // Defines the stages of processing. This is used when performing different
@@ -119,6 +121,7 @@ struct qip_ast_node {
         qip_ast_metadata metadata;
         qip_ast_metadata_item metadata_item;
         qip_ast_sizeof szof;
+        qip_ast_offsetof offsetof;
         qip_ast_alloca alloca;
     };
 };

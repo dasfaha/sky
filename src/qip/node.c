@@ -47,6 +47,7 @@ void qip_ast_node_free(qip_ast_node *node)
         case QIP_AST_TYPE_METADATA: qip_ast_metadata_free(node); break;
         case QIP_AST_TYPE_METADATA_ITEM: qip_ast_metadata_item_free(node); break;
         case QIP_AST_TYPE_SIZEOF: qip_ast_sizeof_free(node); break;
+        case QIP_AST_TYPE_OFFSETOF: qip_ast_offsetof_free(node); break;
         case QIP_AST_TYPE_ALLOCA: qip_ast_alloca_free(node); break;
     }
     node->parent = NULL;
@@ -162,6 +163,7 @@ int qip_ast_node_copy(qip_ast_node *node, qip_ast_node **ret)
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_copy(node, ret); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_copy(node, ret); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_copy(node, ret); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_copy(node, ret); break;
         case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_copy(node, ret); break;
     }
     check(rc == 0, "Unable to copy node");
@@ -220,6 +222,7 @@ int qip_ast_node_codegen(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_CLASS: rc = qip_ast_class_codegen(node, module); break;
         case QIP_AST_TYPE_METHOD: rc = qip_ast_method_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_codegen(node, module, &ret_value); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_codegen(node, module, &ret_value); break;
         case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_codegen(node, module, &ret_value); break;
         default: rc = 0;
     }
@@ -347,6 +350,7 @@ int qip_ast_node_preprocess(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_preprocess(node, module, stage); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_preprocess(node, module); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_preprocess(node, module); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_preprocess(node, module); break;
         case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_preprocess(node, module); break;
         default: rc = 0;
     }
@@ -387,7 +391,8 @@ int qip_ast_node_get_type(qip_ast_node *node, qip_module *module,
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_type(node, module, type); break;
         case QIP_AST_TYPE_VAR_REF: rc = qip_ast_var_ref_get_type(node, module, type); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_get_type(node, type); break;
-        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_sizeof_get_type(node, type); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_get_type(node, type); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_get_type(node, type); break;
         default: {
             sentinel("AST node does not have a type");
             break;
@@ -520,6 +525,7 @@ int qip_ast_node_get_type_refs(qip_ast_node *node, qip_ast_node ***type_refs,
         case QIP_AST_TYPE_BINARY_EXPR: rc = qip_ast_binary_expr_get_type_refs(node, type_refs, count); break;
         case QIP_AST_TYPE_VAR_ASSIGN: rc = qip_ast_var_assign_get_type_refs(node, type_refs, count); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_get_type_refs(node, type_refs, count); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_get_type_refs(node, type_refs, count); break;
         case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_get_type_refs(node, type_refs, count); break;
         default: rc = 0; break;
     }
@@ -754,7 +760,8 @@ int qip_ast_node_get_dependencies(qip_ast_node *node, bstring **dependencies,
         case QIP_AST_TYPE_PROPERTY: rc = qip_ast_property_get_dependencies(node, dependencies, count); break;
         case QIP_AST_TYPE_MODULE: rc = qip_ast_module_get_dependencies(node, dependencies, count); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_get_dependencies(node, dependencies, count); break;
-        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_sizeof_get_dependencies(node, dependencies, count); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_get_dependencies(node, dependencies, count); break;
+        case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_get_dependencies(node, dependencies, count); break;
         default: rc = 0; break;
     }
     check(rc == 0, "Unable to retrieve dependencies");
@@ -891,6 +898,7 @@ int qip_ast_node_validate(qip_ast_node *node, qip_module *module)
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_validate(node, module); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_validate(node, module); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_validate(node, module); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_validate(node, module); break;
         case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_validate(node, module); break;
         default: rc = 0;
     }
@@ -962,6 +970,7 @@ int qip_ast_node_dump(qip_ast_node *node, bstring ret)
         case QIP_AST_TYPE_METADATA: rc = qip_ast_metadata_dump(node, ret); break;
         case QIP_AST_TYPE_METADATA_ITEM: rc = qip_ast_metadata_item_dump(node, ret); break;
         case QIP_AST_TYPE_SIZEOF: rc = qip_ast_sizeof_dump(node, ret); break;
+        case QIP_AST_TYPE_OFFSETOF: rc = qip_ast_offsetof_dump(node, ret); break;
         case QIP_AST_TYPE_ALLOCA: rc = qip_ast_alloca_dump(node, ret); break;
         default: {
             sentinel("Unable to dump AST node");
