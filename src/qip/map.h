@@ -2,6 +2,7 @@
 #define _qip_map_h
 
 #include <inttypes.h>
+#include "module.h"
 
 //==============================================================================
 //
@@ -38,10 +39,10 @@ void qip_map_free(qip_map *map);
 // Element Management
 //======================================
 
-void *qip_map_elalloc(qip_map *map);
+void *qip_map_elalloc(qip_module *module, qip_map *map);
 
-void *qip_map_find(qip_map *map, int64_t key);
+void *qip_map_find(qip_module *module, qip_map *map, int64_t key);
 
-void qip_map_refresh(qip_map *map);
+void qip_map_refresh(qip_module *module, qip_map *map);
 
 #endif

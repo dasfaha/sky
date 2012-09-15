@@ -5,6 +5,7 @@
 
 #include "path_iterator.h"
 #include "qip_cursor.h"
+#include "qip/qip.h"
 
 
 //==============================================================================
@@ -38,6 +39,6 @@ void sky_qip_path_free(sky_qip_path *path);
 // Cursor Management
 //--------------------------------------
 
-sky_qip_cursor *sky_qip_path_events(sky_qip_path *path);
+sky_qip_cursor *sky_qip_path_events(qip_module *module, sky_qip_path *path);
 
 #endif

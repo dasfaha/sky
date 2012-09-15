@@ -54,7 +54,8 @@ int qip_ast_function_codegen(qip_ast_node *node, qip_module *module,
     LLVMValueRef *value);
 
 int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
-    qip_module *module, bstring function_name, LLVMValueRef *value);
+    qip_module *module, bstring function_name, bool is_external,
+    LLVMValueRef *value);
 
 int qip_ast_function_codegen_args(qip_ast_node *node, qip_module *module);
 

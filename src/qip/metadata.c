@@ -231,7 +231,7 @@ int qip_ast_metadata_codegen_method_external(qip_ast_node *node,
     
     // Generate the forward declaration.
     LLVMValueRef func = NULL;
-    rc = qip_ast_function_codegen_prototype_with_name(function, module, function_name, &func);
+    rc = qip_ast_function_codegen_prototype_with_name(function, module, function_name, true, &func);
     check(rc == 0, "Unable to generate external forward declaration");
 
     bdestroy(function_name);

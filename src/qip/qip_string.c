@@ -76,8 +76,10 @@ void qip_string_free(qip_string *string)
 // b - The second string.
 //
 // Returns true if the strings are equal. Otherwise returns false.
-bool qip_string_equals(qip_string *a, qip_string *b)
+bool qip_string_equals(qip_module *module, qip_string *a, qip_string *b)
 {
+    check(module != NULL, "Module required");
+    
     if(a == b) {
         return true;
     }
@@ -87,5 +89,8 @@ bool qip_string_equals(qip_string *a, qip_string *b)
         }
     }
     
+    return false;
+
+error:
     return false;
 }

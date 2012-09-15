@@ -2,7 +2,7 @@
 
 #include "cursor.h"
 #include "qip_path.h"
-
+#include "dbg.h"
 
 //==============================================================================
 //
@@ -40,14 +40,20 @@ void sky_qip_path_free(sky_qip_path *path)
 
 // Retrieves a cursor for the current path.
 //
-// path - The path.
+// module - The module.
+// path   - The path.
 //
 // Returns a new cursor.
-sky_qip_cursor *sky_qip_path_events(sky_qip_path *path)
+sky_qip_cursor *sky_qip_path_events(qip_module *module, sky_qip_path *path)
 {
+    check(module != NULL, "Module required");
+    
     // Initialize cursor with path.
     sky_qip_cursor *cursor = sky_qip_cursor_create();
     sky_cursor_set_path(cursor->cursor, path->path_ptr);
     
     return cursor;
+
+error:
+    return NULL;
 }

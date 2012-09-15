@@ -68,7 +68,7 @@ void qip_fixed_array_free(qip_fixed_array *array)
 
 
 //======================================
-// Element Retrieval
+// Element Pointer Management
 //======================================
 
 // Retrieves the pointer an element in an array based on element size and
@@ -83,22 +83,37 @@ void *qip_fixed_array_get_element_ptr(qip_fixed_array *array, int64_t index)
     return (void*)(array->elements + (array->elemsz * index));
 }
 
+
+//======================================
+// Element Retrieval
+//======================================
+
 // Retrieves the element at a given index.
 //
 // map   - The map.
 // index - The index to lookup.
 //
 // Returns a pointer to the object.
-void *qip_fixed_array_get_item_at(qip_fixed_array *array, int64_t index)
+void *qip_fixed_array_get_item_at(qip_module *module, qip_fixed_array *array,
+                                  int64_t index)
 {
+    check(module != NULL, "Module required");
     void *ptr = qip_fixed_array_get_element_ptr(array, index);
     return *((void**)(ptr));
+
+error:
+    return NULL;
 }
 
-int64_t qip_fixed_array_get_int_item_at(qip_fixed_array *array, int64_t index)
+int64_t qip_fixed_array_get_int_item_at(qip_module *module,
+                                        qip_fixed_array *array, int64_t index)
 {
+    check(module != NULL, "Module required");
     void *ptr = qip_fixed_array_get_element_ptr(array, index);
     return *((int64_t*)(ptr));
+
+error:
+    return 0;
 }
 
 
@@ -113,17 +128,28 @@ int64_t qip_fixed_array_get_int_item_at(qip_fixed_array *array, int64_t index)
 // index - The index to lookup.
 //
 // Returns nothing.
-void qip_fixed_array_set_item_at(qip_fixed_array *array, void *item,
-                                 int64_t index)
+void qip_fixed_array_set_item_at(qip_module *module, qip_fixed_array *array,
+                                 void *item, int64_t index)
 {
+    check(module != NULL, "Module required");
     void **ptr = (void**)qip_fixed_array_get_element_ptr(array, index);
     *ptr = item;
+    return;
+
+error:
+    return;
 }
 
-void qip_fixed_array_set_int_item_at(qip_fixed_array *array, int64_t item,
+void qip_fixed_array_set_int_item_at(qip_module *module,
+                                     qip_fixed_array *array, int64_t item,
                                      int64_t index)
 {
+    check(module != NULL, "Module required");
     int64_t *ptr = (int64_t*)qip_fixed_array_get_element_ptr(array, index);
     *ptr = item;
+    return;
+
+error:
+    return;
 }
 

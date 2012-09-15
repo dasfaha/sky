@@ -5,6 +5,7 @@
 
 #include "cursor.h"
 #include "qip_event.h"
+#include "qip/qip.h"
 
 
 //==============================================================================
@@ -38,9 +39,10 @@ void sky_qip_cursor_free(sky_qip_cursor *cursor);
 // Iteration
 //--------------------------------------
 
-void sky_qip_cursor_next(sky_qip_cursor *cursor, sky_qip_event *event);
+void sky_qip_cursor_next(qip_module *module, sky_qip_cursor *cursor,
+    sky_qip_event *event);
 
-bool sky_qip_cursor_eof(sky_qip_cursor *cursor);
+bool sky_qip_cursor_eof(qip_module *module, sky_qip_cursor *cursor);
 
 
 #endif

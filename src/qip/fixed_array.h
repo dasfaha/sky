@@ -2,6 +2,7 @@
 #define _qip_fixed_array_h
 
 #include <inttypes.h>
+#include "module.h"
 
 //==============================================================================
 //
@@ -41,19 +42,21 @@ void qip_fixed_array_free(qip_fixed_array *array);
 // Element Retrieval
 //======================================
 
-void *qip_fixed_array_get_item_at(qip_fixed_array *array, int64_t index);
+void *qip_fixed_array_get_item_at(qip_module *module, qip_fixed_array *array,
+    int64_t index);
 
-int64_t qip_fixed_array_get_int_item_at(qip_fixed_array *array, int64_t index);
+int64_t qip_fixed_array_get_int_item_at(qip_module *module,
+    qip_fixed_array *array, int64_t index);
 
 
 //======================================
 // Element Assignment
 //======================================
 
-void qip_fixed_array_set_item_at(qip_fixed_array *array, void *item,
-    int64_t index);
+void qip_fixed_array_set_item_at(qip_module *module, qip_fixed_array *array,
+    void *item, int64_t index);
 
-void qip_fixed_array_set_int_item_at(qip_fixed_array *array, int64_t item,
-    int64_t index);
+void qip_fixed_array_set_int_item_at(qip_module *module,
+    qip_fixed_array *array, int64_t item, int64_t index);
 
 #endif

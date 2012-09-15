@@ -385,7 +385,7 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table,
 
     // Serialize.
     qip_serializer *serializer = qip_serializer_create();
-    qip_serializer_pack_map(serializer, map->count);
+    qip_serializer_pack_map(module, serializer, map->count);
     int64_t i;
     for(i=0; i<map->count; i++) {
         result_serialize(map->elements[i], serializer);

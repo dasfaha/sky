@@ -267,6 +267,12 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
 
     // qip_module_dump(module);
     
+    // Initialize the global module variable.
+    if(module->error_count == 0) {
+        rc = qip_module_update_module_ref(module);
+        check(rc == 0, "Unable to initialize module reference");
+    }
+    
     *ret = module;
     return 0;
 

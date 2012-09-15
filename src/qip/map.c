@@ -68,8 +68,10 @@ void qip_map_free(qip_map *map)
 // map - The map to allocate for.
 //
 // Returns a pointer to the new element.
-void *qip_map_elalloc(qip_map *map)
+void *qip_map_elalloc(qip_module *module, qip_map *map)
 {
+    check(module != NULL, "Module required");
+    
     void *elem = calloc(map->elemsz, 1);
     
     map->count++;
@@ -77,6 +79,9 @@ void *qip_map_elalloc(qip_map *map)
     map->elements[map->count-1] = elem;
     
     return elem;
+
+error:
+    return NULL;
 }
 
 // Finds an element in the map with a given key.
@@ -85,8 +90,10 @@ void *qip_map_elalloc(qip_map *map)
 // key - The key to search for.
 //
 // Returns a pointer to the new element if found. Otherwise returns null.
-void *qip_map_find(qip_map *map, int64_t key)
+void *qip_map_find(qip_module *module, qip_map *map, int64_t key)
 {
+    check(module != NULL, "Module required");
+
     // Exit if there are no elements.
     if(map->count == 0) {
         return NULL;
@@ -102,6 +109,9 @@ void *qip_map_find(qip_map *map, int64_t key)
     else {
         return NULL;
     }
+
+error:
+    return NULL;
 }
 
 // Internally refreshes the map. This must be performed whenever a new element
@@ -110,12 +120,19 @@ void *qip_map_find(qip_map *map, int64_t key)
 // map - The map.
 //
 // Returns nothing.
-void qip_map_refresh(qip_map *map)
+void qip_map_refresh(qip_module *module, qip_map *map)
 {
+    check(module != NULL, "Module required");
+
     // Sort the elements by hash code for faster lookup.
     if(map->elements) {
         qsort(map->elements, map->count, sizeof(*map->elements), qip_map_elem_cmp);
     }
+
+    return;
+    
+error:
+    return;
 }
 
 

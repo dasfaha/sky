@@ -39,12 +39,16 @@ void sky_qip_cursor_free(sky_qip_cursor *cursor)
 
 // Retrieves the next event in the cursor.
 //
+// module - The module.
 // cursor - The cursor.
 // event  - The event object to update.
 //
 // Returns nothing.
-void sky_qip_cursor_next(sky_qip_cursor *cursor, sky_qip_event *event)
+void sky_qip_cursor_next(qip_module *module, sky_qip_cursor *cursor,
+                         sky_qip_event *event)
 {
+    check(module != NULL, "Module required");
+
     // Update the action id on the event.
     sky_action_id_t action_id;
     sky_cursor_get_action_id(cursor->cursor, &action_id);
@@ -54,12 +58,24 @@ void sky_qip_cursor_next(sky_qip_cursor *cursor, sky_qip_event *event)
 
     // Move to the next event in the cursor.
     sky_cursor_next(cursor->cursor);
+    
+    return;
+    
+error:
+    return;
 }
 
 // Checks whether the cursor is at the end.
 //
+// module - The module.
+// cursor - The cursor.
+//
 // Returns a flag stating if the cursor is done.
-bool sky_qip_cursor_eof(sky_qip_cursor *cursor)
+bool sky_qip_cursor_eof(qip_module *module, sky_qip_cursor *cursor)
 {
+    check(module != NULL, "Module required");
     return cursor->cursor->eof;
+
+error:
+    return true;
 }

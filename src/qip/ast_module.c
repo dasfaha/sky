@@ -3,6 +3,18 @@
 
 #include "node.h"
 
+#include <llvm-c/Core.h>
+#include <llvm-c/Analysis.h>
+
+//==============================================================================
+//
+// Forward Declarations
+//
+//==============================================================================
+
+int qip_ast_module_codegen_set_module(qip_ast_node *node, qip_module *module);
+
+
 //==============================================================================
 //
 // Functions
@@ -144,6 +156,10 @@ int qip_ast_module_codegen(qip_ast_node *node, qip_module *module)
     check(node->type == QIP_AST_TYPE_MODULE, "Node type must be 'module'");
     check(module != NULL, "Module required");
 
+    // Generate a function to set the current module this code is attched to.
+    rc = qip_ast_module_codegen_set_module(node, module);
+    check(rc == 0, "Unable to generate 'set module' function");
+
     // Codegen classes.
     for(i=0; i<node->module.class_count; i++) {
         qip_ast_node *class_ast = node->module.classes[i];
@@ -157,6 +173,62 @@ int qip_ast_module_codegen(qip_ast_node *node, qip_module *module)
         check(rc == 0, "Unable to generate main function");
     }
     
+    return 0;
+
+error:
+    return -1;
+}
+
+// Generates a function called 'qip_set_module' and a global variable called
+// 'module'. This function is used to pass in the current qip_module.
+//
+// node    - The node.
+// module  - The module.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_ast_module_codegen_set_module(qip_ast_node *node, qip_module *module)
+{
+    int rc;
+    check(node != NULL, "Node required");
+    check(node->type == QIP_AST_TYPE_MODULE, "Node type must be 'module'");
+    check(module != NULL, "Module required");
+
+    // Exit if the function has already been generated.
+    if(LLVMGetNamedFunction(module->llvm_module, "qip_set_module") != NULL) {
+        return 0;
+    }
+
+    LLVMBuilderRef builder = module->compiler->llvm_builder;
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+    LLVMTypeRef void_ptr_type = LLVMPointerType(LLVMInt8TypeInContext(context), 0);
+
+    // Generate global variable: @module
+    module->llvm_global_module_value = LLVMAddGlobal(module->llvm_module, void_ptr_type, "module");
+    LLVMSetInitializer(module->llvm_global_module_value, LLVMConstPointerNull(void_ptr_type));
+    LLVMSetLinkage(module->llvm_global_module_value, LLVMCommonLinkage);
+
+    // Generate function type:
+    //
+    //   define void @qip_set_module(i8* %module);
+    LLVMTypeRef params[1];
+    params[0] = void_ptr_type;
+    LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidTypeInContext(context), params, 1, false);
+    LLVMValueRef func = LLVMAddFunction(module->llvm_module, "qip_set_module", func_type);
+    LLVMSetValueName(LLVMGetParam(func, 0), "module");
+
+    // Generate function body:
+    //
+    //   store i8* %module, i8** @module
+    //   ret void
+    LLVMBasicBlockRef block = LLVMAppendBasicBlock(func, "");
+    LLVMPositionBuilderAtEnd(builder, block);
+    LLVMBuildStore(builder, LLVMGetParam(func, 0), module->llvm_global_module_value);
+    LLVMBuildRetVoid(builder);
+    
+    // Verify function.
+    rc = LLVMVerifyFunction(func, LLVMPrintMessageAction);
+    check(rc != 1, "Invalid function: 'qip_set_module'");
+
     return 0;
 
 error:

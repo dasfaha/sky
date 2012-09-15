@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include "module.h"
+
 //==============================================================================
 //
 // Definitions
@@ -41,6 +43,6 @@ void qip_string_free(qip_string *string);
 // Equality
 //======================================
 
-bool qip_string_equals(qip_string *a, qip_string *b);
+bool qip_string_equals(qip_module *module, qip_string *a, qip_string *b);
 
 #endif

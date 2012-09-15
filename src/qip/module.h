@@ -39,6 +39,8 @@ struct qip_module {
     LLVMModuleRef llvm_module;
     LLVMExecutionEngineRef llvm_engine;
     LLVMPassManagerRef llvm_pass_manager;
+    LLVMValueRef llvm_global_module_value;
+    void *context;
     int64_t sequence;
     qip_ast_node **ast_modules;
     uint32_t ast_module_count;
@@ -148,6 +150,12 @@ int qip_module_execute_boolean(qip_module *module, bool *ret);
 
 int qip_module_get_class_method(qip_module *module, bstring class_name,
     bstring method_name, void **ret);
+
+//--------------------------------------
+// Module Management
+//--------------------------------------
+
+int qip_module_update_module_ref(qip_module *module);
 
 //--------------------------------------
 // Error Management

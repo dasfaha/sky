@@ -330,9 +330,15 @@ int qip_ast_function_generate_external_call(qip_ast_node *node,
     // Make sure we have an external function name.
     check(function_name != NULL, "External function name required");
     
+    // Always pass in the global module reference as the first argument to
+    // external functions so they have a context.
+    unsigned int offset = 1;
+    unsigned int total_arg_count = node->function.arg_count + offset;
+    LLVMValueRef *args = malloc(sizeof(LLVMValueRef) * total_arg_count); check_mem(args);
+    args[0] = LLVMBuildLoad(builder, module->llvm_global_module_value, "");
+    
     // Loop over function arguments to make call arguments.
     unsigned int i;
-    LLVMValueRef *args = malloc(sizeof(LLVMValueRef) * node->function.arg_count); check_mem(args);
     for(i=0; i<node->function.arg_count; i++) {
         qip_ast_node *farg = node->function.args[i];
         bstring arg_name = farg->farg.var_decl->var_decl.name;
@@ -345,17 +351,17 @@ int qip_ast_function_generate_external_call(qip_ast_node *node,
         check(farg_value != NULL, "No LLVM value for function argument declaration: %s", bdata(arg_name));
         
         // Load the reference and add it to the argument list.
-        args[i] = LLVMBuildLoad(builder, farg_value, "");
-        check(args[i] != NULL, "Unable to build load for function argument");
+        args[i+offset] = LLVMBuildLoad(builder, farg_value, "");
+        check(args[i+offset] != NULL, "Unable to build load for function argument");
     }
     
     // Retrieve function.
     LLVMValueRef func = LLVMGetNamedFunction(module->llvm_module, bdata(function_name));
     check(func != NULL, "Unable to find external function: %s", bdata(function_name));
-    check(LLVMCountParams(func) == node->function.arg_count, "Argument mismatch (got %d, expected %d)", node->function.arg_count, LLVMCountParams(func));
+    check(LLVMCountParams(func) == total_arg_count, "Argument mismatch (got %d, expected %d)", total_arg_count, LLVMCountParams(func));
     
     // Create call instruction.
-    LLVMValueRef call_value = LLVMBuildCall(builder, func, args, node->function.arg_count, "");
+    LLVMValueRef call_value = LLVMBuildCall(builder, func, args, total_arg_count, "");
     check(call_value != NULL, "Unable to build external function call");
     
     // If function return void then generate a void return.
@@ -394,7 +400,7 @@ int qip_ast_function_codegen_prototype(qip_ast_node *node, qip_module *module,
     check(rc == 0, "Unable to determine fully qualified function name");
     
     // Generate the prototype with the given name.
-    rc = qip_ast_function_codegen_prototype_with_name(node, module, qualified_name, value);
+    rc = qip_ast_function_codegen_prototype_with_name(node, module, qualified_name, false, value);
     check(rc == 0, "Unable to generate named prototype");
     
     bdestroy(qualified_name);
@@ -408,14 +414,17 @@ error:
 // Generates the function prototype but overrides the name. This is used by
 // the metadata to create external APIs to C.
 //
-// node    - The node.
-// module  - The compilation unit this node is a part of.
-// value   - A pointer to where the LLVM value should be returned to.
+// node          - The node.
+// module        - The compilation unit this node is a part of.
+// function_name - The name of the function to generate.
+// is_external   - A flag stating if this is an external prototype.
+// value         - A pointer to where the LLVM value should be returned to.
 //
 // Returns 0 if successful, otherwise returns -1.
 int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
                                                  qip_module *module,
                                                  bstring function_name,
+                                                 bool is_external,
                                                  LLVMValueRef *value)
 {
     int rc;
@@ -424,13 +433,20 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
     bstring arg_type_name = NULL;
     bstring return_type_name = NULL;
 
+    LLVMContextRef context = LLVMGetModuleContext(module->llvm_module);
+
+    // Determine the number of arguments. External calls always have an
+    // additional first argument that is the module reference.
+    unsigned int offset = (is_external ? 1 : 0);
+    unsigned int total_arg_count = node->function.arg_count + offset;
+
     // Check for an existing prototype.
     func = LLVMGetNamedFunction(module->llvm_module, bdata(function_name));
     
     // If a prototype exists then simply verify it matches and return it.
     if(func != NULL) {
         check(LLVMCountBasicBlocks(func) == 0, "Illegal function redefinition");
-        check(LLVMCountParams(func) == node->function.arg_count, "Function prototype already exists with different arguments");
+        check(LLVMCountParams(func) == total_arg_count, "Function prototype already exists with different arguments");
     }
     // If there is no prototype then create one.
     else {
@@ -442,11 +458,15 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
 
         // Create a list of function argument types.
         qip_ast_node *arg;
-        unsigned int arg_count = node->function.arg_count;
-        LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * arg_count);
+        LLVMTypeRef *params = malloc(sizeof(LLVMTypeRef) * total_arg_count);
+
+        // Create module argument for external calls.
+        if(is_external) {
+            params[0] = LLVMPointerType(LLVMInt8TypeInContext(context), 0);
+        }
 
         // Create arguments.
-        for(i=0; i<arg_count; i++) {
+        for(i=0; i<node->function.arg_count; i++) {
             qip_ast_node *arg = node->function.args[i];
             LLVMTypeRef param = NULL;
             rc = qip_module_get_type_ref(module, arg->farg.var_decl->var_decl.type, NULL, &param);
@@ -454,11 +474,11 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
         
             // Pass argument as reference if this is a complex type.
             if(qip_llvm_is_complex_type(param)) {
-                params[i] = LLVMPointerType(param, 0);
+                params[i+offset] = LLVMPointerType(param, 0);
             }
             // Otherwise pass it by value.
             else {
-                params[i] = param;
+                params[i+offset] = param;
             }
         }
 
@@ -472,17 +492,22 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
         }
 
         // Create function type.
-        LLVMTypeRef funcType = LLVMFunctionType(return_type, params, arg_count, false);
+        LLVMTypeRef funcType = LLVMFunctionType(return_type, params, total_arg_count, false);
         check(funcType != NULL, "Unable to create function type");
 
         // Create function.
         func = LLVMAddFunction(module->llvm_module, bdata(function_name), funcType);
         check(func != NULL, "Unable to create function");
     
+        // Assign module argument name.
+        if(is_external) {
+            LLVMSetValueName(LLVMGetParam(func, 0), "module");
+        }
+    
         // Assign names to function arguments.
-        for(i=0; i<arg_count; i++) {
+        for(i=0; i<node->function.arg_count; i++) {
             arg = node->function.args[i];
-            LLVMValueRef param = LLVMGetParam(func, i);
+            LLVMValueRef param = LLVMGetParam(func, i+offset);
             LLVMSetValueName(param, bdata(arg->farg.var_decl->var_decl.name));
         }
     }

@@ -91,33 +91,56 @@ void qip_serializer_alloc(qip_serializer *serializer, int64_t n)
 // value      - The 64-bit int to pack.
 //
 // Returns nothing.
-void qip_serializer_pack_int(qip_serializer *serializer, int64_t value)
+void qip_serializer_pack_int(qip_module *module, qip_serializer *serializer,
+                             int64_t value)
 {
     size_t sz;
+    check(module != NULL, "Module required");
+    
     qip_serializer_alloc(serializer, QIP_SERIALIZER_MAX_ELEMENT_SIZE);
     minipack_pack_int(serializer->ptr, value, &sz);
     serializer->length += sz;
     serializer->ptr = serializer->data + serializer->length;
+
+    return;
+
+error:
+    return;
 }
 
-void qip_serializer_pack_float(qip_serializer *serializer, double value)
+void qip_serializer_pack_float(qip_module *module, qip_serializer *serializer,
+                               double value)
 {
     size_t sz;
+    check(module != NULL, "Module required");
+
     qip_serializer_alloc(serializer, QIP_SERIALIZER_MAX_ELEMENT_SIZE);
     minipack_pack_double(serializer->ptr, value, &sz);
     serializer->length += sz;
     serializer->ptr = serializer->data + serializer->length;
+    
+    return;
+
+error:
+    return;
 }
 
-void qip_serializer_pack_string(qip_serializer *serializer, qip_string *value)
+void qip_serializer_pack_string(qip_module *module, qip_serializer *serializer,
+                                qip_string *value)
 {
-    qip_serializer_pack_raw(serializer, value->data, value->length-1);
+    check(module != NULL, "Module required");
+    qip_serializer_pack_raw(module, serializer, value->data, value->length-1);
+    return;
+    
+error:
+    return;
 }
 
-void qip_serializer_pack_raw(qip_serializer *serializer, void *value,
-                             uint64_t length)
+void qip_serializer_pack_raw(qip_module *module, qip_serializer *serializer,
+                             void *value, uint64_t length)
 {
     size_t sz;
+    check(module != NULL, "Module required");
     
     // Allocate memory.
     qip_serializer_alloc(serializer, QIP_SERIALIZER_MAX_ELEMENT_SIZE + length);
@@ -131,13 +154,24 @@ void qip_serializer_pack_raw(qip_serializer *serializer, void *value,
     memmove(serializer->ptr, value, (uint32_t)length);
     serializer->length += (uint32_t)length;
     serializer->ptr = serializer->data + serializer->length;
+    
+    return;
+
+error:
+    return;
 }
 
-void qip_serializer_pack_map(qip_serializer *serializer, int64_t count)
+void qip_serializer_pack_map(qip_module *module, qip_serializer *serializer,
+                             int64_t count)
 {
     size_t sz;
+    check(module != NULL, "Module required");
     qip_serializer_alloc(serializer, QIP_SERIALIZER_MAX_ELEMENT_SIZE);
     minipack_pack_map(serializer->ptr, (uint32_t)count, &sz);
     serializer->length += sz;
     serializer->ptr = serializer->data + serializer->length;
+    return;
+
+error:
+    return;
 }

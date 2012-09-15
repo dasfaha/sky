@@ -26,6 +26,15 @@ struct tagbstring QIP_TYPE_NAME_VOID    = bsStatic("void");
 
 //==============================================================================
 //
+// Definitions
+//
+//==============================================================================
+
+typedef void (*qip_set_module_func)(qip_module *module);
+
+
+//==============================================================================
+//
 // Functions
 //
 //==============================================================================
@@ -43,22 +52,10 @@ qip_module *qip_module_create(bstring name, qip_compiler *compiler)
         name = &eql_str;
     }
     
-    qip_module *module = malloc(sizeof(qip_module));
+    qip_module *module = calloc(1, sizeof(qip_module));
     check_mem(module);
     module->compiler = compiler;
     module->llvm_module = LLVMModuleCreateWithName(bdata(name));
-    module->llvm_engine = NULL;
-    module->llvm_pass_manager = NULL;
-    module->sequence = 0;
-    module->scopes = NULL;
-    module->scope_count = 0;
-    module->types = NULL;
-    module->type_nodes = NULL;
-    module->type_count = 0;
-    module->errors = NULL;
-    module->error_count = 0;
-    module->ast_modules = NULL;
-    module->ast_module_count = 0;
     module->perm_pool = qip_mempool_create(); check_mem(module->perm_pool);
     module->temp_pool = qip_mempool_create(); check_mem(module->temp_pool);
 
@@ -1038,7 +1035,7 @@ error:
 
 
 //--------------------------------------
-// Execution
+// Function Lookup
 //--------------------------------------
 
 // Retrieves the function pointer for the method of a given class.
@@ -1071,6 +1068,34 @@ int qip_module_get_class_method(qip_module *module, bstring class_name,
     
 error:
     *ret = NULL;
+    return -1;
+}
+
+
+//--------------------------------------
+// Module Management
+//--------------------------------------
+
+// Sets the current module reference inside the generated code.
+//
+// module      - The module.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_update_module_ref(qip_module *module)
+{
+    check(module != NULL, "Module required");
+
+    // Find a reference to the 'qip_set_module' function.
+    LLVMValueRef func_value = LLVMGetNamedFunction(module->llvm_module, "qip_set_module");
+    check(func_value != NULL, "Function not found in module: 'qip_set_module'");
+    qip_set_module_func set_module = (qip_set_module_func)LLVMGetPointerToGlobal(module->llvm_engine, func_value);
+
+    // Assign the reference to this module.
+    set_module(module);
+
+    return 0;
+    
+error:
     return -1;
 }
 
