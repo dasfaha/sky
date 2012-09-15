@@ -19,7 +19,6 @@
 typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
 typedef void (*sky_qip_result_serialize_func)(void *result, qip_serializer *serializer);
 
-typedef int64_t (*sky_qip_get_dynamic_property_count_func)(void *event);
 typedef void (*sky_qip_update_dynamic_offsets_func)(void *event, qip_fixed_array *offsets);
 
 
@@ -176,7 +175,7 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
     }
 
     // Loop over references and add properties as needed.
-    int64_t dynamic_property_count = 0;
+    module->event_property_count = 0;
     
     for(i=0; i<var_refs->length; i++) {
         qip_ast_node *var_ref = (qip_ast_node*)var_refs->elements[i];
@@ -212,12 +211,14 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
                 args[0] = qip_ast_offsetof_create(
                     qip_ast_var_ref_create_property_access(&this_str, property_name)
                 );
-                args[1] = qip_ast_int_literal_create(dynamic_property_count);
+                args[1] = qip_ast_int_literal_create(module->event_property_count);
                 rc = qip_ast_block_add_expr(udo_block, qip_ast_var_ref_create_method_invoke(&offsets_str, &set_item_at_str, args, 2));
                 check(rc == 0, "Unable to add property id to updateDynamicOffsets()");
 
-                // Increment counter.
-                dynamic_property_count++;
+                // Increment counter and append to arrays.
+                module->event_property_count++;
+                module->event_property_ids = realloc(module->event_property_ids, sizeof(*module->event_property_ids) & module->event_property_count);
+                module->event_property_ids[module->event_property_count-1] = db_property->id;
             }
         }
     }
@@ -225,9 +226,6 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
     // Append void return for dynamic array method.
     rc = qip_ast_block_add_expr(udo_block, qip_ast_freturn_create(NULL));
     check(rc == 0, "Unable to add return to updateDynamicOffsets() block");
-   
-    // Update module.
-    module->event_property_count = dynamic_property_count;
    
     qip_array_free(var_refs);
     return 0;
@@ -301,7 +299,7 @@ int sky_qip_module_compile(sky_qip_module *module, bstring query_text)
     debug("dynamic property count: %lld", module->event_property_count);
     int64_t j;
     for(j=0; j<module->event_property_count; j++) {
-        debug("  [%lld] offset: %lld", j, module->event_property_offsets[j]);
+        debug("  [%lld] id: %d, offset: %lld", j, module->event_property_ids[j], module->event_property_offsets[j]);
     }
     
     // Retrieve main function.
