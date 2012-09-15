@@ -19,6 +19,9 @@
 typedef void (*sky_qip_path_map_func)(sky_qip_path *path, qip_map *map);
 typedef void (*qip_result_serialize_func)(void *result, qip_serializer *serializer);
 
+typedef int64_t (*sky_qip_get_dynamic_property_count_func)(void *event);
+typedef void (*sky_qip_update_dynamic_property_arrays_func)(void *event, qip_fixed_array *ids, qip_fixed_array *offsets);
+
 
 //==============================================================================
 //
@@ -136,7 +139,13 @@ int sky_peach_message_process_dynamic_class_callback(qip_module *module, qip_ast
     check(class != NULL, "Class required");
     check(data != NULL, "Table required");
     
+    struct tagbstring this_str = bsStatic("this");
     struct tagbstring event_str = bsStatic("Event");
+    struct tagbstring gdpc_str = bsStatic("getDynamicPropertyCount");
+    struct tagbstring udpa_str = bsStatic("updateDynamicPropertyArrays");
+    struct tagbstring ids_str = bsStatic("ids");
+    struct tagbstring offsets_str = bsStatic("offsets");
+    struct tagbstring set_item_at_str = bsStatic("setItemAt");
 
     // Convert data reference to a table.
     sky_table *table = (sky_table*)data;
@@ -145,6 +154,20 @@ int sky_peach_message_process_dynamic_class_callback(qip_module *module, qip_ast
     // referenced.
     if(biseqcstr(class->class.name, "Event")) {
         array = qip_array_create(); check_mem(array);
+        
+        // Retrieve getDynamicPropertyCount() method.
+        qip_ast_node *gdpc_method = NULL;
+        rc = qip_ast_class_get_method(class, &gdpc_str, &gdpc_method);
+        check(rc == 0 && gdpc_method != NULL, "Unable to find Event.getDynamicPropertyCount method");
+        qip_ast_node *gdpc_block = gdpc_method->method.function->function.body;
+        qip_ast_block_free_exprs(gdpc_block);
+
+        // Retrieve updateDynamicPropertyArrays() method.
+        qip_ast_node *udpa_method = NULL;
+        rc = qip_ast_class_get_method(class, &udpa_str, &udpa_method);
+        check(rc == 0 && udpa_method != NULL, "Unable to find Event.updateDynamicPropertyArrays method");
+        qip_ast_node *udpa_block = udpa_method->method.function->function.body;
+        qip_ast_block_free_exprs(udpa_block);
         
         // Loop over each module to find Event variable references.
         uint32_t i;
@@ -155,6 +178,8 @@ int sky_peach_message_process_dynamic_class_callback(qip_module *module, qip_ast
         }
 
         // Loop over references and add properties as needed.
+        int64_t dynamic_property_count = 0;
+        
         for(i=0; i<array->length; i++) {
             qip_ast_node *var_ref = (qip_ast_node*)array->elements[i];
             
@@ -182,9 +207,43 @@ int sky_peach_message_process_dynamic_class_callback(qip_module *module, qip_ast
                     // Add it to the class.
                     rc = qip_ast_class_add_property(class, property);
                     check(rc == 0, "Unable to add property to class");
+                    
+                    // Add to db property id to updateDynamicPropertyArrays() method:
+                    //
+                    //   ids.setItemAt(<index>, <db-prop-id>);
+                    qip_ast_node *args[2];
+                    args[0] = qip_ast_int_literal_create(db_property->id);
+                    args[1] = qip_ast_int_literal_create(dynamic_property_count);
+                    rc = qip_ast_block_add_expr(udpa_block, qip_ast_var_ref_create_method_invoke(&ids_str, &set_item_at_str, args, 2));
+                    check(rc == 0, "Unable to add property id to updateDynamicPropertyArrays()");
+
+                    // Add to db property id to updateDynamicPropertyArrays() method:
+                    //
+                    //   offsets.setItemAt(offsetof(this.<db-prop-name>), <index>);
+                    args[0] = qip_ast_offsetof_create(
+                        qip_ast_var_ref_create_property_access(&this_str, property_name)
+                    );
+                    args[1] = qip_ast_int_literal_create(dynamic_property_count);
+                    rc = qip_ast_block_add_expr(udpa_block, qip_ast_var_ref_create_method_invoke(&offsets_str, &set_item_at_str, args, 2));
+                    check(rc == 0, "Unable to add property id to updateDynamicPropertyArrays()");
+
+                    // Increment counter.
+                    dynamic_property_count++;
                 }
             }
         }
+        
+        // Append dynamic property count return.
+        rc = qip_ast_block_add_expr(gdpc_block, 
+            qip_ast_freturn_create(
+                qip_ast_int_literal_create(dynamic_property_count)
+            )
+        );
+        check(rc == 0, "Unable to add return to getDynamicPropertyCount() block");
+
+        // Append void return for dynamic array method.
+        rc = qip_ast_block_add_expr(udpa_block, qip_ast_freturn_create(NULL));
+        check(rc == 0, "Unable to add return to updateDynamicPropertyArrays() block");
     }
     
     qip_array_free(array);
@@ -209,6 +268,10 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table,
     check(message != NULL, "Message required");
     check(table != NULL, "Table required");
     check(output != NULL, "Output stream required");
+
+    struct tagbstring event_str = bsStatic("Event");
+    struct tagbstring gdpc_str = bsStatic("getDynamicPropertyCount");
+    struct tagbstring udpa_str = bsStatic("updateDynamicPropertyArrays");
 
     // Compile query and execute.
     qip_ast_node *type_ref, *var_decl;
@@ -248,6 +311,38 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table,
     check(module->error_count == 0, "Parse errors found");
     qip_compiler_free(compiler);
 
+    // Retrieve Event functions for dynamic property info.
+    sky_qip_get_dynamic_property_count_func get_dynamic_property_count = NULL;
+    rc = qip_module_get_class_method(module, &event_str, &gdpc_str, (void*)&get_dynamic_property_count);
+    check(rc == 0 && get_dynamic_property_count != NULL, "Unable to find Event.getDynamicPropertyCount() function");
+
+    sky_qip_update_dynamic_property_arrays_func update_dynamic_property_arrays = NULL;
+    rc = qip_module_get_class_method(module, &event_str, &udpa_str, (void*)&update_dynamic_property_arrays);
+    check(rc == 0 && get_dynamic_property_count != NULL, "Unable to find Event.updateDynamicPropertyArrays() function");
+
+    // Retrieve dynamic property info.
+    int64_t dynamic_property_count = get_dynamic_property_count(NULL);
+    qip_fixed_array *_ids = qip_fixed_array_create(sizeof(int64_t), dynamic_property_count);
+    qip_fixed_array *_offsets = qip_fixed_array_create(sizeof(int64_t), dynamic_property_count);
+    update_dynamic_property_arrays(NULL, _ids, _offsets);
+
+    // Simplify arrays.
+    int64_t *ids = (int64_t*)_ids->elements;
+    int64_t *offsets = (int64_t*)_offsets->elements;
+    _ids->elements = NULL;
+    qip_fixed_array_free(_ids);
+    _offsets->elements = NULL;
+    qip_fixed_array_free(_offsets);
+
+    // Print dynamic info.
+    debug("dynamic property count: %lld", dynamic_property_count);
+    int64_t j;
+    for(j=0; j<dynamic_property_count; j++) {
+        debug("  [%lld] id: %lld, offset: %lld", j, ids[j], offsets[j]);
+    }
+
+    //qip_module_dump(module);
+    
     // Retrieve main function.
     sky_qip_path_map_func process_path = NULL;
     rc = qip_module_get_main_function(module, (void*)(&process_path));

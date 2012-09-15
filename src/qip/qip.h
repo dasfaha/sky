@@ -6,6 +6,7 @@
 #include "parser.h"
 #include "map.h"
 #include "qip_string.h"
+#include "fixed_array.h"
 #include "serializer.h"
 
 #endif
