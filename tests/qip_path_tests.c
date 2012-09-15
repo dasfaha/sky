@@ -36,7 +36,7 @@ char DATA[] =
 typedef void * (*sky_qip_path_func)(sky_qip_path *path);
 
 int test_sky_qip_path_execute() {
-    qip_module *module = NULL;
+    qip_module *module = qip_module_create(NULL, NULL);
     COMPILE_QUERY_1ARG(module, "Path", "path",
         "Cursor cursor = path.events();\n"
         "return cursor;"

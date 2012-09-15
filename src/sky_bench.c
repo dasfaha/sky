@@ -300,7 +300,6 @@ void benchmark_count_with_qip(Options *options)
     args[1] = qip_ast_farg_create(var_decl);
 
     // Initialize query.
-    qip_module *module = NULL;
     struct tagbstring query = bsStatic(
         "[Hashable(\"id\")]\n"
         "class Result {\n"
@@ -320,7 +319,8 @@ void benchmark_count_with_qip(Options *options)
     qip_compiler *compiler = qip_compiler_create();
     qip_compiler_add_class_path(compiler, &core_class_path);
     qip_compiler_add_class_path(compiler, &sky_class_path);
-    rc = qip_compiler_compile(compiler, &module_name, &query, args, arg_count, NULL, &module);
+    qip_module *module = qip_module_create(&module_name, compiler);
+    rc = qip_compiler_compile(compiler, module, &query, args, arg_count);
     check(rc == 0, "Unable to compile");
     if(module->error_count > 0) fprintf(stderr, "Parse error [line %d] %s\n", module->errors[0]->line_no, bdata(module->errors[0]->message));
     check(module->error_count == 0, "Compile error");

@@ -23,25 +23,12 @@ class Event {
     //----------------------------------
 
     /**
-     *  Retrieves the number of dynamic properties on the class. This method
-     *  is used externally by Sky.
-     *
-     *  @return  The number of dynamic properties on the class.
-     */
-    private Int getDynamicPropertyCount()
-    {
-        // Implemented during dynamic class processing.
-        return 0;
-    }
-    
-    /**
      *  Initializes the offsets of the dynamic properties on the Event class.
      *  This method is externally used by the Qip module.
      *
-     *  @param ids      An array to store the property identifiers.
      *  @param offsets  An array to store the property byte offsets.
      */
-    private void updateDynamicPropertyArrays(Array<Int> ids, Array<Int> offsets)
+    private void updateDynamicOffsets(Array<Int> offsets)
     {
         // Implemented during dynamic class processing.
         return;

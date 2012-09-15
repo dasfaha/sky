@@ -99,28 +99,21 @@ void qip_compiler_free_dependencies(qip_compiler *compiler)
 // Compiles QIP program text into a module.
 //
 // compiler  - The compiler object stores compiler settings such as include paths.
-// name      - The name of the QIP module.
+// module    - The module to compile into.
 // source    - The QIP program source code.
 // args      - A list of arguments to be passed into the main function.
 // arg_count - The number of arguments.
-// data      - A pointer to data passed to callbacks for reference.
-// ret       - A pointer to where the compiled QIP module will return to.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_compiler_compile(qip_compiler *compiler, bstring name,
-                         bstring source, qip_ast_node **args, 
-                         uint32_t arg_count, void *data, qip_module **ret)
+int qip_compiler_compile(qip_compiler *compiler, qip_module *module, bstring source,
+                         qip_ast_node **args, uint32_t arg_count)
 {
     int rc;
     uint32_t i;
     check(compiler != NULL, "Compiler is required");
     
-    // Initialize return value.
-    *ret = NULL;
-    
-    // Create the module & parser.
+    // Create the parser.
     qip_parser *parser = NULL;
-    qip_module *module = qip_module_create(name, compiler); check_mem(module);
 
     // Maintain a list of dependencies for all modules.
     bstring *dependencies = NULL;
@@ -136,7 +129,7 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
     qip_module_free_errors(module);
 
     // Continuously loop and parse QIP files until there are no more dependencies.
-    bstring current_module_name = name;
+    bstring current_module_name = module->name;
     bstring current_module_source = source;
     do {
         // Throw error if no source can be found.
@@ -215,7 +208,7 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
     
     // Process dynamic classes before proceeding to code generation.
     if(module->error_count == 0) {
-        rc = qip_module_process_dynamic_classes(module, data);
+        rc = qip_module_process_dynamic_classes(module);
         check(rc == 0, "Unable to process dynamic classes for module");
     }
 
@@ -273,13 +266,10 @@ int qip_compiler_compile(qip_compiler *compiler, bstring name,
         check(rc == 0, "Unable to initialize module reference");
     }
     
-    *ret = module;
     return 0;
 
 error:
     qip_parser_free(parser);
-    qip_module_free(module);
-    *ret = NULL;
     return -1;
 }
 
@@ -382,12 +372,10 @@ error:
 // compiler - The compiler.
 // module   - The module.
 // class    - The class AST node.
-// data     - A pointer to an object that was passed into the compiler for
-//            context.
 //
 // Returns 0 if successful, otherwise returns -1.
 int qip_compiler_process_dynamic_class(qip_compiler *compiler, qip_module *module,
-                                       qip_ast_node *class, void *data)
+                                       qip_ast_node *class)
 {
     int rc;
     check(compiler != NULL, "Compiler required");
@@ -396,7 +384,7 @@ int qip_compiler_process_dynamic_class(qip_compiler *compiler, qip_module *modul
     check(compiler->process_dynamic_class != NULL, "Process dynamic class function pointer must be set");
     
     // Delegate to external interface.
-    rc = compiler->process_dynamic_class(module, class, data);
+    rc = compiler->process_dynamic_class(module, class);
     check(rc == 0, "Unable to process dynamic class");
     
     return 0;

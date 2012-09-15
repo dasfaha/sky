@@ -7,8 +7,10 @@ CXXFLAGS=-g -Wall -Wextra -Wno-self-assign -D_FILE_OFFSET_BITS=64 `llvm-config -
 
 SOURCES=$(wildcard src/**/*.c src/**/**/*.c src/*.c)
 OBJECTS=$(patsubst %.c,%.o,${SOURCES}) $(patsubst %.l,%.o,${LEX_SOURCES}) $(patsubst %.y,%.o,${YACC_SOURCES})
-LIB_SOURCES=$(filter-out $(wildcard src/sky_*.c),${SOURCES})
-LIB_OBJECTS=$(filter-out $(wildcard src/sky_*.o),${OBJECTS})
+BIN_SOURCES=src/skyd.c,src/sky_bench.c,src/sky_gen.c
+BIN_OBJECTS=$(patsubst %.c,%.o,${BIN_SOURCES})
+LIB_SOURCES=$(filter-out ${BIN_SOURCES},${SOURCES})
+LIB_OBJECTS=$(filter-out ${BIN_OBJECTS},${OBJECTS})
 TEST_SOURCES=$(wildcard tests/*_tests.c tests/**/*_tests.c)
 TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 

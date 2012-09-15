@@ -46,15 +46,16 @@ typedef void (*qip_set_module_func)(qip_module *module);
 // Creates a module.
 qip_module *qip_module_create(bstring name, qip_compiler *compiler)
 {
-    // Default module name to "eql".
-    struct tagbstring eql_str = bsStatic("eql");
+    // Default module name to "qip".
+    struct tagbstring qip_str = bsStatic("qip");
     if(name == NULL) {
-        name = &eql_str;
+        name = &qip_str;
     }
     
     qip_module *module = calloc(1, sizeof(qip_module));
     check_mem(module);
     module->compiler = compiler;
+    module->name = bstrcpy(name); check_mem(module->name);
     module->llvm_module = LLVMModuleCreateWithName(bdata(name));
     module->perm_pool = qip_mempool_create(); check_mem(module->perm_pool);
     module->temp_pool = qip_mempool_create(); check_mem(module->temp_pool);
@@ -256,10 +257,9 @@ error:
 // Processes all dynamic classes through the module's compiler's delegate.
 //
 // module - The compilation module.
-// data   - A pointer to data passed to the callback for reference.
 //
 // Returns 0 if successful, otherwise returns -1.
-int qip_module_process_dynamic_classes(qip_module *module, void *data)
+int qip_module_process_dynamic_classes(qip_module *module)
 {
     int rc;
     check(module != NULL, "Module required");
@@ -283,7 +283,7 @@ int qip_module_process_dynamic_classes(qip_module *module, void *data)
             
             // If dynamic metatag exists then process it.
             if(dynamic_metadata != NULL) {
-                rc = qip_compiler_process_dynamic_class(module->compiler, module, class, data);
+                rc = qip_compiler_process_dynamic_class(module->compiler, module, class);
                 check(rc == 0, "Unable to process dynamic class");
             }
         }

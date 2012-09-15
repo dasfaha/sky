@@ -1,11 +1,10 @@
 #include <dbg.h>
 
 // Required for Dynamic Event class.
-int dynamic_class_callback(qip_module *module, qip_ast_node *class, void *data)
+int dynamic_class_callback(qip_module *module, qip_ast_node *class)
 {
     check(module != NULL, "Module required");
     check(class != NULL, "Class required");
-    check(data == NULL, "Table required");
     
     return 0;
 
@@ -16,14 +15,14 @@ error:
 // Initializes and compiles a query into a module.
 #define COMPILE_QUERY_RAW(MODULE, ARGS, ARG_COUNT, QUERY) do {\
     struct tagbstring query = bsStatic(QUERY); \
-    struct tagbstring module_name = bsStatic("qip"); \
     struct tagbstring core_class_path = bsStatic("lib/core"); \
     struct tagbstring sky_class_path = bsStatic("lib/sky"); \
     qip_compiler *compiler = qip_compiler_create(); \
     compiler->process_dynamic_class = dynamic_class_callback; \
     qip_compiler_add_class_path(compiler, &core_class_path); \
     qip_compiler_add_class_path(compiler, &sky_class_path); \
-    int _rc = qip_compiler_compile(compiler, &module_name, &query, ARGS, ARG_COUNT, NULL, &module); \
+    MODULE->compiler = compiler; \
+    int _rc = qip_compiler_compile(compiler, module, &query, ARGS, ARG_COUNT); \
     mu_assert(_rc == 0, "Unable to compile"); \
     if(module->error_count > 0) fprintf(stderr, "Parse error [line %d] %s\n", module->errors[0]->line_no, bdata(module->errors[0]->message)); \
     mu_assert_int_equals(module->error_count, 0); \

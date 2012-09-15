@@ -37,7 +37,7 @@ char DATA[] =
 typedef int64_t (*sky_qip_path_int_func)(sky_qip_path *path);
 
 int test_sky_qip_cursor_execute_simple() {
-    qip_module *module = NULL;
+    qip_module *module = qip_module_create(NULL, NULL);
     COMPILE_QUERY_1ARG(module, "Path", "path",
         "Int total = 0;\n"
         "Cursor cursor = path.events();\n"
@@ -97,7 +97,7 @@ int test_sky_qip_cursor_execute_with_map() {
     var_decl = qip_ast_var_decl_create(type_ref, &data_str, NULL);
     args[1] = qip_ast_farg_create(var_decl);
 
-    qip_module *module = NULL;
+    qip_module *module = qip_module_create(NULL, NULL);
     COMPILE_QUERY_RAW(module, args, arg_count,
         "[Hashable(\"id\")]\n"
         "class Result {\n"
