@@ -49,7 +49,7 @@ void qip_serializer_pack_float(qip_module *module, qip_serializer *serializer,
     double value);
 
 void qip_serializer_pack_string(qip_module *module, qip_serializer *serializer,
-    qip_string *value);
+    qip_string value);
 
 void qip_serializer_pack_raw(qip_module *module, qip_serializer *serializer,
     void *value, uint64_t length);

@@ -24,7 +24,5 @@ bool qip_llvm_is_pointer_type(LLVMTypeRef type);
 
 bool qip_llvm_is_double_pointer_type(LLVMTypeRef type);
 
-bool qip_llvm_is_complex_type(LLVMTypeRef type);
-
 
 #endif

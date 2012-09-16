@@ -473,7 +473,7 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
             check(rc == 0, "Unable to determine function argument type");
         
             // Pass argument as reference if this is a complex type.
-            if(qip_llvm_is_complex_type(param)) {
+            if(qip_module_is_complex_type(module, param)) {
                 params[i+offset] = LLVMPointerType(param, 0);
             }
             // Otherwise pass it by value.
@@ -487,7 +487,7 @@ int qip_ast_function_codegen_prototype_with_name(qip_ast_node *node,
         rc = qip_module_get_type_ref(module, node->function.return_type, NULL, &return_type);
         check(rc == 0, "Unable to determine function return type");
 
-        if(qip_llvm_is_complex_type(return_type)) {
+        if(qip_module_is_complex_type(module, return_type)) {
             return_type = LLVMPointerType(return_type, 0);
         }
 

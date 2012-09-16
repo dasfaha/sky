@@ -126,10 +126,10 @@ error:
 }
 
 void qip_serializer_pack_string(qip_module *module, qip_serializer *serializer,
-                                qip_string *value)
+                                qip_string value)
 {
     check(module != NULL, "Module required");
-    qip_serializer_pack_raw(module, serializer, value->data, value->length-1);
+    qip_serializer_pack_raw(module, serializer, value.data, value.length-1);
     return;
     
 error:

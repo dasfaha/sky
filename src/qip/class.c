@@ -724,7 +724,7 @@ int qip_ast_class_codegen_type(qip_module *module, qip_ast_node *node)
                 check(elements[i] != NULL, "Unable to find class: %s", bdata(property->property.var_decl->var_decl.type->type_ref.name));
 
                 // Wrap complex types as pointers.
-                if(qip_llvm_is_complex_type(elements[i])) {
+                if(qip_module_is_complex_type(module, elements[i])) {
                     elements[i] = LLVMPointerType(elements[i], 0);
                 }
             }
@@ -1473,6 +1473,12 @@ int qip_ast_class_generate_constructor(qip_ast_node *node)
     
     struct tagbstring constructor_name = bsStatic("init");
     
+    // Do not generate a constructor for String since it is not considered
+    // a complex type.
+    if(biseqcstr(node->class.name, "String")) {
+        return 0;
+    }
+
     // Find existing constructor method.
     qip_ast_node *method = NULL;
     rc = qip_ast_class_get_method(node, &constructor_name, &method);

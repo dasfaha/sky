@@ -521,7 +521,6 @@ int qip_ast_var_ref_get_pointer(qip_ast_node *node, qip_module *module,
             check(rc == 0 && property_index >= 0, "Unable to find property '%s' on class '%s'", bdata(node->var_ref.name), bdata(class->class.name));
 
             // Build GEP instruction.
-            //LLVMDumpValue(parent_value);
             *value = LLVMBuildStructGEP(builder, parent_value, property_index, "");
             check(*value != NULL, "Unable to build GEP instruction");
         }

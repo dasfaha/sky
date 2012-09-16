@@ -503,6 +503,27 @@ void qip_module_free_ast_modules(qip_module *module)
 // Types
 //--------------------------------------
 
+// Retrieves a flag stating if the LLVM type passed in is a complex type
+// (struct, array). The String type is an exception in that it is a struct
+// but is not considered a complex type.
+//
+// type - The LLVM type to check.
+//
+// Returns true if the type is complex, otherwise returns false.
+bool qip_module_is_complex_type(qip_module *module, LLVMTypeRef type)
+{
+    // The String type is not considered complex in Qip.
+    if(type == module->llvm_string_type) {
+        return false;
+    }
+    // All other struct and array types are complex though.
+    else {
+        LLVMTypeKind type_kind = LLVMGetTypeKind(type);
+        return (type_kind == LLVMStructTypeKind || type_kind == LLVMArrayTypeKind);
+    }
+}
+
+
 // Retrieves an LLVM type definition for a given type name. Optionally returns
 // the associated AST node if the type is user-defined. For templated classes,
 // this only works after the namespace has been flattened.
@@ -575,7 +596,7 @@ int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
             check(rc == 0, "Unable to determine function param type: %d", i);
             
             // If the param is a complex type then wrap it in a pointer.
-            if(qip_llvm_is_complex_type(params[i])) {
+            if(qip_module_is_complex_type(module, params[i])) {
                 params[i] = LLVMPointerType(params[i], 0);
             }
         }
@@ -648,6 +669,11 @@ int qip_module_add_type_ref(qip_module *module, qip_ast_node *node,
     module->type_nodes = realloc(module->type_nodes, sizeof(qip_ast_node*) * module->type_count);
     check_mem(module->type_nodes);
     module->type_nodes[module->type_count-1] = node;
+    
+    // If this is the string type then save it.
+    if(biseqcstr(node->class.name, "String") == 1) {
+        module->llvm_string_type = type;
+    }
     
     return 0;
     
@@ -1032,6 +1058,34 @@ error:
     return -1;
 }
 
+// Executes the main function of a QIP module that returns a String.
+//
+// module - The module to execute.
+// ret    - A pointer to where the returned value should be sent.
+//
+// Returns 0 if successful, otherwise returns -1.
+int qip_module_execute_string(qip_module *module, qip_string *ret)
+{
+    int rc;
+    check(module != NULL, "Module required");
+    check(ret != NULL, "Return pointer required");
+
+    // Reset temporary pool.
+    rc = qip_module_reset_temp_pool(module);
+    check(rc == 0, "Unable to reset temporary pool");
+
+    // Execute main function.
+    sky_qip_string_function_t main_function;
+    rc = qip_module_get_main_function(module, (void*)(&main_function));
+    check(rc == 0 && main_function != NULL, "Unable to retrieve main function");
+    *ret = main_function();
+
+    return 0;
+    
+error:
+    *ret = qip_string_create(0, NULL);
+    return -1;
+}
 
 
 //--------------------------------------

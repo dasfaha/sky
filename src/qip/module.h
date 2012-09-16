@@ -16,10 +16,13 @@
 
 typedef struct qip_module qip_module;
 
+#include "qip_string.h"
+
 typedef void *(*sky_qip_function_t)();
 typedef int64_t (*sky_qip_int_function_t)();
 typedef double (*sky_qip_float_function_t)();
 typedef bool (*sky_qip_boolean_function_t)();
+typedef qip_string (*sky_qip_string_function_t)();
 
 
 #include "compiler.h"
@@ -41,6 +44,7 @@ struct qip_module {
     LLVMExecutionEngineRef llvm_engine;
     LLVMPassManagerRef llvm_pass_manager;
     LLVMValueRef llvm_global_module_value;
+    LLVMTypeRef llvm_string_type;
     void *context;
     int64_t sequence;
     qip_ast_node **ast_modules;
@@ -103,6 +107,8 @@ int qip_module_preprocess(qip_module *module,
 // Types
 //--------------------------------------
 
+bool qip_module_is_complex_type(qip_module *module, LLVMTypeRef type);
+
 int qip_module_get_type_ref(qip_module *module, qip_ast_node *type_ref,
     qip_ast_node **node, LLVMTypeRef *type);
 
@@ -144,6 +150,8 @@ int qip_module_execute_int(qip_module *module, int64_t *ret);
 int qip_module_execute_float(qip_module *module, double *ret);
 
 int qip_module_execute_boolean(qip_module *module, bool *ret);
+
+int qip_module_execute_string(qip_module *module, qip_string *ret);
 
 //--------------------------------------
 // LLVM Function Management

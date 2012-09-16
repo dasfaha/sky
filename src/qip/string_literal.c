@@ -109,8 +109,11 @@ int qip_ast_string_literal_codegen(qip_ast_node *node,
     LLVMValueRef llvm_struct = LLVMConstNamedStruct(llvm_type, args, 2);
     
     // Build a global with the appropriate initializer.
-    *value = LLVMAddGlobal(module->llvm_module, llvm_type, "");
-    LLVMSetInitializer(*value, llvm_struct);
+    LLVMValueRef global_value = LLVMAddGlobal(module->llvm_module, llvm_type, "");
+    LLVMSetInitializer(global_value, llvm_struct);
+    
+    // Load pointer.
+    *value = LLVMBuildLoad(builder, global_value, "");
     
     return 0;
 

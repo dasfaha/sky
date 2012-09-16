@@ -181,7 +181,7 @@ int qip_ast_var_decl_codegen(qip_ast_node *node, qip_module *module,
     LLVMTypeRef type;
     rc = qip_module_get_type_ref(module, node->var_decl.type, NULL, &type);
     check(rc == 0 && type != NULL, "Unable to find LLVM type ref: %s", bdata(node->var_decl.type->type_ref.name));
-    bool is_complex_type = qip_llvm_is_complex_type(type);
+    bool is_complex_type = qip_module_is_complex_type(module, type);
 
     // Create a function argument allocation.
     LLVMValueRef value_alloca = NULL;
