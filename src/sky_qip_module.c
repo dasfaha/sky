@@ -12,6 +12,21 @@
 
 //==============================================================================
 //
+// Constants
+//
+//==============================================================================
+
+struct tagbstring SKY_QIP_DATA_TYPE_INT = bsStatic("Int");
+
+struct tagbstring SKY_QIP_DATA_TYPE_FLOAT = bsStatic("Float");
+
+struct tagbstring SKY_QIP_DATA_TYPE_BOOLEAN = bsStatic("Boolean");
+
+struct tagbstring SKY_QIP_DATA_TYPE_STRING = bsStatic("String");
+
+
+//==============================================================================
+//
 // Definitions
 //
 //==============================================================================
@@ -108,6 +123,47 @@ void sky_qip_module_free_event_info(sky_qip_module *module)
 
 
 //--------------------------------------
+// Data Type Utilities
+//--------------------------------------
+
+// Retrieves a reference to a standardized bstring that represents the name
+// of the data type.
+//
+// type_name - The name of the type.
+// ret       - A pointer to where the standardized type name should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_qip_module_get_standard_type_name(bstring type_name, bstring *ret)
+{
+    check(type_name != NULL, "Type name required");
+    check(ret != NULL, "Return pointer required");
+
+    // Check against standard types.
+    if(biseq(&SKY_QIP_DATA_TYPE_INT, type_name)) {
+        *ret = &SKY_QIP_DATA_TYPE_INT;
+    }
+    else if(biseq(&SKY_QIP_DATA_TYPE_FLOAT, type_name)) {
+        *ret = &SKY_QIP_DATA_TYPE_FLOAT;
+    }
+    else if(biseq(&SKY_QIP_DATA_TYPE_BOOLEAN, type_name)) {
+        *ret = &SKY_QIP_DATA_TYPE_BOOLEAN;
+    }
+    else if(biseq(&SKY_QIP_DATA_TYPE_STRING, type_name)) {
+        *ret = &SKY_QIP_DATA_TYPE_STRING;
+    }
+    // If this is not a standard type then return the name that came in.
+    else {
+        sentinel("Type is not a standard type: %s", bdata(type_name));
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
+
+//--------------------------------------
 // Dynamic Event Property Processing
 //--------------------------------------
 
@@ -197,11 +253,10 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
                 check(rc == 0, "Unable to find property '%s' in table: %s", bdata(property_name), bdata(module->table->path));
                 
                 // Generate and add property to class.
-                rc = qip_ast_class_add_property(class, 
-                    qip_ast_property_create(QIP_ACCESS_PUBLIC, 
-                        qip_ast_var_decl_create(qip_ast_type_ref_create(db_property->data_type), property_name, NULL)
-                    )
+                property = qip_ast_property_create(QIP_ACCESS_PUBLIC, 
+                    qip_ast_var_decl_create(qip_ast_type_ref_create(db_property->data_type), property_name, NULL)
                 );
+                rc = qip_ast_class_add_property(class, property);
                 check(rc == 0, "Unable to add property to class");
                 
                 // Add to db property id to updateDynamicOffsets() method:
@@ -215,10 +270,18 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
                 rc = qip_ast_block_add_expr(udo_block, qip_ast_var_ref_create_method_invoke(&offsets_str, &set_item_at_str, args, 2));
                 check(rc == 0, "Unable to add property id to updateDynamicOffsets()");
 
-                // Increment counter and append to arrays.
+                // Increment counter.
                 module->event_property_count++;
-                module->event_property_ids = realloc(module->event_property_ids, sizeof(*module->event_property_ids) & module->event_property_count);
+
+                // Append to property id array.
+                module->event_property_ids = realloc(module->event_property_ids, sizeof(*module->event_property_ids) * module->event_property_count);
                 module->event_property_ids[module->event_property_count-1] = db_property->id;
+
+                // Append to property type array.
+                bstring type_name = property->property.var_decl->var_decl.type->type_ref.name;
+                module->event_property_types = realloc(module->event_property_types, sizeof(*module->event_property_types) * module->event_property_count);
+                rc = sky_qip_module_get_standard_type_name(type_name, &module->event_property_types[module->event_property_count-1]);
+                check(rc == 0, "Unable to retrieve standard type name: '%s'", bdata(type_name));
             }
         }
     }
@@ -299,7 +362,7 @@ int sky_qip_module_compile(sky_qip_module *module, bstring query_text)
     debug("dynamic property count: %lld", module->event_property_count);
     int64_t j;
     for(j=0; j<module->event_property_count; j++) {
-        debug("  [%lld] id: %d, offset: %lld", j, module->event_property_ids[j], module->event_property_offsets[j]);
+        debug("  [%lld] id: %d, offset: %lld, type: %s [%p]", j, module->event_property_ids[j], module->event_property_offsets[j], bdata(module->event_property_types[j]), module->event_property_types[j]);
     }
     
     // Retrieve main function.
