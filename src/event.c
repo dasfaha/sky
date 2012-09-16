@@ -405,7 +405,7 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     void *endptr = ptr + data_length;
     while(ptr < endptr) {
         check(allocate_data(event) == 0, "Unable to append event data");
-        event->data[index] = sky_event_data_create(0, NULL);
+        event->data[index] = sky_event_data_create(0);
 
         rc = sky_event_data_unpack(event->data[index], ptr, &_sz);
         check(rc == 0, "Unable to unpack event data at %p", ptr);
@@ -415,9 +415,7 @@ int sky_event_unpack(sky_event *event, void *ptr, size_t *sz)
     }
 
     // Store number of bytes read.
-    if(sz != NULL) {
-        *sz = (ptr-start);
-    }
+    if(sz != NULL) *sz = (ptr-start);
 
     return 0;
 
@@ -558,7 +556,7 @@ int sky_event_set_data(sky_event *event, sky_property_id_t key, bstring value)
     // Otherwise append a new data item.
     else {
         check(allocate_data(event) == 0, "Unable to allocate event data");
-        event->data[event->data_count-1] = sky_event_data_create(key, value);
+        event->data[event->data_count-1] = sky_event_data_create_string(key, value);
     }
 
     return 0;

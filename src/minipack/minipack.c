@@ -1,4 +1,4 @@
-// minipack v0.4.0
+// minipack v0.4.1
 
 #include "minipack.h"
 #include "string.h"
@@ -961,6 +961,14 @@ void minipack_pack_int64(void *ptr, int64_t value, size_t *sz)
 // Nil
 //--------------------------------------
 
+// Retrieves the size, in bytes, of how large an element will be.
+//
+// Returns the number of bytes needed for the element.
+size_t minipack_sizeof_nil()
+{
+    return NIL_SIZE;
+}
+
 // Checks if an element is a nil.
 //
 // ptr - A pointer to the element.
@@ -1043,6 +1051,14 @@ int minipack_fwrite_nil(FILE *file, size_t *sz)
 //--------------------------------------
 // Boolean
 //--------------------------------------
+
+// Retrieves the size, in bytes, of how large an element will be.
+//
+// Returns the number of bytes needed for the element.
+size_t minipack_sizeof_bool()
+{
+    return BOOL_SIZE;
+}
 
 // Checks if an element is a bool.
 //
@@ -1164,6 +1180,14 @@ int minipack_fwrite_bool(FILE *file, bool value, size_t *sz)
 // Float
 //--------------------------------------
 
+// Retrieves the size, in bytes, of how large an element will be.
+//
+// Returns the number of bytes needed for the element.
+size_t minipack_sizeof_float()
+{
+    return FLOAT_SIZE;
+}
+
 // Checks if an element is a float.
 //
 // ptr - A pointer to the element.
@@ -1248,6 +1272,14 @@ int minipack_fwrite_float(FILE *file, float value, size_t *sz)
 //--------------------------------------
 // Double
 //--------------------------------------
+
+// Retrieves the size, in bytes, of how large an element will be.
+//
+// Returns the number of bytes needed for the element.
+size_t minipack_sizeof_double()
+{
+    return DOUBLE_SIZE;
+}
 
 // Checks if an element is a double.
 //

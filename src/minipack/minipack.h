@@ -1,4 +1,4 @@
-// minipack v0.4.0
+// minipack v0.4.1
 
 #ifndef _minipack_h
 #define _minipack_h
@@ -181,6 +181,8 @@ void minipack_pack_int64(void *ptr, int64_t value, size_t *sz);
 // Nil
 //======================================
 
+size_t minipack_sizeof_nil();
+
 bool minipack_is_nil(void *ptr);
 
 void minipack_pack_nil(void *ptr, size_t *sz);
@@ -201,6 +203,8 @@ int minipack_fwrite_nil(FILE *file, size_t *sz);
 //======================================
 // Bool
 //======================================
+
+size_t minipack_sizeof_bool();
 
 bool minipack_is_bool(void *ptr);
 
@@ -227,6 +231,8 @@ int minipack_fwrite_bool(FILE *file, bool value, size_t *sz);
 // Float
 //======================================
 
+size_t minipack_sizeof_float();
+
 bool minipack_is_float(void *ptr);
 
 float minipack_unpack_float(void *ptr, size_t *sz);
@@ -241,6 +247,8 @@ int minipack_fwrite_float(FILE *file, float value, size_t *sz);
 //======================================
 // Double
 //======================================
+
+size_t minipack_sizeof_double();
 
 bool minipack_is_double(void *ptr);
 
