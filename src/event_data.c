@@ -28,7 +28,7 @@ sky_event_data *sky_event_data_create(sky_property_id_t key, bstring value)
     
     data = malloc(sizeof(sky_event_data));
     data->key = key;
-    data->value = bstrcpy(value); if(value) check_mem(data->value);
+    data->string_value = bstrcpy(value); if(value) check_mem(data->string_value);
 
     return data;
     
@@ -41,7 +41,7 @@ error:
 void sky_event_data_free(sky_event_data *data)
 {
     if(data) {
-        bdestroy(data->value);
+        bdestroy(data->string_value);
         free(data);
     }
 }
@@ -56,7 +56,7 @@ int sky_event_data_copy(sky_event_data *source, sky_event_data **target)
 {
     check(source != NULL, "Event data source required for copy");
 
-    *target = sky_event_data_create(source->key, source->value);
+    *target = sky_event_data_create(source->key, source->string_value);
 
     return 0;
     
@@ -79,8 +79,8 @@ size_t sky_event_data_sizeof(sky_event_data *data)
 {
     size_t sz = 0;
     sz += sizeof(data->key);
-    sz += minipack_sizeof_raw(blength(data->value));
-    sz += blength(data->value);
+    sz += minipack_sizeof_raw(blength(data->string_value));
+    sz += blength(data->string_value);
     return sz;
 }
 
@@ -105,13 +105,13 @@ int sky_event_data_pack(sky_event_data *data, void *ptr, size_t *sz)
     ptr += sizeof(data->key);
 
     // Write value header.
-    minipack_pack_raw(ptr, blength(data->value), &_sz);
+    minipack_pack_raw(ptr, blength(data->string_value), &_sz);
     check(_sz != 0, "Unable to pack event data value header at %p", ptr);
     ptr += _sz;
 
     // Write value.
-    memmove(ptr, bdata(data->value), blength(data->value));
-    ptr += blength(data->value);
+    memmove(ptr, bdata(data->string_value), blength(data->string_value));
+    ptr += blength(data->string_value);
 
     // Store number of bytes written.
     if(sz != NULL) {
@@ -150,7 +150,7 @@ int sky_event_data_unpack(sky_event_data *data, void *ptr, size_t *sz)
     ptr += _sz;
 
     // Read value.
-    data->value = blk2bstr(ptr, value_length); check_mem(data->value);
+    data->string_value = blk2bstr(ptr, value_length); check_mem(data->string_value);
     ptr += value_length;
 
     // Store number of bytes read.

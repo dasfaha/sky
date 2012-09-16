@@ -547,13 +547,13 @@ int sky_event_set_data(sky_event *event, sky_property_id_t key, bstring value)
     // If existing key is found then update value.
     if(data != NULL) {
         // Cleanup old value.
-        if(data->value != NULL) {
-            bdestroy(data->value);
+        if(data->string_value != NULL) {
+            bdestroy(data->string_value);
         }
     
         // Assign new value.
-        data->value = bstrcpy(value);
-        if(value != NULL) check_mem(data->value);
+        data->string_value = bstrcpy(value);
+        if(value != NULL) check_mem(data->string_value);
     }
     // Otherwise append a new data item.
     else {

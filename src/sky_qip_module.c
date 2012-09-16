@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "sky_qip_module.h"
+#include "property.h"
 #include "constants.h"
 #include "minipack.h"
 #include "mem.h"
@@ -8,21 +9,6 @@
 
 #include "qip/qip.h"
 #include "qip_path.h"
-
-
-//==============================================================================
-//
-// Constants
-//
-//==============================================================================
-
-struct tagbstring SKY_QIP_DATA_TYPE_INT = bsStatic("Int");
-
-struct tagbstring SKY_QIP_DATA_TYPE_FLOAT = bsStatic("Float");
-
-struct tagbstring SKY_QIP_DATA_TYPE_BOOLEAN = bsStatic("Boolean");
-
-struct tagbstring SKY_QIP_DATA_TYPE_STRING = bsStatic("String");
 
 
 //==============================================================================
@@ -119,47 +105,6 @@ void sky_qip_module_free_event_info(sky_qip_module *module)
         
         module->event_property_count = 0;
     }
-}
-
-
-//--------------------------------------
-// Data Type Utilities
-//--------------------------------------
-
-// Retrieves a reference to a standardized bstring that represents the name
-// of the data type.
-//
-// type_name - The name of the type.
-// ret       - A pointer to where the standardized type name should be returned.
-//
-// Returns 0 if successful, otherwise returns -1.
-int sky_qip_module_get_standard_type_name(bstring type_name, bstring *ret)
-{
-    check(type_name != NULL, "Type name required");
-    check(ret != NULL, "Return pointer required");
-
-    // Check against standard types.
-    if(biseq(&SKY_QIP_DATA_TYPE_INT, type_name)) {
-        *ret = &SKY_QIP_DATA_TYPE_INT;
-    }
-    else if(biseq(&SKY_QIP_DATA_TYPE_FLOAT, type_name)) {
-        *ret = &SKY_QIP_DATA_TYPE_FLOAT;
-    }
-    else if(biseq(&SKY_QIP_DATA_TYPE_BOOLEAN, type_name)) {
-        *ret = &SKY_QIP_DATA_TYPE_BOOLEAN;
-    }
-    else if(biseq(&SKY_QIP_DATA_TYPE_STRING, type_name)) {
-        *ret = &SKY_QIP_DATA_TYPE_STRING;
-    }
-    // If this is not a standard type then return the name that came in.
-    else {
-        sentinel("Type is not a standard type: %s", bdata(type_name));
-    }
-
-    return 0;
-
-error:
-    return -1;
 }
 
 
@@ -280,7 +225,7 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
                 // Append to property type array.
                 bstring type_name = property->property.var_decl->var_decl.type->type_ref.name;
                 module->event_property_types = realloc(module->event_property_types, sizeof(*module->event_property_types) * module->event_property_count);
-                rc = sky_qip_module_get_standard_type_name(type_name, &module->event_property_types[module->event_property_count-1]);
+                rc = sky_property_get_standard_data_type_name(type_name, &module->event_property_types[module->event_property_count-1]);
                 check(rc == 0, "Unable to retrieve standard type name: '%s'", bdata(type_name));
             }
         }

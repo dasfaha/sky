@@ -17,6 +17,15 @@ typedef struct sky_property sky_property;
 //
 //==============================================================================
 
+extern struct tagbstring SKY_DATA_TYPE_INT;
+
+extern struct tagbstring SKY_DATA_TYPE_FLOAT;
+
+extern struct tagbstring SKY_DATA_TYPE_BOOLEAN;
+
+extern struct tagbstring SKY_DATA_TYPE_STRING;
+
+
 typedef enum {
     SKY_PROPERTY_TYPE_OBJECT = 1,
     SKY_PROPERTY_TYPE_ACTION = 2,
@@ -55,5 +64,11 @@ size_t sky_property_sizeof(sky_property *property);
 int sky_property_pack(sky_property *property, FILE *file);
 
 int sky_property_unpack(sky_property *property, FILE *file);
+
+//--------------------------------------
+// Data Type
+//--------------------------------------
+
+int sky_property_get_standard_data_type_name(bstring type_name, bstring *ret);
 
 #endif

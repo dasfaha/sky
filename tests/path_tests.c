@@ -173,16 +173,16 @@ int test_sky_path_unpack() {
     mu_assert(path->events[1]->action_id == 7, "");
 
     sky_event_get_data(path->events[1], 1, &data);
-    mu_assert(biseqcstr(data->value, "foo"), "");
+    mu_assert(biseqcstr(data->string_value, "foo"), "");
     sky_event_get_data(path->events[1], 2, &data);
-    mu_assert(biseqcstr(data->value, "bar"), "");
+    mu_assert(biseqcstr(data->string_value, "bar"), "");
 
     mu_assert(path->events[2]->timestamp == 29LL, "");
     mu_assert(path->events[2]->object_id == 2, "");
     mu_assert(path->events[2]->action_id == 0, "");
 
     sky_event_get_data(path->events[2], 1, &data);
-    mu_assert(biseqcstr(data->value, "foo"), "");
+    mu_assert(biseqcstr(data->string_value, "foo"), "");
 
     sky_path_free(path);
     

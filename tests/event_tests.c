@@ -75,9 +75,9 @@ int test_sky_event_set_data() {
     mu_assert(event->data_count == 2, "Expected data count to be 2");
 
     sky_event_get_data(event, 10, &data);
-    mu_assert(biseqcstr(data->value, "baz"), "Expected data 10 to equal 'baz'");
+    mu_assert(biseqcstr(data->string_value, "baz"), "Expected data 10 to equal 'baz'");
     sky_event_get_data(event, 20, &data);
-    mu_assert(biseqcstr(data->value, "bar"), "Expected data 20 to equal 'bar'");
+    mu_assert(biseqcstr(data->string_value, "bar"), "Expected data 20 to equal 'bar'");
     sky_event_get_data(event, 30, &data);
     mu_assert(data == NULL, "Expected data 30 be NULL");
 
@@ -99,7 +99,7 @@ int test_sky_event_unset_data() {
     sky_event_get_data(event, 10, &data);
     mu_assert(data == NULL, "Expected data 10 be NULL");
     sky_event_get_data(event, 20, &data);
-    mu_assert(biseqcstr(data->value, "bar"), "Expected data 20 to equal 'bar'");
+    mu_assert(biseqcstr(data->string_value, "bar"), "Expected data 20 to equal 'bar'");
 
     sky_event_free(event);
 
@@ -226,9 +226,9 @@ int test_sky_event_data_event_unpack() {
 
     sky_event_data *data = NULL;
     sky_event_get_data(event, 1, &data);
-    mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
+    mu_assert(biseqcstr(data->string_value, "foo"), "Expected data 1 to equal 'foo'");
     sky_event_get_data(event, 2, &data);
-    mu_assert(biseqcstr(data->value, "bar"), "Expected data 1 to equal 'bar'");
+    mu_assert(biseqcstr(data->string_value, "bar"), "Expected data 1 to equal 'bar'");
 
     sky_event_free(event);
     
@@ -250,9 +250,9 @@ int test_sky_event_action_data_event_unpack() {
 
     sky_event_data *data = NULL;
     sky_event_get_data(event, 1, &data);
-    mu_assert(biseqcstr(data->value, "foo"), "Expected data 1 to equal 'foo'");
+    mu_assert(biseqcstr(data->string_value, "foo"), "Expected data 1 to equal 'foo'");
     sky_event_get_data(event, 2, &data);
-    mu_assert(biseqcstr(data->value, "bar"), "Expected data 1 to equal 'bar'");
+    mu_assert(biseqcstr(data->string_value, "bar"), "Expected data 1 to equal 'bar'");
 
     sky_event_free(event);
     

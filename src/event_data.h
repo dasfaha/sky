@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "bstring.h"
 #include "types.h"
@@ -10,24 +11,18 @@
 
 //==============================================================================
 //
-// Overview
-//
-//==============================================================================
-
-// Event data is a simple hash of keys and values. Keys are stored as the id
-// of the property they represent. Additional property information such as the
-// property name is stored globally in the table.
-
-
-//==============================================================================
-//
-// Typedefs
+// Definitions
 //
 //==============================================================================
 
 typedef struct sky_event_data {
     sky_property_id_t key;
-    bstring value;
+    union {
+        bool boolean_value;
+        int64_t int_value;
+        double float_value;
+        bstring string_value;
+    };
 } sky_event_data;
 
 

@@ -34,7 +34,7 @@ int test_sky_event_data_create() {
     sky_event_data *data = sky_event_data_create(10, &value);
     mu_assert(data != NULL, "Unable to allocate event data");
     mu_assert(data->key == 10, "Event data key not assigned");
-    mu_assert(biseqcstr(data->value, "foo"), "Event data value not assigned");
+    mu_assert(biseqcstr(data->string_value, "foo"), "Event data value not assigned");
 
     sky_event_data_free(data);
 
@@ -83,7 +83,7 @@ int test_sky_event_data_unpack() {
 
     mu_assert_long_equals(sz, DATA_LENGTH);
     mu_assert(data->key == 10, "");
-    mu_assert(biseqcstr(data->value, "foo"), "");
+    mu_assert(biseqcstr(data->string_value, "foo"), "");
 
     sky_event_data_free(data);
 

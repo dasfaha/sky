@@ -18,6 +18,21 @@ int sky_property_update_type(sky_property *property);
 
 //==============================================================================
 //
+// Definitions
+//
+//==============================================================================
+
+struct tagbstring SKY_DATA_TYPE_INT = bsStatic("Int");
+
+struct tagbstring SKY_DATA_TYPE_FLOAT = bsStatic("Float");
+
+struct tagbstring SKY_DATA_TYPE_BOOLEAN = bsStatic("Boolean");
+
+struct tagbstring SKY_DATA_TYPE_STRING = bsStatic("String");
+
+
+//==============================================================================
+//
 // Functions
 //
 //==============================================================================
@@ -215,3 +230,45 @@ int sky_property_update_type(sky_property *property)
 error:
     return -1;
 }
+
+
+//--------------------------------------
+// Data Type
+//--------------------------------------
+
+// Retrieves a reference to a standardized bstring that represents the name
+// of the data type.
+//
+// type_name - The name of the type.
+// ret       - A pointer to where the standardized type name should be returned.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_property_get_standard_data_type_name(bstring type_name, bstring *ret)
+{
+    check(type_name != NULL, "Type name required");
+    check(ret != NULL, "Return pointer required");
+
+    // Check against standard types.
+    if(biseq(&SKY_DATA_TYPE_INT, type_name)) {
+        *ret = &SKY_DATA_TYPE_INT;
+    }
+    else if(biseq(&SKY_DATA_TYPE_FLOAT, type_name)) {
+        *ret = &SKY_DATA_TYPE_FLOAT;
+    }
+    else if(biseq(&SKY_DATA_TYPE_BOOLEAN, type_name)) {
+        *ret = &SKY_DATA_TYPE_BOOLEAN;
+    }
+    else if(biseq(&SKY_DATA_TYPE_STRING, type_name)) {
+        *ret = &SKY_DATA_TYPE_STRING;
+    }
+    // If this is not a standard type then return the name that came in.
+    else {
+        sentinel("Type is not a standard type: %s", bdata(type_name));
+    }
+
+    return 0;
+
+error:
+    return -1;
+}
+
