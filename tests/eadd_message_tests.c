@@ -9,6 +9,45 @@
 
 //==============================================================================
 //
+// Fixtures
+//
+//==============================================================================
+
+sky_eadd_message *create_message_with_data()
+{
+    sky_eadd_message *message = sky_eadd_message_create();
+    message->object_id = 10;
+    message->timestamp = 1000LL;
+    message->action_id = 20;
+    message->data_count = 4;
+    message->data = malloc(sizeof(message->data) * message->data_count);
+
+    message->data[0] = sky_eadd_message_data_create();
+    message->data[0]->key = bfromcstr("myString");
+    message->data[0]->data_type = &SKY_DATA_TYPE_STRING;
+    message->data[0]->string_value = bfromcstr("xyz");
+
+    message->data[1] = sky_eadd_message_data_create();
+    message->data[1]->key = bfromcstr("myInt");
+    message->data[1]->data_type = &SKY_DATA_TYPE_INT;
+    message->data[1]->int_value = 200;
+
+    message->data[2] = sky_eadd_message_data_create();
+    message->data[2]->key = bfromcstr("myFloat");
+    message->data[2]->data_type = &SKY_DATA_TYPE_FLOAT;
+    message->data[2]->float_value = 100.2;
+
+    message->data[3] = sky_eadd_message_data_create();
+    message->data[3]->key = bfromcstr("myBoolean");
+    message->data[3]->data_type = &SKY_DATA_TYPE_BOOLEAN;
+    message->data[3]->boolean_value = true;
+
+    return message;
+}
+
+
+//==============================================================================
+//
 // Test Cases
 //
 //==============================================================================
@@ -19,11 +58,7 @@
 
 int test_sky_eadd_message_pack() {
     cleantmp();
-    sky_eadd_message *message = sky_eadd_message_create();
-    message->object_id = 10;
-    message->timestamp = 1000;
-    message->action_id = 20;
-    
+    sky_eadd_message *message = create_message_with_data();
     FILE *file = fopen("tmp/message", "w");
     mu_assert_bool(sky_eadd_message_pack(message, file) == 0);
     fclose(file);
@@ -45,6 +80,14 @@ int test_sky_eadd_message_unpack() {
     return 0;
 }
 
+int test_sky_eadd_message_sizeof() {
+    sky_eadd_message *message = create_message_with_data();
+    mu_assert_long_equals(sky_eadd_message_sizeof(message), 90L);
+    sky_eadd_message_free(message);
+    return 0;
+}
+
+
 
 //--------------------------------------
 // Processing
@@ -56,11 +99,7 @@ int test_sky_eadd_message_process() {
     table->path = bfromcstr("tmp");
     sky_table_open(table);
     
-    sky_eadd_message *message = sky_eadd_message_create();
-    message->object_id = 10;
-    message->timestamp = 1000LL;
-    message->action_id = 20;
-
+    sky_eadd_message *message = create_message_with_data();
     FILE *output = fopen("tmp/output", "w");
     mu_assert(sky_eadd_message_process(message, table, output) == 0, "");
     fclose(output);
@@ -83,6 +122,7 @@ int test_sky_eadd_message_process() {
 int all_tests() {
     mu_run_test(test_sky_eadd_message_pack);
     mu_run_test(test_sky_eadd_message_unpack);
+    mu_run_test(test_sky_eadd_message_sizeof);
     mu_run_test(test_sky_eadd_message_process);
     return 0;
 }

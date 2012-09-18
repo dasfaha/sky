@@ -29,7 +29,7 @@ int sky_minipack_fread_bstring(FILE *file, bstring *ret)
     // Initialize buffer.
     char *buffer = malloc(length+1); check_mem(buffer);
     buffer[length] = 0;
-    
+
     // Read into buffer.
     sz = fread(buffer, sizeof(char), length, file);
     check(sz == length, "Expected %d bytes, received %ld bytes at byte %ld", length, sz, ftell(file));
