@@ -94,7 +94,7 @@ int test_sky_eadd_message_sizeof() {
 //--------------------------------------
 
 int test_sky_eadd_message_process() {
-    cleantmp();
+    loadtmp("tests/fixtures/eadd_message/1/table/pre");
     sky_table *table = sky_table_create();
     table->path = bfromcstr("tmp");
     sky_table_open(table);
@@ -103,8 +103,8 @@ int test_sky_eadd_message_process() {
     FILE *output = fopen("tmp/output", "w");
     mu_assert(sky_eadd_message_process(message, table, output) == 0, "");
     fclose(output);
-    mu_assert_file("tmp/0/header", "tests/fixtures/eadd_message/1/table/0/header");
-    mu_assert_file("tmp/0/data", "tests/fixtures/eadd_message/1/table/0/data");
+    mu_assert_file("tmp/0/header", "tests/fixtures/eadd_message/1/table/post/0/header");
+    mu_assert_file("tmp/0/data", "tests/fixtures/eadd_message/1/table/post/0/data");
     mu_assert_file("tmp/output", "tests/fixtures/eadd_message/1/output");
 
     sky_eadd_message_free(message);

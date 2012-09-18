@@ -411,6 +411,41 @@ int sky_eadd_message_process(sky_eadd_message *message, sky_table *table,
     // Create event object.
     sky_event *event = sky_event_create(message->object_id, message->timestamp, message->action_id);
     
+    // Allocate space for event data.
+    event->data_count = message->data_count;
+    event->data = calloc(message->data_count, sizeof(*event->data)); check_mem(event->data);
+    
+    // Copy data from message.
+    uint32_t i;
+    for(i=0; i<message->data_count; i++) {
+        sky_event_data *data = NULL;
+        sky_eadd_message_data *message_data = message->data[i];
+        
+        // Look up property id by name
+        sky_property *property = NULL;
+        rc = sky_property_file_find_by_name(table->property_file, message_data->key, &property);
+        check(rc == 0 && property != NULL, "Unable to find property '%s' in table: %s", bdata(message_data->key), bdata(table->path));
+        
+        // Create event data based on data type.
+        if(message_data->data_type == &SKY_DATA_TYPE_STRING) {
+            data = sky_event_data_create_string(property->id, message_data->string_value);
+        }
+        else if(message_data->data_type == &SKY_DATA_TYPE_INT) {
+            data = sky_event_data_create_int(property->id, message_data->int_value);
+        }
+        else if(message_data->data_type == &SKY_DATA_TYPE_FLOAT) {
+            data = sky_event_data_create_float(property->id, message_data->float_value);
+        }
+        else if(message_data->data_type == &SKY_DATA_TYPE_BOOLEAN) {
+            data = sky_event_data_create_boolean(property->id, message_data->boolean_value);
+        }
+        else {
+            sentinel("Invalid data type in eadd message");
+        }
+        
+        event->data[i] = data;
+    }
+    
     // Add event to table.
     rc = sky_table_add_event(table, event);
     check(rc == 0, "Unable to add event to table");
