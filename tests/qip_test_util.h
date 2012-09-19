@@ -1,4 +1,5 @@
 #include <dbg.h>
+#include <sky_qip_module.h>
 
 // Required for Dynamic Event class.
 int dynamic_class_callback(qip_module *module, qip_ast_node *class)
@@ -22,6 +23,7 @@ error:
     qip_compiler_add_class_path(compiler, &core_class_path); \
     qip_compiler_add_class_path(compiler, &sky_class_path); \
     MODULE->compiler = compiler; \
+    MODULE->context = (void*)sky_qip_module_create(); \
     int _rc = qip_compiler_compile(compiler, module, &query, ARGS, ARG_COUNT); \
     mu_assert(_rc == 0, "Unable to compile"); \
     if(module->error_count > 0) fprintf(stderr, "Parse error [line %d] %s\n", module->errors[0]->line_no, bdata(module->errors[0]->message)); \

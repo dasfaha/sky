@@ -83,5 +83,8 @@ int sky_cursor_next(sky_cursor *cursor);
 
 int sky_cursor_get_action_id(sky_cursor *cursor, sky_action_id_t *action_id);
 
+int sky_cursor_get_data_ptr(sky_cursor *cursor, void **data_ptr,
+    uint32_t *data_length);
+
 
 #endif

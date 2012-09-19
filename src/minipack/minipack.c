@@ -1,4 +1,4 @@
-// minipack v0.4.1
+// minipack v0.4.2
 
 #include "minipack.h"
 #include "string.h"
@@ -196,6 +196,46 @@ uint64_t bswap64(uint64_t value)
 #define htonll(x) x
 #define ntohll(x) x
 #endif
+
+
+//==============================================================================
+//
+// General
+//
+//==============================================================================
+
+// Retrieves the size, in bytes, of how large an element will be along with
+// the size of its data (if it is a string). Maps and arrays are not supported
+// with this function.
+//
+// Returns the number of bytes needed for the element and the element's data.
+size_t minipack_sizeof_elem_and_data(void *ptr)
+{
+    size_t sz;
+    
+    // Integer.
+    sz = minipack_sizeof_int_elem(ptr);
+    if(sz > 0) return sz;
+    
+    // Unsigned Integer.
+    sz = minipack_sizeof_uint_elem(ptr);
+    if(sz > 0) return sz;
+    
+    // Float & Double
+    if(minipack_is_float(ptr)) return minipack_sizeof_float();
+    if(minipack_is_double(ptr)) return minipack_sizeof_double();
+
+    // Nil & Boolean.
+    if(minipack_is_nil(ptr)) return minipack_sizeof_nil();
+    if(minipack_is_bool(ptr)) return minipack_sizeof_bool();
+
+    // Raw
+    uint32_t length = minipack_unpack_raw(ptr, &sz);
+    if(sz > 0) return sz + length;
+    
+    // Map, Array and other data returns 0.
+    return 0;
+}
 
 
 //==============================================================================

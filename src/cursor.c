@@ -264,3 +264,49 @@ error:
     *action_id = 0;
     return -1;
 }
+
+// Retrieves the pointer to where the data section of an event starts as
+// well of the length of the data.
+//
+// cursor      - The cursor.
+// data_ptr    - A pointer to where the memory location of the data starts.
+// data_length - The length of the data section.
+//
+// Returns 0 if successful, otherwise returns -1.
+int sky_cursor_get_data_ptr(sky_cursor *cursor, void **data_ptr,
+                            uint32_t *data_length)
+{
+    check(cursor != NULL, "Cursor required");
+    check(!cursor->eof, "Cursor cannot be EOF");
+    check(data_ptr != NULL, "Data return pointer required");
+    check(data_length != NULL, "Data length return pointer required");
+
+    // Retrieve the data section if this event has data.
+    if(*((sky_event_flag_t*)cursor->ptr) & SKY_EVENT_FLAG_DATA) {
+        // Move past the initial header (flag, timestamp, action_id).
+        void *ptr = cursor->ptr;
+        ptr += sizeof(sky_event_flag_t) + sizeof(sky_timestamp_t);
+        if(*((sky_event_flag_t*)cursor->ptr) & SKY_EVENT_FLAG_ACTION) {
+            ptr += sizeof(sky_action_id_t);
+        }
+
+        // At the end of the header is the data length.
+        *data_length = *((sky_event_data_length_t*)(ptr));
+        
+        // After the data length begins the data section.
+        *data_ptr = ptr + sizeof(sky_event_data_length_t);
+    }
+    // If this is an action-only event then return null.
+    else {
+        *data_ptr = NULL;
+        *data_length = 0;
+    }
+    
+    return 0;
+
+error:
+    *data_ptr = NULL;
+    *data_length = 0;
+    return -1;
+}
+

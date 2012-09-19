@@ -15,14 +15,15 @@
 //
 //==============================================================================
 
-size_t DATA_LENGTH = 57;
-char DATA[] = 
-    "\x0a\x00\x00\x00\x31\x00\x00\x00\x01\xa0\x00\x00\x00\x00\x00\x00"
-    "\x00\x0b\x00\x02\xa1\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00"
-    "\x01\xa3\x66\x6f\x6f\x03\xa2\x00\x00\x00\x00\x00\x00\x00\x0d\x00"
-    "\x05\x00\x00\x00\x01\xa3\x62\x61\x72"
-;
-
+void *get_path_data0() {
+    struct tagbstring data_path = bsStatic("tests/fixtures/qip_cursor/0/path");
+    uint32_t data_length = sky_file_get_size(&data_path);
+    uint8_t *data = calloc(data_length, sizeof(uint8_t));
+    FILE *file = fopen(bdata(&data_path), "r");
+    fread(data, data_length, 1, file);
+    fclose(file);
+    return data;
+}
 
 //==============================================================================
 //
@@ -48,8 +49,9 @@ int test_sky_qip_cursor_execute_simple() {
     );
 
     // Initialize path.
+    void *data = get_path_data0();
     sky_qip_path *path = sky_qip_path_create();
-    path->path_ptr = &DATA;
+    path->path_ptr = data;
 
     // Execute module.
     sky_qip_path_int_func f = NULL;
@@ -62,6 +64,7 @@ int test_sky_qip_cursor_execute_simple() {
     // Clean up.
     sky_qip_path_free(path);
     qip_module_free(module);
+    free(data);
     return 0;
 }
 
@@ -113,8 +116,9 @@ int test_sky_qip_cursor_execute_with_map() {
     );
 
     // Initialize path & map.
+    void *data = get_path_data0();
     sky_qip_path *path = sky_qip_path_create();
-    path->path_ptr = &DATA;
+    path->path_ptr = data;
     qip_map *map = qip_map_create();
 
     // Execute module.
@@ -139,6 +143,7 @@ int test_sky_qip_cursor_execute_with_map() {
     sky_qip_path_free(path);
     qip_map_free(map);
     qip_module_free(module);
+    free(data);
     return 0;
 }
 
