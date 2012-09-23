@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "minipack.h"
 #include "qip_cursor.h"
 #include "sky_qip_module.h"
 #include "dbg.h"
