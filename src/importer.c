@@ -28,6 +28,12 @@ int sky_importer_process_actions(sky_importer *importer, bstring source,
 int sky_importer_process_action(sky_importer *importer, bstring source,
     jsmntok_t *tokens, uint32_t *index);
 
+int sky_importer_process_properties(sky_importer *importer, bstring source,
+    jsmntok_t *tokens, uint32_t *index);
+
+int sky_importer_process_property(sky_importer *importer, bstring source,
+    jsmntok_t *tokens, uint32_t *index);
+
 
 bool sky_importer_tokstr_equal(bstring source, jsmntok_t *token,
     const char *str);
@@ -282,6 +288,13 @@ int sky_importer_process_table(sky_importer *importer, bstring source,
             rc = sky_importer_process_actions(importer, source, tokens, index);
             check(rc == 0, "Unable to process actions import");
         }
+        else if(sky_importer_tokstr_equal(source, token, "properties")) {
+            rc = sky_importer_process_properties(importer, source, tokens, index);
+            check(rc == 0, "Unable to process properties import");
+        }
+        //else {
+        //    sentinel("Invalid token at char %d", tokens[*index].start);
+        //}
     }
     
     return 0;
@@ -337,8 +350,12 @@ int sky_importer_process_action(sky_importer *importer, bstring source,
         (*index)++;
         
         if(sky_importer_tokstr_equal(source, token, "name")) {
-            action->name = sky_importer_token_parse_bstring(source, &tokens[(*index)++]);
+            action->name = sky_importer_token_parse_bstring(source, &tokens[*index]);
         }
+        else {
+            sentinel("Invalid token at char %d", tokens[*index].start);
+        }
+        (*index)++;
     }
     
     // Add action.
@@ -347,6 +364,83 @@ int sky_importer_process_action(sky_importer *importer, bstring source,
     }
     rc = sky_action_file_add_action(importer->table->action_file, action);
     check(rc == 0, "Unable to add action: %s", bdata(action->name));
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+int sky_importer_process_properties(sky_importer *importer, bstring source,
+                                    jsmntok_t *tokens, uint32_t *index)
+{
+    int rc;
+    check(importer != NULL, "Importer required");
+    check(source != NULL, "Source required");
+    check(tokens != NULL, "Tokens required");
+    check(index != NULL, "Token index required");
+
+    jsmntok_t *properties_token = &tokens[*index];
+    (*index)++;
+    
+    // Process over each property.
+    int32_t i;
+    for(i=0; i<properties_token->size; i++) {
+        rc = sky_importer_process_property(importer, source, tokens, index);
+        check(rc == 0, "Unable to process properties import");
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+int sky_importer_process_property(sky_importer *importer, bstring source,
+                                  jsmntok_t *tokens, uint32_t *index)
+{
+    int rc;
+    check(importer != NULL, "Importer required");
+    check(source != NULL, "Source required");
+    check(tokens != NULL, "Tokens required");
+    check(index != NULL, "Token index required");
+
+    jsmntok_t *property_token = &tokens[*index];
+    (*index)++;
+    
+    // Create the property object.
+    sky_property *property = sky_property_create(); check_mem(property);
+    
+    // Process over child tokens.
+    int32_t i;
+    for(i=0; i<(property_token->size/2); i++) {
+        jsmntok_t *token = &tokens[*index];
+        (*index)++;
+        
+        if(sky_importer_tokstr_equal(source, token, "type")) {
+            bstring type = sky_importer_token_parse_bstring(source, &tokens[*index]);
+            property->type = biseqcstr(type, "action") == 1 ? SKY_PROPERTY_TYPE_ACTION : SKY_PROPERTY_TYPE_OBJECT;
+            bdestroy(type);
+        }
+        else if(sky_importer_tokstr_equal(source, token, "dataType")) {
+            property->data_type = sky_importer_token_parse_bstring(source, &tokens[*index]);
+        }
+        else if(sky_importer_tokstr_equal(source, token, "name")) {
+            property->name = sky_importer_token_parse_bstring(source, &tokens[*index]);
+        }
+        else {
+            sentinel("Invalid token at char %d", tokens[*index].start);
+        }
+        
+        (*index)++;
+    }
+    
+    // Add property.
+    if(!importer->table->opened) {
+        check(sky_table_open(importer->table) == 0, "Unable to open table");
+    }
+    rc = sky_property_file_add_property(importer->table->property_file, property);
+    check(rc == 0, "Unable to add property: %s", bdata(property->name));
     
     return 0;
 

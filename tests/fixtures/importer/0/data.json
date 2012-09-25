@@ -6,6 +6,9 @@
       {name: "goodbye"}
     ],
     properties:[
+      {type:"object", dataType:"Int", name:"myInt"},
+      {type:"action", dataType:"String", name:"myString"},
+      {type:"object", dataType:"Boolean", name:"myBoolean"}
     ],
     events:[
     ]

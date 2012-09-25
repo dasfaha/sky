@@ -48,6 +48,7 @@ sky_property *sky_property_create()
 {
     sky_property *property = calloc(sizeof(sky_property), 1);
     check_mem(property);
+    property->type = SKY_PROPERTY_TYPE_OBJECT;
     return property;
     
 error:
