@@ -161,6 +161,11 @@ int sky_table_load_data_file(sky_table *table)
     table->data_file->header_path = bformat("%s/0/header", bdata(table->path));
     check_mem(table->data_file->header_path);
     
+    // Initialize settings on the block.
+    if(table->default_block_size > 0) {
+        table->data_file->block_size = table->default_block_size;
+    }
+    
     // Load data
     rc = sky_data_file_load(table->data_file);
     check(rc == 0, "Unable to load data file");

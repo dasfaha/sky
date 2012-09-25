@@ -62,6 +62,7 @@ struct sky_table {
     bstring name;
     bstring path;
     bool opened;
+    uint32_t default_block_size;
 };
 
 
