@@ -8,9 +8,13 @@
     properties:[
       {type:"object", dataType:"Int", name:"myInt"},
       {type:"action", dataType:"String", name:"myString"},
-      {type:"object", dataType:"Boolean", name:"myBoolean"}
+      {type:"object", dataType:"Boolean", name:"myBoolean"},
+      {type:"action", dataType:"Float", name:"myFloat"}
     ],
     events:[
+      {objectId:10, timestamp:"2010-01-02T10:30:20Z", action:"hello"},
+      {objectId:10, timestamp:"2010-01-02T10:30:00Z", action:"goodbye"},
+      {objectId:11, timestamp:"2010-01-02T10:30:00Z", action:"goodbye"}
     ]
   }
 }

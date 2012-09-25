@@ -2,6 +2,7 @@
 
 #include "jsmn/jsmn.h"
 #include "importer.h"
+#include "timestamp.h"
 #include "dbg.h"
 
 
@@ -32,6 +33,12 @@ int sky_importer_process_properties(sky_importer *importer, bstring source,
     jsmntok_t *tokens, uint32_t *index);
 
 int sky_importer_process_property(sky_importer *importer, bstring source,
+    jsmntok_t *tokens, uint32_t *index);
+
+int sky_importer_process_events(sky_importer *importer, bstring source,
+    jsmntok_t *tokens, uint32_t *index);
+
+int sky_importer_process_event(sky_importer *importer, bstring source,
     jsmntok_t *tokens, uint32_t *index);
 
 
@@ -292,11 +299,17 @@ int sky_importer_process_table(sky_importer *importer, bstring source,
             rc = sky_importer_process_properties(importer, source, tokens, index);
             check(rc == 0, "Unable to process properties import");
         }
-        //else {
-        //    sentinel("Invalid token at char %d", tokens[*index].start);
-        //}
+        else if(sky_importer_tokstr_equal(source, token, "events")) {
+            rc = sky_importer_process_events(importer, source, tokens, index);
+            check(rc == 0, "Unable to process events import");
+        }
+        else {
+            sentinel("Invalid token at char %d", tokens[*index].start);
+        }
     }
     
+    sky_table_close(importer->table);
+
     return 0;
 
 error:
@@ -321,6 +334,10 @@ int sky_importer_process_actions(sky_importer *importer, bstring source,
         rc = sky_importer_process_action(importer, source, tokens, index);
         check(rc == 0, "Unable to process actions import");
     }
+    
+    // Save action file.
+    rc = sky_action_file_save(importer->table->action_file);
+    check(rc == 0, "Unable to save action file");
     
     return 0;
 
@@ -390,6 +407,10 @@ int sky_importer_process_properties(sky_importer *importer, bstring source,
         check(rc == 0, "Unable to process properties import");
     }
     
+    // Save property file.
+    rc = sky_property_file_save(importer->table->property_file);
+    check(rc == 0, "Unable to save property file");
+
     return 0;
 
 error:
@@ -441,6 +462,90 @@ int sky_importer_process_property(sky_importer *importer, bstring source,
     }
     rc = sky_property_file_add_property(importer->table->property_file, property);
     check(rc == 0, "Unable to add property: %s", bdata(property->name));
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+int sky_importer_process_events(sky_importer *importer, bstring source,
+                                jsmntok_t *tokens, uint32_t *index)
+{
+    int rc;
+    check(importer != NULL, "Importer required");
+    check(source != NULL, "Source required");
+    check(tokens != NULL, "Tokens required");
+    check(index != NULL, "Token index required");
+
+    jsmntok_t *events_token = &tokens[*index];
+    (*index)++;
+    
+    // Process over each event.
+    int32_t i;
+    for(i=0; i<events_token->size; i++) {
+        rc = sky_importer_process_event(importer, source, tokens, index);
+        check(rc == 0, "Unable to process event import");
+    }
+    
+    return 0;
+
+error:
+    return -1;
+}
+
+int sky_importer_process_event(sky_importer *importer, bstring source,
+                               jsmntok_t *tokens, uint32_t *index)
+{
+    int rc;
+    check(importer != NULL, "Importer required");
+    check(source != NULL, "Source required");
+    check(tokens != NULL, "Tokens required");
+    check(index != NULL, "Token index required");
+
+    jsmntok_t *event_token = &tokens[*index];
+    (*index)++;
+
+    // Open table if it hasn't been already.
+    if(!importer->table->opened) {
+        check(sky_table_open(importer->table) == 0, "Unable to open table");
+    }
+
+    // Create the event object.
+    sky_event *event = sky_event_create(0, 0, 0); check_mem(event);
+    
+    // Process over child tokens.
+    int32_t i;
+    for(i=0; i<(event_token->size/2); i++) {
+        jsmntok_t *token = &tokens[*index];
+        (*index)++;
+        
+        if(sky_importer_tokstr_equal(source, token, "timestamp")) {
+            bstring timestamp = sky_importer_token_parse_bstring(source, &tokens[*index]);
+            rc = sky_timestamp_parse(timestamp, &event->timestamp);
+            check(rc == 0, "Unable to parse timestamp");
+            bdestroy(timestamp);
+        }
+        else if(sky_importer_tokstr_equal(source, token, "objectId")) {
+            event->object_id = (sky_object_id_t)sky_importer_token_parse_int(source, &tokens[*index]);
+        }
+        else if(sky_importer_tokstr_equal(source, token, "action")) {
+            sky_action *action = NULL;
+            bstring action_name = sky_importer_token_parse_bstring(source, &tokens[*index]);
+            rc = sky_action_file_find_action_by_name(importer->table->action_file, action_name, &action);
+            check(rc == 0, "Unable to find action: %s", bdata(action_name));
+            event->action_id = action->id;
+        }
+        else {
+            sentinel("Invalid token at char %d", tokens[*index].start);
+        }
+        
+        (*index)++;
+    }
+    
+    // Add event.
+    rc = sky_table_add_event(importer->table, event);
+    check(rc == 0, "Unable to add event");
     
     return 0;
 
