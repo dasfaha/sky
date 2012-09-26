@@ -195,7 +195,7 @@ int sky_qip_module_process_event_class(sky_qip_module *module,
                 // Lookup property in the database.
                 sky_property *db_property = NULL;
                 rc = sky_property_file_find_by_name(module->table->property_file, property_name, &db_property);
-                check(rc == 0, "Unable to find property '%s' in table: %s", bdata(property_name), bdata(module->table->path));
+                check(rc == 0 && db_property != NULL, "Unable to find property '%s' in table: %s", bdata(property_name), bdata(module->table->path));
                 
                 // Generate and add property to class.
                 property = qip_ast_property_create(QIP_ACCESS_PUBLIC, 

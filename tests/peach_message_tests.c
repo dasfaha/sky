@@ -48,7 +48,7 @@ int test_sky_peach_message_unpack() {
 //--------------------------------------
 
 int test_sky_peach_message_process() {
-    loadtmp("tests/fixtures/peach_message/1/table");
+    importtmp("tests/fixtures/peach_message/1/import.json");
     sky_table *table = sky_table_create();
     table->path = bfromcstr("tmp");
     sky_table_open(table);

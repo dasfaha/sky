@@ -3,6 +3,8 @@
 #include <bstring.h>
 #include <file.h>
 
+#import <importer.h>
+
 //==============================================================================
 //
 // Minunit
@@ -103,6 +105,18 @@ struct tagbstring BSTMPDIR = bsStatic(TMPDIR);
         cleantmp(); \
         mu_assert_with_msg(sky_file_cp_r(&_srcpath, &BSTMPDIR) == 0, "Unable to copy to tmp directory"); \
     } \
+} while(0)
+
+// Uses an import file to create a table in the given directory.
+#define importtmp(PATH) do {\
+    cleantmp(); \
+    sky_importer *importer = sky_importer_create(); \
+    importer->path = bfromcstr(TMPDIR); \
+    FILE *file = fopen(PATH, "r"); \
+    mu_assert_with_msg(file != NULL, "Unable to open import file: " PATH); \
+    int rc = sky_importer_import(importer, file); \
+    mu_assert_int_equals(rc, 0); \
+    fclose(file); \
 } while(0)
     
 // Asserts that a block has a specific block id and object id range.
