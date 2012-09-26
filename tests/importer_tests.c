@@ -30,8 +30,8 @@ int test_sky_importer_import() {
     mu_assert_int_equals(importer->table->default_block_size, 128);
     mu_assert_file("tmp/actions", "tests/fixtures/importer/0/table/actions");
     mu_assert_file("tmp/properties", "tests/fixtures/importer/0/table/properties");
-    //mu_assert_file("tmp/0/data", "tests/fixtures/importer/0/table/0/data");
-    //mu_assert_file("tmp/0/header", "tests/fixtures/importer/0/table/0/header");
+    mu_assert_file("tmp/0/data", "tests/fixtures/importer/0/table/0/data");
+    mu_assert_file("tmp/0/header", "tests/fixtures/importer/0/table/0/header");
 
     sky_importer_free(importer);
     return 0;
