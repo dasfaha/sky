@@ -7,15 +7,16 @@
       {name: "farewell"}
     ],
     properties:[
-      {type:"object", dataType:"Int", name:"foo"},
+      {type:"object", dataType:"Int", name:"object_prop"},
+      {type:"action", dataType:"Int", name:"action_prop"},
       {type:"object", dataType:"String", name:"this_is_a_really_long_property_name_woohoo"}
     ],
     events:[
-      {objectId:3, timestamp:"1970-01-01T00:00:01Z", action:"hello"},
+      {objectId:3, timestamp:"1970-01-01T00:00:01Z", action:"hello", data:{object_prop:5, action_prop:20}},
       {objectId:3, timestamp:"1970-01-01T00:00:02Z", action:"goodbye"},
-      {objectId:3, timestamp:"1970-01-01T00:00:03Z", action:"farewell"},
+      {objectId:3, timestamp:"1970-01-01T00:00:03Z", action:"farewell", data:{object_prop:12, action_prop:22}},
 
-      {objectId:4, timestamp:"1970-01-01T00:00:04Z", action:"hello"},
+      {objectId:4, timestamp:"1970-01-01T00:00:04Z", action:"hello", data:{object_prop:3}},
       {objectId:4, timestamp:"1970-01-01T00:00:05Z", action:"goodbye"},
 
       {objectId:5, timestamp:"1970-01-01T00:00:04Z", action:"hello"},

@@ -172,7 +172,8 @@ int sky_property_unpack(sky_property *property, FILE *file)
         check(rc == 0, "Unable to read map key");
         
         if(biseqcstr(key, "id")) {
-            property->id = (sky_property_id_t)minipack_fread_int(file, &sz);
+            int32_t val = minipack_fread_int(file, &sz);
+            property->id = (sky_property_id_t)val;
             check(sz > 0, "Unable to read property id");
         }
         else if(biseqcstr(key, "type")) {

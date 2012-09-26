@@ -303,13 +303,6 @@ int sky_qip_module_compile(sky_qip_module *module, bstring query_text)
     offsets->elements = NULL;
     qip_fixed_array_free(offsets);
 
-    // Print dynamic info.
-    debug("dynamic property count: %lld", module->event_property_count);
-    int64_t j;
-    for(j=0; j<module->event_property_count; j++) {
-        debug("  [%lld] id: %d, offset: %lld, type: %s [%p]", j, module->event_property_ids[j], module->event_property_offsets[j], bdata(module->event_property_types[j]), module->event_property_types[j]);
-    }
-    
     // Retrieve main function.
     rc = qip_module_get_main_function(module->_qip_module, &module->main_function);
     check(rc == 0, "Unable to retrieve main function");
