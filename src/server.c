@@ -25,10 +25,9 @@
 //==============================================================================
 
 int sky_server_open_table(sky_server *server, bstring database_name,
-    bstring table_name, sky_database **database, sky_table **table);
+    bstring table_name, sky_table **table);
 
-int sky_server_close_table(sky_server *server, sky_database *database,
-    sky_table *table);
+int sky_server_close_table(sky_server *server, sky_table *table);
 
 
 //==============================================================================
@@ -50,8 +49,8 @@ sky_server *sky_server_create(bstring path)
 {
     sky_server *server = NULL;
     server = calloc(1, sizeof(sky_server)); check_mem(server);
-    
-    server->path = path;
+    server->path = bstrcpy(path);
+    if(path) check_mem(server->path);
     server->port = SKY_DEFAULT_PORT;
     
     return server;
@@ -179,9 +178,8 @@ int sky_server_accept(sky_server *server)
     check(rc == 0, "Unable to unpack message header");
 
     // Open database & table.
-    sky_database *database = NULL;
     sky_table *table = NULL;
-    rc = sky_server_open_table(server, header->database_name, header->table_name, &database, &table);
+    rc = sky_server_open_table(server, header->database_name, header->table_name, &table);
     check(rc == 0, "Unable to open table");
 
     // Parse appropriate message type.
@@ -226,13 +224,11 @@ error:
 // server        - The server that is opening the table.
 // database_name - The name of the database to open.
 // table_name    - The name of the table to open.
-// database      - Returns the instance of the database to the caller. 
 // table         - Returns the instance of the table to the caller. 
 //
 // Returns 0 if successful, otherwise returns -1.
 int sky_server_open_table(sky_server *server, bstring database_name,
-                          bstring table_name, sky_database **database,
-                          sky_table **table)
+                          bstring table_name,  sky_table **table)
 {
     int rc;
     check(server != NULL, "Server required");
@@ -240,59 +236,58 @@ int sky_server_open_table(sky_server *server, bstring database_name,
     check(table_name != NULL, "Table name required");
     
     // Initialize return values.
-    *database = NULL;
     *table    = NULL;
     
-    // Determine the path to the database.
-    bstring database_path = bformat("%s/%s", bdata(server->path), bdata(database_name)); 
-    check_mem(database_path);
-    
-    // Create the database.
-    *database = sky_database_create(); check_mem(*database);
-    rc = sky_database_set_path(*database, database_path);
-    check(rc == 0, "Unable to set database path");
-    
     // Determine the path to the table.
-    bstring table_path = bformat("%s/%s", bdata(database_path), bdata(table_name));
-    check_mem(table_path);
+    bstring path = bformat("%s/%s/%s", bdata(server->path), bdata(database_name), bdata(table_name));
+    check_mem(path);
 
-    // Create the table.
-    *table = sky_table_create(); check_mem(*table);
-    rc = sky_table_set_path(*table, table_path);
-    check(rc == 0, "Unable to set table path");
+    // If the table is already open then reuse it.
+    if(server->last_table != NULL && biseq(server->last_table->path, path) == 1) {
+        *table = server->last_table;
+    }
+    // Otherwise open the table.
+    else {
+        // Close the currently open table if one exists
+        if(server->last_table != NULL) {
+            rc = sky_server_close_table(server, server->last_table);
+            check(rc == 0, "Unable to close current table");
+        }
+        
+        // Create the table.
+        *table = sky_table_create(); check_mem(*table);
+        rc = sky_table_set_path(*table, path);
+        check(rc == 0, "Unable to set table path");
     
-    // Open the table.
-    rc = sky_table_open(*table);
-    check(rc == 0, "Unable to open table");
+        // Open the table.
+        rc = sky_table_open(*table);
+        check(rc == 0, "Unable to open table");
     
-    bdestroy(table_path);
-    bdestroy(database_path);
+        // Save the reference as the currently open table.
+        server->last_table = *table;
+    }
+
+    bdestroy(path);
     return 0;
 
 error:
-    bdestroy(table_path);
-    bdestroy(database_path);
-    sky_database_free(*database);
+    bdestroy(path);
     sky_table_free(*table);
-    *database = NULL;
-    *table    = NULL;
+    *table = NULL;
     return -1;
 }
 
-// Closes an table.
+// Closes a table.
 //
-// server - The server that is opening the table.
-// database - The database that the table belongs to.
-// table - The table to close.
+// server - The server.
+// table  - The table to close.
 //
 // Returns 0 if successful, otherwise returns -1.
-int sky_server_close_table(sky_server *server, sky_database *database,
-                           sky_table *table)
+int sky_server_close_table(sky_server *server, sky_table *table)
 {
     int rc;
     check(server != NULL, "Server required");
-    check(database != NULL, "Database required");
-    check(database != NULL, "Table required");
+    check(table != NULL, "Table required");
     
     // Close the table.
     rc = sky_table_close(table);
@@ -301,14 +296,10 @@ int sky_server_close_table(sky_server *server, sky_database *database,
     // Free the table.
     sky_table_free(table);
     
-    // Free the database file.
-    sky_database_free(database);
-    
     return 0;
 
 error:
     sky_table_free(table);
-    sky_database_free(database);
     return -1;
 }
 
@@ -333,6 +324,8 @@ int sky_server_process_eadd_message(sky_server *server, sky_table *table,
     check(table != NULL, "Table required");
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
+    
+    debug("Message received: [EADD]");
     
     // Parse message.
     sky_eadd_message *message = sky_eadd_message_create(); check_mem(message);
@@ -371,6 +364,8 @@ int sky_server_process_peach_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [PEACH]");
+
     // Parse message.
     sky_peach_message *message = sky_peach_message_create(); check_mem(message);
     rc = sky_peach_message_unpack(message, input);
@@ -408,6 +403,8 @@ int sky_server_process_aadd_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [AADD]");
+
     // Parse message.
     sky_aadd_message *message = sky_aadd_message_create(); check_mem(message);
     rc = sky_aadd_message_unpack(message, input);
@@ -440,6 +437,8 @@ int sky_server_process_aget_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [AGET]");
+
     // Parse message.
     sky_aget_message *message = sky_aget_message_create(); check_mem(message);
     rc = sky_aget_message_unpack(message, input);
@@ -472,6 +471,8 @@ int sky_server_process_aall_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [AALL]");
+
     // Parse message.
     sky_aall_message *message = sky_aall_message_create(); check_mem(message);
     rc = sky_aall_message_unpack(message, input);
@@ -509,6 +510,8 @@ int sky_server_process_padd_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [PADD]");
+
     // Parse message.
     sky_padd_message *message = sky_padd_message_create(); check_mem(message);
     rc = sky_padd_message_unpack(message, input);
@@ -541,6 +544,8 @@ int sky_server_process_pget_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [PGET]");
+
     // Parse message.
     sky_pget_message *message = sky_pget_message_create(); check_mem(message);
     rc = sky_pget_message_unpack(message, input);
@@ -573,6 +578,8 @@ int sky_server_process_pall_message(sky_server *server, sky_table *table,
     check(input != NULL, "Input required");
     check(output != NULL, "Output stream required");
     
+    debug("Message received: [PALL]");
+
     // Parse message.
     sky_pall_message *message = sky_pall_message_create(); check_mem(message);
     rc = sky_pall_message_unpack(message, input);

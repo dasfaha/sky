@@ -46,12 +46,15 @@ typedef enum sky_server_state_e {
     SKY_SERVER_STATE_RUNNING,
 } sky_server_state_e;
 
-typedef struct sky_server {
+
+typedef struct {
     sky_server_state_e state;
     bstring path;
     int port;
     struct sockaddr_in* sockaddr;
     int socket;
+    sky_database *last_database;
+    sky_table *last_table;
 } sky_server;
 
 

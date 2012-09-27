@@ -138,19 +138,24 @@ int main(int argc, char **argv)
         server->port = options->port;
     }
     
+    // Clean up options.
+    Options_free(options);
+    
     // Display status.
     printf("Sky Server v%s\n", SKY_VERSION);
     printf("Listening on 0.0.0.0:%d, CTRL+C to stop\n", server->port);
     
     // Start server.
     sky_server_start(server);
-    sky_server_accept(server);
+    
+    // Continuously accept connections.
+    while(true) {
+        sky_server_accept(server);
+    }
+
     sky_server_stop(server);
     sky_server_free(server);
 
-    // Clean up.
-    Options_free(options);
-    
     return 0;
 }
 
