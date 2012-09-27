@@ -11,6 +11,15 @@
 
 //==============================================================================
 //
+// Definition
+//
+//==============================================================================
+
+#define SKY_MESSAGE_HEADER_ITEM_COUNT 6
+
+
+//==============================================================================
+//
 // Functions
 //
 //==============================================================================
@@ -56,6 +65,7 @@ void sky_message_header_free(sky_message_header *header)
 size_t sky_message_header_sizeof(sky_message_header *header)
 {
     size_t sz = 0;
+    sz += minipack_sizeof_array(SKY_MESSAGE_HEADER_ITEM_COUNT);
     sz += minipack_sizeof_uint(header->version);
     sz += minipack_sizeof_uint(header->type);
     sz += minipack_sizeof_uint(header->length);
@@ -78,6 +88,10 @@ int sky_message_header_pack(sky_message_header *header, FILE *file)
     size_t sz;
     check(header != NULL, "Header required");
     check(file != NULL, "File stream required");
+
+    // Item count
+    minipack_fwrite_array(file, SKY_MESSAGE_HEADER_ITEM_COUNT, &sz);
+    check(sz != 0, "Unable to pack item count");
 
     // Version
     minipack_fwrite_uint(file, header->version, &sz);
@@ -117,6 +131,11 @@ int sky_message_header_unpack(sky_message_header *header, FILE *file)
     size_t sz;
     check(header != NULL, "Header required");
     check(file != NULL, "Pointer required");
+
+    // Item Count
+    uint32_t count = minipack_fread_array(file, &sz);
+    check(sz != 0, "Unable to unpack version");
+    check(count == SKY_MESSAGE_HEADER_ITEM_COUNT, "Invalid header item count: %d; expected: %d", count, SKY_MESSAGE_HEADER_ITEM_COUNT);
 
     // Version
     header->version = minipack_fread_uint(file, &sz);
