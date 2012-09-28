@@ -14,6 +14,7 @@ LIB_OBJECTS=$(filter-out ${BIN_OBJECTS},${OBJECTS})
 TEST_SOURCES=$(wildcard tests/*_tests.c tests/**/*_tests.c)
 TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 
+PREFIX?=/usr/local
 
 ################################################################################
 # Default Target
@@ -21,6 +22,18 @@ TEST_OBJECTS=$(patsubst %.c,%,${TEST_SOURCES})
 
 all: bin/libsky.a bin/skyd bin/sky-gen bin/sky-bench test
 
+
+################################################################################
+# Installation
+################################################################################
+
+install: all
+	install -d $(DESTDIR)/$(PREFIX)/sky/
+	install -d $(DESTDIR)/$(PREFIX)/sky/bin/
+	install -d $(DESTDIR)/$(PREFIX)/sky/data/
+	install bin/skyd $(DESTDIR)/$(PREFIX)/sky/bin/
+	rm $(DESTDIR)/$(PREFIX)/bin/skyd
+	ln -s $(DESTDIR)/$(PREFIX)/sky/bin/skyd $(DESTDIR)/$(PREFIX)/bin/skyd
 
 ################################################################################
 # Binaries

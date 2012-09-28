@@ -10,24 +10,11 @@
 
 //==============================================================================
 //
-// Overview
+// Definitions
 //
 //==============================================================================
 
-// The skyd application is the daemon process used for running the Sky server.
-// When it starts, it opens a socket to listen for client connections on the
-// default port, 8585. You can change this by passing in the `-p` command line
-// argument.
-//
-// You will also need to specify the data directory where databases are stored.
-// This is specified using the `-d` command line argument.
-
-
-//==============================================================================
-//
-// Typedefs
-//
-//==============================================================================
+#define SKY_DEFAULT_DATA_PATH "/usr/local/sky/data"
 
 typedef struct Options {
     bstring path;
@@ -74,12 +61,13 @@ Options *parseopts(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-    // Retrieve path as first non-getopts option.
+    // Default the path if one is not specified.
     if(argc < 1) {
-        fprintf(stderr, "Error: Server data path required.\n\n");
-        exit(1);
+        options->path = bfromcstr(SKY_DEFAULT_DATA_PATH); check_mem(options->path);
     }
-    options->path = bfromcstr(argv[0]);
+    else {
+        options->path = bfromcstr(argv[0]); check_mem(options->path);
+    }
 
     // Default port.
     if(options->port < 0) {
