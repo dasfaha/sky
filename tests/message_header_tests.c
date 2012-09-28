@@ -20,7 +20,7 @@ int test_sky_message_header_pack() {
     cleantmp();
     sky_message_header *header = sky_message_header_create();
     header->version = 1;
-    header->type = 0x00200001;
+    header->name = bfromcstr("eadd");
     header->length = 10;
     header->database_name = bfromcstr("foo");
     header->table_name = bfromcstr("bar");
@@ -40,7 +40,7 @@ int test_sky_message_header_unpack() {
     fclose(file);
 
     mu_assert_int64_equals(header->version, 1LL);
-    mu_assert_int64_equals(header->type, 0x00200001LL);
+    mu_assert_bstring(header->name, "eadd");
     mu_assert_int64_equals(header->length, 10LL);
     mu_assert_bstring(header->database_name, "foo");
     mu_assert_bstring(header->table_name, "bar");

@@ -5,7 +5,6 @@
 
 #include "bstring.h"
 #include "server.h"
-#include "message_type.h"
 #include "message_header.h"
 #include "eadd_message.h"
 #include "peach_message.h"
@@ -183,19 +182,32 @@ int sky_server_accept(sky_server *server)
     check(rc == 0, "Unable to open table");
 
     // Parse appropriate message type.
-    switch(header->type) {
-        case SKY_MESSAGE_EADD:  rc = sky_server_process_eadd_message(server, table, input, output); break;
-        case SKY_MESSAGE_PEACH: rc = sky_server_process_peach_message(server, table, input, output); break;
-
-        case SKY_MESSAGE_AADD: rc = sky_server_process_aadd_message(server, table, input, output); break;
-        case SKY_MESSAGE_AGET: rc = sky_server_process_aget_message(server, table, input, output); break;
-        case SKY_MESSAGE_AALL: rc = sky_server_process_aall_message(server, table, input, output); break;
-
-        case SKY_MESSAGE_PADD: rc = sky_server_process_padd_message(server, table, input, output); break;
-        case SKY_MESSAGE_PGET: rc = sky_server_process_pget_message(server, table, input, output); break;
-        case SKY_MESSAGE_PALL: rc = sky_server_process_pall_message(server, table, input, output); break;
-
-        default: sentinel("Invalid message type"); break;
+    if(biseqcstr(header->name, "eadd") == 1) {
+        rc = sky_server_process_eadd_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "peach") == 1) {
+        rc = sky_server_process_peach_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "aadd") == 1) {
+        rc = sky_server_process_aadd_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "aget") == 1) {
+        rc = sky_server_process_aget_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "aall") == 1) {
+        rc = sky_server_process_aall_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "padd") == 1) {
+        rc = sky_server_process_padd_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "pget") == 1) {
+        rc = sky_server_process_pget_message(server, table, input, output);
+    }
+    else if(biseqcstr(header->name, "pall") == 1) {
+        rc = sky_server_process_pall_message(server, table, input, output);
+    }
+    else {
+        sentinel("Invalid message type");
     }
     
     // Clean up.

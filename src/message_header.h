@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#include "message_type.h"
 #include "bstring.h"
 #include "types.h"
 
@@ -18,7 +17,7 @@
 // The header info for a message.
 typedef struct {
     uint64_t version;
-    uint64_t type;
+    bstring name;
     uint64_t length;
     bstring database_name;
     bstring table_name;
