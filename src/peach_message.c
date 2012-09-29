@@ -176,8 +176,8 @@ int sky_peach_message_process(sky_peach_message *message, sky_table *table,
     struct tagbstring result_str = bsStatic("Result");
     struct tagbstring serialize_str = bsStatic("serialize");
     sky_qip_result_serialize_func result_serialize = NULL;
-    qip_module_get_class_method(module->_qip_module, &result_str, &serialize_str, (void*)(&result_serialize));
-    check(result_serialize != NULL, "Unable to find serialize() method on class 'Result'");
+    rc = qip_module_get_class_method(module->_qip_module, &result_str, &serialize_str, (void*)(&result_serialize));
+    check(rc == 0 && result_serialize != NULL, "Unable to find serialize() method on class 'Result'");
 
     // Serialize.
     qip_serializer *serializer = qip_serializer_create();
